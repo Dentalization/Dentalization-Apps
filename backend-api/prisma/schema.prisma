@@ -1,0 +1,246 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  PATIENT
+  DOCTOR
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+  SUSPENDED
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VOICE
+  APPOINTMENT_REQUEST
+  DIAGNOSIS_RESULT
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  RESCHEDULED
+}
+
+enum PhotoAnalysisStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id          String     @id @default(cuid())
+  email       String     @unique
+  password    String
+  role        UserRole
+  status      UserStatus @default(ACTIVE)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Role-specific profiles
+  patientProfile PatientProfile?
+  doctorProfile  DoctorProfile?
+
+  // Shared features for single app
+  sessions      Session[]
+  notifications Notification[]
+  
+  // Chat relationships
+  sentMessages     ChatMessage[] @relation("SentMessages")
+  receivedMessages ChatMessage[] @relation("ReceivedMessages")
+  
+  // Appointment relationships (patient side)
+  patientAppointments Appointment[] @relation("PatientAppointments")
+  
+  // Appointment relationships (doctor side)
+  doctorAppointments Appointment[] @relation("DoctorAppointments")
+
+  @@map("users")
+}
+
+model PatientProfile {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  firstName        String
+  lastName         String
+  dateOfBirth      DateTime?
+  phone            String?
+  address          String?
+  emergencyContact String?
+  
+  // Medical information
+  allergies        String?
+  medications      String?
+  medicalHistory   String?
+  insuranceInfo    String?
+  
+  // App-specific
+  profilePicture   String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  
+  // Relationships
+  dentalPhotos     DentalPhoto[]
+  medicalRecords   MedicalRecord[]
+
+  @@map("patient_profiles")
+}
+
+model DoctorProfile {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  firstName         String
+  lastName          String
+  phone             String?
+  
+  // Professional information
+  licenseNumber     String    @unique
+  specialization    String?
+  experience        Int?      // years of experience
+  education         String?
+  
+  // Clinic information
+  clinicName        String?
+  clinicAddress     String?
+  clinicPhone       String?
+  
+  // Verification
+  isVerified        Boolean   @default(false)
+  verificationDocs  String[]  // Array of document URLs
+  
+  // App-specific
+  profilePicture    String?
+  bio               String?
+  consultationFee   Float?
+  availability      String?   // JSON string for availability schedule
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("doctor_profiles")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("sessions")
+}
+
+model ChatMessage {
+  id          String      @id @default(cuid())
+  senderId    String
+  receiverId  String
+  sender      User        @relation("SentMessages", fields: [senderId], references: [id])
+  receiver    User        @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  message     String
+  messageType MessageType @default(TEXT)
+  isRead      Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+
+  @@map("chat_messages")
+}
+
+model Appointment {
+  id          String            @id @default(cuid())
+  patientId   String
+  doctorId    String
+  patient     User              @relation("PatientAppointments", fields: [patientId], references: [id])
+  doctor      User              @relation("DoctorAppointments", fields: [doctorId], references: [id])
+  
+  scheduledAt DateTime
+  duration    Int               @default(30) // minutes
+  status      AppointmentStatus @default(PENDING)
+  
+  // Appointment details
+  reason      String?
+  notes       String?
+  
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@map("appointments")
+}
+
+model DentalPhoto {
+  id              String              @id @default(cuid())
+  patientId       String
+  patient         PatientProfile      @relation(fields: [patientId], references: [id])
+  
+  imageUrl        String
+  thumbnailUrl    String?
+  description     String?
+  
+  // AI Analysis
+  analysisStatus  PhotoAnalysisStatus @default(PENDING)
+  analysisResult  String?             // JSON string with AI analysis results
+  confidence      Float?
+  
+  uploadedAt      DateTime            @default(now())
+  analyzedAt      DateTime?
+
+  @@map("dental_photos")
+}
+
+model MedicalRecord {
+  id          String         @id @default(cuid())
+  patientId   String
+  patient     PatientProfile @relation(fields: [patientId], references: [id])
+  
+  title       String
+  description String
+  diagnosis   String?
+  treatment   String?
+  
+  // Attachments
+  attachments String[]       // Array of file URLs
+  
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@map("medical_records")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  
+  title     String
+  message   String
+  type      String   @default("general")
+  isRead    Boolean  @default(false)
+  
+  // Optional data payload
+  data      String?  // JSON string for additional data
+  
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}
