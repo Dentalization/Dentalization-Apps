@@ -4,6 +4,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import RootNavigator from './src/navigation/RootNavigator';
+import { ThemeProvider } from './src/components/common/ThemeProvider';
 import { store } from './src/store';
 
 const App = () => {
@@ -11,7 +12,9 @@ const App = () => {
     <Provider store={store}>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <SafeAreaProvider>
-          <RootNavigator />
+          <ThemeProvider>
+            <RootNavigator />
+          </ThemeProvider>
         </SafeAreaProvider>
       </GestureHandlerRootView>
     </Provider>
