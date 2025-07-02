@@ -2,23 +2,27 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
+import { useDispatch, useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import { useTheme } from '../../components/common/ThemeProvider';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Card from '../../components/common/Card';
+import { registerUser, clearError } from '../../store/slices/authSlice';
 import { ROUTES } from '../../../shared/constants';
 
 const RegisterScreen = ({ navigation }) => {
   const theme = useTheme();
+  const dispatch = useDispatch();
+  const { isLoading, error } = useSelector(state => state.auth);
   
   const [formData, setFormData] = useState({
     email: '',
@@ -26,16 +30,64 @@ const RegisterScreen = ({ navigation }) => {
     confirmPassword: '',
     firstName: '',
     lastName: '',
+    role: 'PATIENT', // Default role
+    phoneNumber: '',
   });
-  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [selectedRole, setSelectedRole] = useState('PATIENT');
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleRoleSelection = (role) => {
+    setSelectedRole(role);
+    setFormData(prev => ({ ...prev, role }));
+  };
+
   const validateForm = () => {
-    if (!formData.email || !formData.password || !formData.firstName || !formData.lastName) {
-      Alert.alert('Error', 'Please fill in all fields');
+    // Check required fields
+    if (!formData.firstName.trim()) {
+      Alert.alert('Error', 'Please enter your first name');
+      return false;
+    }
+    
+    if (!formData.lastName.trim()) {
+      Alert.alert('Error', 'Please enter your last name');
+      return false;
+    }
+    
+    if (!formData.email.trim()) {
+      Alert.alert('Error', 'Please enter your email address');
+      return false;
+    }
+    
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return false;
+    }
+    
+    if (!formData.phoneNumber.trim()) {
+      Alert.alert('Error', 'Please enter your phone number');
+      return false;
+    }
+    
+    if (!formData.password.trim()) {
+      Alert.alert('Error', 'Please enter a password');
+      return false;
+    }
+    
+    // Password validation
+    if (formData.password.length < 8) {
+      Alert.alert('Error', 'Password must be at least 8 characters long');
+      return false;
+    }
+    
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+      Alert.alert('Error', 'Password must contain at least one uppercase letter, one lowercase letter, and one number');
       return false;
     }
     
@@ -43,205 +95,300 @@ const RegisterScreen = ({ navigation }) => {
       Alert.alert('Error', 'Passwords do not match');
       return false;
     }
-    
-    if (formData.password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters');
-      return false;
-    }
-    
+
     return true;
   };
 
   const handleRegister = async () => {
     if (!validateForm()) return;
 
-    setIsLoading(true);
-
     try {
-      // TODO: Replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const registrationData = {
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        phoneNumber: formData.phoneNumber.trim(),
+        role: formData.role,
+      };
+
+      const result = await dispatch(registerUser(registrationData)).unwrap();
       
-      Alert.alert(
-        'Success',
-        'Account created successfully! Please select your role.',
-        [
-          {
-            text: 'OK',
-            onPress: () => navigation.navigate('RoleSelection', { userData: formData }),
-          },
-        ]
-      );
-      
+      // Navigation will be handled by RootNavigator based on auth state
+      Alert.alert('Success', 'Account created successfully!');
     } catch (error) {
-      Alert.alert('Registration Failed', error.message);
-    } finally {
-      setIsLoading(false);
+      Alert.alert('Registration Failed', error || 'An error occurred during registration');
     }
   };
 
-  const navigateToLogin = () => {
-    navigation.navigate(ROUTES.LOGIN);
-  };
+  const roles = [
+    {
+      id: 'PATIENT',
+      title: 'Patient',
+      description: 'Book appointments and manage your dental health',
+      icon: 'person',
+    },
+    {
+      id: 'DOCTOR',
+      title: 'Doctor',
+      description: 'Manage patients and provide dental care',
+      icon: 'local-hospital',
+    },
+  ];
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.scheme.background }]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <KeyboardAvoidingView
-        style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContainer}
+          contentContainerStyle={{ flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.header}>
-            <Icon
-              name="person-add"
-              size={60}
-              color={theme.colors.primary}
-              style={styles.logo}
-            />
-            <Text style={[styles.title, { color: theme.scheme.text }]}>
-              Create Account
-            </Text>
-            <Text style={[styles.subtitle, { color: theme.scheme.textSecondary }]}>
-              Join Dentalization today
-            </Text>
-          </View>
+          <View style={{
+            flex: 1,
+            paddingHorizontal: 24,
+            paddingVertical: 32,
+          }}>
+            {/* Header */}
+            <View style={{ alignItems: 'center', marginBottom: 32 }}>
+              <View style={{
+                width: 80,
+                height: 80,
+                borderRadius: 40,
+                backgroundColor: theme.colors.primary,
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginBottom: 24,
+              }}>
+                <Icon name="person-add" size={40} color="#FFFFFF" />
+              </View>
+              <Text style={{
+                fontSize: 28,
+                fontWeight: 'bold',
+                color: theme.colors.text,
+                marginBottom: 8,
+              }}>
+                Create Account
+              </Text>
+              <Text style={{
+                fontSize: 16,
+                color: theme.colors.textSecondary,
+                textAlign: 'center',
+              }}>
+                Join Dentalization to get started
+              </Text>
+            </View>
 
-          <Card style={styles.formCard}>
-            <View style={styles.nameRow}>
+            {/* Role Selection */}
+            <Card style={{ marginBottom: 24 }}>
+              <Text style={{
+                fontSize: 16,
+                fontWeight: '600',
+                color: theme.colors.text,
+                marginBottom: 16,
+              }}>
+                I am a:
+              </Text>
+              
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                {roles.map((role) => (
+                  <TouchableOpacity
+                    key={role.id}
+                    onPress={() => handleRoleSelection(role.id)}
+                    style={{
+                      flex: 1,
+                      padding: 16,
+                      borderRadius: 8,
+                      borderWidth: 2,
+                      borderColor: selectedRole === role.id ? theme.colors.primary : '#E5E5E5',
+                      backgroundColor: selectedRole === role.id ? `${theme.colors.primary}10` : '#FFFFFF',
+                    }}
+                  >
+                    <Icon
+                      name={role.icon}
+                      size={32}
+                      color={selectedRole === role.id ? theme.colors.primary : theme.colors.textSecondary}
+                      style={{ alignSelf: 'center', marginBottom: 8 }}
+                    />
+                    <Text style={{
+                      fontSize: 16,
+                      fontWeight: '600',
+                      color: selectedRole === role.id ? theme.colors.primary : theme.colors.text,
+                      textAlign: 'center',
+                      marginBottom: 4,
+                    }}>
+                      {role.title}
+                    </Text>
+                    <Text style={{
+                      fontSize: 12,
+                      color: theme.colors.textSecondary,
+                      textAlign: 'center',
+                    }}>
+                      {role.description}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </Card>
+
+            {/* Registration Form */}
+            <Card style={{ marginBottom: 24 }}>
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <Input
+                  placeholder="First Name"
+                  value={formData.firstName}
+                  onChangeText={(value) => handleInputChange('firstName', value)}
+                  autoCapitalize="words"
+                  leftIcon="person"
+                  editable={!isLoading}
+                  style={{ flex: 1 }}
+                />
+                
+                <Input
+                  placeholder="Last Name"
+                  value={formData.lastName}
+                  onChangeText={(value) => handleInputChange('lastName', value)}
+                  autoCapitalize="words"
+                  leftIcon="person"
+                  editable={!isLoading}
+                  style={{ flex: 1 }}
+                />
+              </View>
+
               <Input
-                label="First Name"
-                placeholder="First name"
-                value={formData.firstName}
-                onChangeText={(value) => handleInputChange('firstName', value)}
-                containerStyle={styles.nameInput}
+                placeholder="Email Address"
+                value={formData.email}
+                onChangeText={(value) => handleInputChange('email', value)}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                leftIcon="email"
+                editable={!isLoading}
+                style={{ marginTop: 16 }}
+              />
+
+              <Input
+                placeholder="Phone Number"
+                value={formData.phoneNumber}
+                onChangeText={(value) => handleInputChange('phoneNumber', value)}
+                keyboardType="phone-pad"
+                leftIcon="phone"
+                editable={!isLoading}
+                style={{ marginTop: 16 }}
               />
               
               <Input
-                label="Last Name"
-                placeholder="Last name"
-                value={formData.lastName}
-                onChangeText={(value) => handleInputChange('lastName', value)}
-                containerStyle={styles.nameInput}
+                placeholder="Password"
+                value={formData.password}
+                onChangeText={(value) => handleInputChange('password', value)}
+                secureTextEntry={!showPassword}
+                leftIcon="lock"
+                rightIcon={showPassword ? 'visibility-off' : 'visibility'}
+                onRightIconPress={() => setShowPassword(!showPassword)}
+                editable={!isLoading}
+                style={{ marginTop: 16 }}
               />
+
+              <Input
+                placeholder="Confirm Password"
+                value={formData.confirmPassword}
+                onChangeText={(value) => handleInputChange('confirmPassword', value)}
+                secureTextEntry={!showConfirmPassword}
+                leftIcon="lock"
+                rightIcon={showConfirmPassword ? 'visibility-off' : 'visibility'}
+                onRightIconPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                editable={!isLoading}
+                style={{ marginTop: 16 }}
+              />
+
+              {/* Password Requirements */}
+              <View style={{
+                marginTop: 12,
+                padding: 12,
+                backgroundColor: '#F8F9FA',
+                borderRadius: 8,
+              }}>
+                <Text style={{
+                  fontSize: 12,
+                  color: theme.colors.textSecondary,
+                  fontWeight: '500',
+                  marginBottom: 4,
+                }}>
+                  Password Requirements:
+                </Text>
+                <Text style={{
+                  fontSize: 11,
+                  color: theme.colors.textSecondary,
+                  lineHeight: 16,
+                }}>
+                  • At least 8 characters{'\n'}
+                  • One uppercase letter{'\n'}
+                  • One lowercase letter{'\n'}
+                  • One number
+                </Text>
+              </View>
+
+              {/* Register Button */}
+              <Button
+                title="Create Account"
+                onPress={handleRegister}
+                loading={isLoading}
+                style={{ marginTop: 24 }}
+              />
+
+              {/* Error Message */}
+              {error && (
+                <View style={{
+                  marginTop: 16,
+                  padding: 12,
+                  backgroundColor: '#FEF2F2',
+                  borderRadius: 8,
+                  borderLeftWidth: 4,
+                  borderLeftColor: '#EF4444',
+                }}>
+                  <Text style={{
+                    color: '#EF4444',
+                    fontSize: 14,
+                    fontWeight: '500',
+                  }}>
+                    {error}
+                  </Text>
+                </View>
+              )}
+            </Card>
+
+            {/* Sign In Link */}
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+              <Text style={{
+                fontSize: 16,
+                color: theme.colors.textSecondary,
+              }}>
+                Already have an account?{' '}
+              </Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate(ROUTES.LOGIN)}
+                disabled={isLoading}
+              >
+                <Text style={{
+                  fontSize: 16,
+                  color: theme.colors.primary,
+                  fontWeight: '600',
+                }}>
+                  Sign In
+                </Text>
+              </TouchableOpacity>
             </View>
-
-            <Input
-              label="Email"
-              placeholder="Enter your email"
-              value={formData.email}
-              onChangeText={(value) => handleInputChange('email', value)}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              leftIcon={
-                <Icon name="email" size={20} color={theme.colors.secondaryText} />
-              }
-            />
-
-            <Input
-              label="Password"
-              placeholder="Create a password"
-              value={formData.password}
-              onChangeText={(value) => handleInputChange('password', value)}
-              secureTextEntry
-              leftIcon={
-                <Icon name="lock" size={20} color={theme.colors.secondaryText} />
-              }
-            />
-
-            <Input
-              label="Confirm Password"
-              placeholder="Confirm your password"
-              value={formData.confirmPassword}
-              onChangeText={(value) => handleInputChange('confirmPassword', value)}
-              secureTextEntry
-              leftIcon={
-                <Icon name="lock" size={20} color={theme.colors.secondaryText} />
-              }
-            />
-
-            <Button
-              title="Create Account"
-              onPress={handleRegister}
-              loading={isLoading}
-              style={styles.registerButton}
-            />
-          </Card>
-
-          <View style={styles.footer}>
-            <Text style={[styles.footerText, { color: theme.scheme.textSecondary }]}>
-              Already have an account?{' '}
-            </Text>
-            <Button
-              title="Sign In"
-              variant="ghost"
-              onPress={navigateToLogin}
-              style={styles.signInButton}
-            />
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 32,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  logo: {
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  formCard: {
-    marginBottom: 24,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  nameInput: {
-    flex: 1,
-    marginHorizontal: 4,
-  },
-  registerButton: {
-    marginTop: 8,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-  },
-  footerText: {
-    fontSize: 14,
-  },
-  signInButton: {
-    paddingHorizontal: 0,
-    minHeight: 'auto',
-  },
-});
 
 export default RegisterScreen;

@@ -5,6 +5,7 @@ import {
   ActivityIndicator,
   View,
 } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useTheme } from './ThemeProvider';
 
 const Button = ({
@@ -15,6 +16,8 @@ const Button = ({
   disabled = false,
   loading = false,
   icon,
+  leftIcon,
+  rightIcon,
   style,
   textStyle,
   ...props
@@ -30,6 +33,7 @@ const Button = ({
         minHeight: 36,
       },
       text: theme.text.sm,
+      iconSize: 16,
     },
     md: {
       container: {
@@ -38,6 +42,7 @@ const Button = ({
         minHeight: 48,
       },
       text: theme.text.base,
+      iconSize: 20,
     },
     lg: {
       container: {
@@ -46,6 +51,7 @@ const Button = ({
         minHeight: 56,
       },
       text: theme.text.lg,
+      iconSize: 24,
     },
   };
 
@@ -107,6 +113,25 @@ const Button = ({
     ? theme.colors.white
     : theme.colors.roleColors?.primary || theme.colors.primary;
 
+  // Get icon color based on variant
+  const getIconColor = () => {
+    if (disabled) return theme.colors.gray500;
+    
+    switch (variant) {
+      case 'primary':
+      case 'danger':
+        return theme.colors.white;
+      case 'outline':
+        return theme.colors.roleColors?.primary || theme.colors.primary;
+      case 'ghost':
+        return theme.colors.roleColors?.primary || theme.colors.primary;
+      default:
+        return theme.colors.white;
+    }
+  };
+
+  const iconColor = getIconColor();
+
   return (
     <TouchableOpacity
       style={containerStyles}
@@ -121,13 +146,30 @@ const Button = ({
         <View style={{
           flexDirection: 'row',
           alignItems: 'center',
+          justifyContent: 'center',
         }}>
-          {icon && (
-            <View style={{ marginRight: theme.space[2] }}>
-              {icon}
-            </View>
+          {/* Left Icon */}
+          {(leftIcon || icon) && (
+            <Icon
+              name={leftIcon || icon}
+              size={currentSize.iconSize}
+              color={iconColor}
+              style={{ marginRight: title ? theme.space[2] : 0 }}
+            />
           )}
-          <Text style={textStyles}>{title}</Text>
+          
+          {/* Title */}
+          {title && <Text style={textStyles}>{title}</Text>}
+          
+          {/* Right Icon */}
+          {rightIcon && (
+            <Icon
+              name={rightIcon}
+              size={currentSize.iconSize}
+              color={iconColor}
+              style={{ marginLeft: title ? theme.space[2] : 0 }}
+            />
+          )}
         </View>
       )}
     </TouchableOpacity>

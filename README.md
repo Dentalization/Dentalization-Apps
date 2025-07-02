@@ -246,12 +246,12 @@ enum MessageType {
 
 ## 🔐 Phase 2: Authentication & Role Management (Weeks 4-6)
 
-### Week 4: Unified Authentication System
-- [ ] **Single Auth Flow**
-  - Create shared login/register screens
-  - Implement role selection during registration
-  - Set up biometric authentication for both roles
-  - Configure secure token storage
+### Week 4: Unified Authentication System ✅
+- [x] **Single Auth Flow**
+  - ✅ Create shared login/register screens
+  - ✅ Implement role selection during registration
+  - ✅ Set up biometric authentication for both roles
+  - ✅ Configure secure token storage
 
 ### Week 5: Role-Based Profiles
 - [ ] **Patient Profile Setup**

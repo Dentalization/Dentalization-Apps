@@ -1,211 +1,328 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 import { useTheme } from '../../components/common/ThemeProvider';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Card from '../../components/common/Card';
-import { loginStart, loginSuccess, loginFailure } from '../../store/slices/authSlice';
+import { 
+  loginUser, 
+  loginWithBiometric, 
+  clearError,
+  setBiometricAvailable,
+  setBiometricEnabled 
+} from '../../store/slices/authSlice';
+import BiometricService from '../../services/biometricService';
 import { ROUTES } from '../../../shared/constants';
 
 const LoginScreen = ({ navigation }) => {
   const theme = useTheme();
   const dispatch = useDispatch();
+  const { isLoading, error, biometricAvailable, biometricEnabled } = useSelector(state => state.auth);
   
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
-  const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [biometricType, setBiometricType] = useState(null);
+
+  useEffect(() => {
+    initializeBiometric();
+    return () => {
+      dispatch(clearError());
+    };
+  }, [dispatch]);
+
+  const initializeBiometric = async () => {
+    try {
+      const biometricService = new BiometricService();
+      const type = await biometricService.getBiometricType();
+      const hasStoredCredentials = await biometricService.hasStoredCredentials();
+      
+      setBiometricType(type);
+      dispatch(setBiometricAvailable(!!type));
+      dispatch(setBiometricEnabled(hasStoredCredentials));
+    } catch (error) {
+      console.log('Biometric initialization error:', error);
+    }
+  };
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleLogin = async () => {
-    if (!formData.email || !formData.password) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
+  const validateForm = () => {
+    if (!formData.email.trim()) {
+      Alert.alert('Error', 'Please enter your email address');
+      return false;
+    }
+    
+    if (!formData.email.includes('@')) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return false;
+    }
+    
+    if (!formData.password.trim()) {
+      Alert.alert('Error', 'Please enter your password');
+      return false;
+    }
+    
+    if (formData.password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters long');
+      return false;
     }
 
-    setIsLoading(true);
-    dispatch(loginStart());
+    return true;
+  };
+
+  const handleLogin = async () => {
+    if (!validateForm()) return;
 
     try {
-      // TODO: Replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Mock successful login
-      const mockUser = {
-        id: '1',
-        email: formData.email,
-        role: 'PATIENT', // Will be dynamic based on actual login
-        name: 'John Doe',
-      };
-      
-      const mockToken = 'mock-jwt-token';
-      
-      dispatch(loginSuccess({ user: mockUser, token: mockToken }));
-      
+      const result = await dispatch(loginUser({
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
+        rememberMe: rememberMe,
+      })).unwrap();
+
+      // Navigation will be handled by RootNavigator based on auth state
     } catch (error) {
-      dispatch(loginFailure(error.message));
-      Alert.alert('Login Failed', error.message);
-    } finally {
-      setIsLoading(false);
+      Alert.alert('Login Failed', error || 'An error occurred during login');
     }
   };
 
-  const navigateToRegister = () => {
-    navigation.navigate(ROUTES.REGISTER);
+  const handleBiometricLogin = async () => {
+    try {
+      const result = await dispatch(loginWithBiometric()).unwrap();
+      // Navigation will be handled by RootNavigator based on auth state
+    } catch (error) {
+      Alert.alert('Biometric Login Failed', error || 'Biometric authentication failed');
+    }
   };
 
-  const navigateToForgotPassword = () => {
-    navigation.navigate(ROUTES.FORGOT_PASSWORD);
+  const getBiometricIcon = () => {
+    switch (biometricType) {
+      case 'FaceID':
+        return 'face';
+      case 'TouchID':
+      case 'Fingerprint':
+        return 'fingerprint';
+      default:
+        return 'security';
+    }
+  };
+
+  const getBiometricText = () => {
+    switch (biometricType) {
+      case 'FaceID':
+        return 'Login with Face ID';
+      case 'TouchID':
+        return 'Login with Touch ID';
+      case 'Fingerprint':
+        return 'Login with Fingerprint';
+      default:
+        return 'Login with Biometric';
+    }
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.scheme.background }]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <KeyboardAvoidingView
-        style={styles.keyboardView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContainer}
+          contentContainerStyle={{ flexGrow: 1 }}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.header}>
-            <Icon
-              name="local-hospital"
-              size={60}
-              color={theme.colors.primary}
-              style={styles.logo}
-            />
-            <Text style={[styles.title, { color: theme.scheme.text }]}>
-              Welcome to Dentalization
-            </Text>
-            <Text style={[styles.subtitle, { color: theme.scheme.textSecondary }]}>
-              Sign in to continue
-            </Text>
-          </View>
+          <View style={{
+            flex: 1,
+            justifyContent: 'center',
+            paddingHorizontal: 24,
+            paddingVertical: 32,
+          }}>
+            {/* Header */}
+            <View style={{ alignItems: 'center', marginBottom: 48 }}>
+              <View style={{
+                width: 80,
+                height: 80,
+                borderRadius: 40,
+                backgroundColor: theme.colors.primary,
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginBottom: 24,
+              }}>
+                <Icon name="local-hospital" size={40} color="#FFFFFF" />
+              </View>
+              <Text style={{
+                fontSize: 28,
+                fontWeight: 'bold',
+                color: theme.colors.text,
+                marginBottom: 8,
+              }}>
+                Welcome Back
+              </Text>
+              <Text style={{
+                fontSize: 16,
+                color: theme.colors.textSecondary,
+                textAlign: 'center',
+              }}>
+                Sign in to continue to Dentalization
+              </Text>
+            </View>
 
-          <Card style={styles.formCard}>
-            <Input
-              label="Email"
-              placeholder="Enter your email"
-              value={formData.email}
-              onChangeText={(value) => handleInputChange('email', value)}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              leftIcon={
-                <Icon name="email" size={20} color={theme.colors.secondaryText} />
-              }
-            />
+            {/* Login Form */}
+            <Card style={{ marginBottom: 24 }}>
+              <Input
+                placeholder="Email Address"
+                value={formData.email}
+                onChangeText={(value) => handleInputChange('email', value)}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                leftIcon="email"
+                editable={!isLoading}
+              />
+              
+              <Input
+                placeholder="Password"
+                value={formData.password}
+                onChangeText={(value) => handleInputChange('password', value)}
+                secureTextEntry={!showPassword}
+                leftIcon="lock"
+                rightIcon={showPassword ? 'visibility-off' : 'visibility'}
+                onRightIconPress={() => setShowPassword(!showPassword)}
+                editable={!isLoading}
+                style={{ marginTop: 16 }}
+              />
 
-            <Input
-              label="Password"
-              placeholder="Enter your password"
-              value={formData.password}
-              onChangeText={(value) => handleInputChange('password', value)}
-              secureTextEntry
-              leftIcon={
-                <Icon name="lock" size={20} color={theme.colors.secondaryText} />
-              }
-            />
+              {/* Remember Me & Forgot Password */}
+              <View style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginTop: 16,
+              }}>
+                <TouchableOpacity
+                  onPress={() => setRememberMe(!rememberMe)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                  }}
+                  disabled={isLoading}
+                >
+                  <Icon
+                    name={rememberMe ? 'check-box' : 'check-box-outline-blank'}
+                    size={20}
+                    color={rememberMe ? theme.colors.primary : theme.colors.textSecondary}
+                  />
+                  <Text style={{
+                    marginLeft: 8,
+                    fontSize: 14,
+                    color: theme.colors.text,
+                  }}>
+                    Remember me
+                  </Text>
+                </TouchableOpacity>
 
-            <Button
-              title="Sign In"
-              onPress={handleLogin}
-              loading={isLoading}
-              style={styles.loginButton}
-            />
+                <TouchableOpacity
+                  onPress={() => navigation.navigate(ROUTES.FORGOT_PASSWORD)}
+                  disabled={isLoading}
+                >
+                  <Text style={{
+                    fontSize: 14,
+                    color: theme.colors.primary,
+                    fontWeight: '500',
+                  }}>
+                    Forgot Password?
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
-            <Button
-              title="Forgot Password?"
-              variant="ghost"
-              onPress={navigateToForgotPassword}
-              style={styles.forgotButton}
-            />
-          </Card>
+              {/* Login Button */}
+              <Button
+                title="Sign In"
+                onPress={handleLogin}
+                loading={isLoading}
+                style={{ marginTop: 24 }}
+              />
 
-          <View style={styles.footer}>
-            <Text style={[styles.footerText, { color: theme.scheme.textSecondary }]}>
-              Don't have an account?{' '}
-            </Text>
-            <Button
-              title="Sign Up"
-              variant="ghost"
-              onPress={navigateToRegister}
-              style={styles.signUpButton}
-            />
+              {/* Biometric Login */}
+              {biometricAvailable && biometricEnabled && (
+                <Button
+                  title={getBiometricText()}
+                  onPress={handleBiometricLogin}
+                  variant="outline"
+                  leftIcon={getBiometricIcon()}
+                  loading={isLoading}
+                  style={{ marginTop: 16 }}
+                />
+              )}
+
+              {/* Error Message */}
+              {error && (
+                <View style={{
+                  marginTop: 16,
+                  padding: 12,
+                  backgroundColor: '#FEF2F2',
+                  borderRadius: 8,
+                  borderLeftWidth: 4,
+                  borderLeftColor: '#EF4444',
+                }}>
+                  <Text style={{
+                    color: '#EF4444',
+                    fontSize: 14,
+                    fontWeight: '500',
+                  }}>
+                    {error}
+                  </Text>
+                </View>
+              )}
+            </Card>
+
+            {/* Sign Up Link */}
+            <View style={{
+              flexDirection: 'row',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+              <Text style={{
+                fontSize: 16,
+                color: theme.colors.textSecondary,
+              }}>
+                Don't have an account?{' '}
+              </Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate(ROUTES.REGISTER)}
+                disabled={isLoading}
+              >
+                <Text style={{
+                  fontSize: 16,
+                  color: theme.colors.primary,
+                  fontWeight: '600',
+                }}>
+                  Sign Up
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 32,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  logo: {
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  formCard: {
-    marginBottom: 24,
-  },
-  loginButton: {
-    marginTop: 8,
-  },
-  forgotButton: {
-    marginTop: 16,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-  },
-  footerText: {
-    fontSize: 14,
-  },
-  signUpButton: {
-    paddingHorizontal: 0,
-    minHeight: 'auto',
-  },
-});
 
 export default LoginScreen;
