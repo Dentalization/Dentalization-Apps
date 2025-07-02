@@ -1,9 +1,12 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
+const compression = require('compression');
+const morgan = require('morgan');
+const cookieParser = require('cookie-parser');
 const dotenv = require('dotenv');
 const { PrismaClient } = require('@prisma/client');
+const { generalLimiter } = require('./middleware/rateLimiter');
 
 // Load environment variables
 dotenv.config();
@@ -16,22 +19,31 @@ const app = express();
 
 // Security middleware
 app.use(helmet());
+app.use(compression());
+
+// CORS configuration
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+  origin: process.env.NODE_ENV === 'production'
+    ? process.env.FRONTEND_URL
+    : ['http://localhost:3000', 'http://localhost:19006'], // Dev: React Web + React Native
   credentials: true,
 }));
 
 // Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.',
-});
-app.use(limiter);
+app.use(generalLimiter);
+
+// Logging
+if (process.env.NODE_ENV !== 'test') {
+  app.use(morgan('combined'));
+}
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
+
+// Static files (for uploaded photos)
+app.use('/uploads', express.static('uploads'));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -39,6 +51,7 @@ app.get('/health', (req, res) => {
     status: 'OK',
     message: 'Dentalization API is running',
     timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
   });
 });
 
@@ -53,35 +66,77 @@ app.use('/api/admin', require('./routes/admin'));
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
-    error: 'Not Found',
-    message: 'The requested resource was not found on this server.',
+    success: false,
+    message: 'Route not found',
   });
 });
 
 // Global error handler
-app.use((err, req, res, next) => {
-  console.error('Error:', err);
-  
-  res.status(err.status || 500).json({
-    error: 'Internal Server Error',
-    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+app.use((error, req, res, next) => {
+  console.error('Global error:', error);
+
+  // Prisma errors
+  if (error.code === 'P2002') {
+    return res.status(400).json({
+      success: false,
+      message: 'A record with this data already exists',
+    });
+  }
+
+  if (error.code === 'P2025') {
+    return res.status(404).json({
+      success: false,
+      message: 'Record not found',
+    });
+  }
+
+  // Multer errors (file upload)
+  if (error.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({
+      success: false,
+      message: 'File size too large',
+    });
+  }
+
+  if (error.message === 'Only image files are allowed') {
+    return res.status(400).json({
+      success: false,
+      message: 'Only image files are allowed',
+    });
+  }
+
+  // Default error response
+  res.status(error.status || 500).json({
+    success: false,
+    message: error.message || 'Internal server error',
+    ...(process.env.NODE_ENV === 'development' && { stack: error.stack }),
   });
 });
 
 // Start server
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 const server = app.listen(PORT, () => {
   console.log(`🚀 Dentalization API server running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
+  console.log(`🔒 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 // Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully');
+process.on('SIGINT', async () => {
+  console.log('Received SIGINT, shutting down gracefully...');
   await prisma.$disconnect();
   server.close(() => {
     console.log('Process terminated');
+    process.exit(0);
+  });
+});
+
+process.on('SIGTERM', async () => {
+  console.log('Received SIGTERM, shutting down gracefully...');
+  await prisma.$disconnect();
+  server.close(() => {
+    console.log('Process terminated');
+    process.exit(0);
   });
 });
 
