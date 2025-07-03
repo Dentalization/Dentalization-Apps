@@ -1,8 +1,8 @@
 const express = require('express');
-const sharedController = require('../controllers/sharedController');
-const { authenticate } = require('../middleware/auth');
+const sharedController = require('../../controllers/sharedController');
+const { authenticate } = require('../../middleware/auth');
 const { body } = require('express-validator');
-const { handleValidationErrors } = require('../middleware/validation');
+const { handleValidationErrors } = require('../../middleware/validation');
 
 const router = express.Router();
 
