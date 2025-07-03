@@ -93,9 +93,19 @@ model PatientProfile {
   medications      String?
   medicalHistory   String?
   insuranceInfo    String?
+  painTolerance    String?
+  preferredLanguage String?
+  dietaryRestrictions String?
+  smokingStatus    String?
+  
+  // Dental specific
+  dentalConcerns   String?
+  previousDentalWork String?
+  lastDentalVisit  DateTime?
   
   // App-specific
   profilePicture   String?
+  profileComplete  Boolean   @default(false)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
   
@@ -118,13 +128,26 @@ model DoctorProfile {
   // Professional information
   licenseNumber     String    @unique
   specialization    String?
+  subspecialties    String[]  // Array of subspecialties
   experience        Int?      // years of experience
   education         String?
+  certifications    String[]  // Array of certifications
   
   // Clinic information
   clinicName        String?
   clinicAddress     String?
   clinicPhone       String?
+  clinicWebsite     String?
+  
+  // Services and scheduling
+  services          String[]  // Array of services offered
+  workingHours      String?   // JSON string for working hours
+  appointmentDuration Int?    // Default appointment duration in minutes
+  
+  // Financial
+  consultationFee   Float?
+  acceptedInsurance String[]  // Array of accepted insurance providers
+  paymentMethods    String[]  // Array of accepted payment methods
   
   // Verification
   isVerified        Boolean   @default(false)
@@ -133,8 +156,7 @@ model DoctorProfile {
   // App-specific
   profilePicture    String?
   bio               String?
-  consultationFee   Float?
-  availability      String?   // JSON string for availability schedule
+  profileComplete   Boolean   @default(false)
   
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt

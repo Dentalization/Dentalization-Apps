@@ -57,11 +57,11 @@ app.get('/health', (req, res) => {
 
 // API Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/profile', require('./routes/profile'));
 app.use('/api/patients', require('./routes/patients'));
 app.use('/api/doctors', require('./routes/doctors'));
-app.use('/api/appointments', require('./routes/shared/appointments'));
-app.use('/api/chat', require('./routes/shared/chat'));
-app.use('/api/admin', require('./routes/admin'));
+app.use('/api/shared', require('./routes/shared'));
+// app.use('/api/admin', require('./routes/admin'));
 
 // 404 handler
 app.use('*', (req, res) => {

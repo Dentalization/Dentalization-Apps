@@ -14,7 +14,7 @@
 
 ```
 Dentalization-Apps/
-├── mobile-app/                        # Single React Native App (Patient + Doctor)
+├── DentalizationApp/                        # Single React Native App (Patient + Doctor)
 │   ├── src/
 │   │   ├── components/               # Shared UI components
 │   │   │   ├── common/              # Common components
@@ -253,18 +253,43 @@ enum MessageType {
   - ✅ Set up biometric authentication for both roles
   - ✅ Configure secure token storage
 
-### Week 5: Role-Based Profiles
-- [ ] **Patient Profile Setup**
-  - Patient registration with medical history
-  - Photo upload capabilities
-  - Emergency contact information
-  - Health preferences and allergies
+### Week 5: Role-Based Profiles ✅ (Completed)
+- [x] **Patient Profile Setup**
+  - ✅ Multi-step patient profile form (personal info, dental history, health info, emergency contact, preferences)
+  - ✅ Photo upload capabilities for profile pictures
+  - ✅ Emergency contact information collection
+  - ✅ Comprehensive health preferences and allergies
+  - ✅ Dental-specific fields (anxiety level, pain tolerance, previous treatments, dental concerns)
+  - ✅ Insurance information and payment preferences
 
-- [ ] **Doctor Profile Setup**
-  - Doctor registration with license verification
-  - Professional credentials upload
-  - Clinic information and availability setup
-  - Specialization and experience details
+- [x] **Doctor Profile Setup**
+  - ✅ Multi-step doctor profile form (professional info, credentials, clinic info, services, documents)
+  - ✅ License verification and document upload
+  - ✅ Professional credentials and education details
+  - ✅ Enhanced dental registration with dental license number, license issuing body, and expiry date
+  - ✅ Education qualification selection (DDS, DMD, BDS, MDS, PhD)
+  - ✅ Clinic information and working hours setup
+  - ✅ Dental specialization selection (General Dentistry, Orthodontics, Periodontics, etc.)
+  - ✅ Detailed dental services offered selection (12+ dental procedures)
+  - ✅ Consultation types offered (In-Person, Virtual, Emergency, Home Visit)
+  - ✅ Insurance and BPJS acceptance options
+  - ✅ Emergency availability toggle
+  - ✅ Professional bio/about section
+
+- [x] **Backend Integration**
+  - ✅ PostgreSQL database with proper schema (enums, arrays, relationships)
+  - ✅ Profile setup API endpoints for patients and doctors
+  - ✅ File upload endpoints for profile photos and documents
+  - ✅ Profile completion tracking and navigation flow
+  - ✅ Database seeding with sample data for testing
+  - ✅ Backend server running successfully with all imports fixed
+
+- [x] **Navigation & Flow Integration**
+  - ✅ Profile completion status tracking in Redux
+  - ✅ Automatic routing to profile setup for incomplete profiles
+  - ✅ Profile service for API communication
+  - [ ] Error handling and validation feedback in UI
+  - [ ] Success feedback and smooth transitions
 
 ### Week 6: Profile Management
 - [ ] **Unified Profile Features**

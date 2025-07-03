@@ -1,10 +1,10 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const patientController = require('../controllers/patientController');
-const { authenticate, authorize } = require('../middleware/auth');
-const { validateProfileUpdate, validateAppointment } = require('../middleware/validation');
-const { uploadLimiter } = require('../middleware/rateLimiter');
+const patientController = require('../../controllers/patientController');
+const { authenticate, authorize } = require('../../middleware/auth');
+const { validateProfileUpdate, validateAppointment } = require('../../middleware/validation');
+const { uploadLimiter } = require('../../middleware/rateLimiter');
 
 const router = express.Router();
 
