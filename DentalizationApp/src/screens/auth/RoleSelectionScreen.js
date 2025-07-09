@@ -15,6 +15,7 @@ import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
 import { loginSuccess } from '../../store/slices/authSlice';
 import { USER_ROLES } from '../../constants/roles';
+import { ROUTES } from '../../constants';
 
 const RoleSelectionScreen = ({ navigation, route }) => {
   const theme = useTheme();
@@ -27,17 +28,19 @@ const RoleSelectionScreen = ({ navigation, route }) => {
   const roles = [
     {
       id: USER_ROLES.PATIENT,
-      title: 'Patient',
-      description: 'Book appointments, upload photos, and consult with doctors',
+      title: 'Pasien',
+      description: 'Saya mencari dokter gigi atau memerlukan perawatan gigi',
       icon: 'person',
       color: theme.colors.patient.primary,
+      route: ROUTES.REGISTER_PATIENT,
     },
     {
       id: USER_ROLES.DOCTOR,
-      title: 'Doctor',
-      description: 'Manage patients, diagnose conditions, and provide consultations',
+      title: 'Dokter Gigi',
+      description: 'Saya adalah dokter gigi yang ingin bergabung dengan platform ini',
       icon: 'local-hospital',
       color: theme.colors.doctor.primary,
+      route: ROUTES.REGISTER_DOCTOR,
     },
   ];
 
@@ -45,34 +48,15 @@ const RoleSelectionScreen = ({ navigation, route }) => {
     setSelectedRole(role);
   };
 
-  const handleContinue = async () => {
+  const handleContinue = () => {
     if (!selectedRole) {
-      Alert.alert('Error', 'Please select a role to continue');
+      Alert.alert('Error', 'Silakan pilih jenis akun untuk melanjutkan');
       return;
     }
 
-    setIsLoading(true);
-
-    try {
-      // TODO: Replace with actual API call to complete registration
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Mock successful registration with role
-      const mockUser = {
-        id: '1',
-        email: userData?.email || 'user@example.com',
-        role: selectedRole,
-        name: `${userData?.firstName || 'John'} ${userData?.lastName || 'Doe'}`,
-      };
-      
-      const mockToken = 'mock-jwt-token';
-      
-      dispatch(loginSuccess({ user: mockUser, token: mockToken }));
-      
-    } catch (error) {
-      Alert.alert('Registration Failed', error.message);
-    } finally {
-      setIsLoading(false);
+    const selectedRoleObj = roles.find(role => role.id === selectedRole);
+    if (selectedRoleObj && selectedRoleObj.route) {
+      navigation.navigate(selectedRoleObj.route);
     }
   };
 
@@ -125,10 +109,10 @@ const RoleSelectionScreen = ({ navigation, route }) => {
             style={styles.logo}
           />
           <Text style={[styles.title, { color: theme.scheme.text }]}>
-            Choose Your Role
+            Pilih Peran Anda
           </Text>
           <Text style={[styles.subtitle, { color: theme.scheme.textSecondary }]}>
-            Select how you'll be using Dentalization
+            Pilih bagaimana Anda akan menggunakan Dentalization
           </Text>
         </View>
 
@@ -138,7 +122,7 @@ const RoleSelectionScreen = ({ navigation, route }) => {
 
         <View style={styles.footer}>
           <Button
-            title="Continue"
+            title="Lanjutkan"
             onPress={handleContinue}
             loading={isLoading}
             disabled={!selectedRole}
@@ -146,7 +130,7 @@ const RoleSelectionScreen = ({ navigation, route }) => {
           />
           
           <Text style={[styles.footerNote, { color: theme.scheme.textSecondary }]}>
-            You can change your role later in settings
+            Mohon di Pilih Peran dengan Bijak. Jika Anda Dokter Gigi, pastikan Anda memiliki lisensi yang valid.
           </Text>
         </View>
       </View>

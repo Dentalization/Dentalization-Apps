@@ -2,7 +2,8 @@
 export const ROUTES = {
   // Auth routes
   LOGIN: 'Login',
-  REGISTER: 'Register',
+  REGISTER_PATIENT: 'RegisterPatient',
+  REGISTER_DOCTOR: 'RegisterDoctor',
   FORGOT_PASSWORD: 'ForgotPassword',
   RESET_PASSWORD: 'ResetPassword',
   VERIFY_EMAIL: 'VerifyEmail',
@@ -22,6 +23,7 @@ export const ROUTES = {
   
   // Patient routes
   PATIENT_DASHBOARD: 'PatientDashboard',
+  PATIENT_CAMERA: 'PatientCamera',
   PATIENT_APPOINTMENTS: 'PatientAppointments',
   PATIENT_HISTORY: 'PatientHistory',
   PATIENT_DIAGNOSIS: 'PatientDiagnosis',

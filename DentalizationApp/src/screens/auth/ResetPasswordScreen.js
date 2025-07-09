@@ -42,12 +42,13 @@ const ResetPasswordScreen = ({ navigation, route }) => {
       return false;
     }
     
-    // Check for at least one uppercase letter, one lowercase letter, and one number
+    // Check for at least one uppercase letter, one lowercase letter, one number, and one special character
     const hasUppercase = /[A-Z]/.test(password);
     const hasLowercase = /[a-z]/.test(password);
     const hasNumber = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>\[\]]/.test(password);
     
-    return hasUppercase && hasLowercase && hasNumber;
+    return hasUppercase && hasLowercase && hasNumber && hasSpecialChar;
   };
 
   const handleResetPassword = async () => {
@@ -56,24 +57,24 @@ const ResetPasswordScreen = ({ navigation, route }) => {
     
     // Validate fields
     if (!newPassword || !confirmPassword) {
-      setError('Please enter both password fields.');
+      setError('Silakan masukkan kedua kolom kata sandi.');
       return;
     }
     
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match.');
+      setError('Kata sandi tidak cocok.');
       return;
     }
     
     if (!validatePassword(newPassword)) {
       setError(
-        'Password must be at least 8 characters with at least one uppercase letter, one lowercase letter, and one number.'
+        'Kata sandi harus minimal 8 karakter dengan minimal satu huruf besar, satu huruf kecil, satu angka, dan satu karakter khusus (!@#$%^&*(),.?":{}|).'
       );
       return;
     }
     
     if (!token) {
-      setError('Invalid or missing reset token. Please use the link from your email.');
+      setError('Token reset tidak valid atau tidak ada. Silakan gunakan tautan dari email Anda.');
       return;
     }
     
@@ -128,20 +129,20 @@ const ResetPasswordScreen = ({ navigation, route }) => {
               />
             </View>
             <Text style={[styles.title, { color: theme.colors.text }]}>
-              {resetSuccessful ? 'Password Reset Successful' : 'Reset Your Password'}
+              {resetSuccessful ? 'Pengaturan Ulang Kata Sandi Berhasil' : 'Atur Ulang Kata Sandi Anda'}
             </Text>
             <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
               {resetSuccessful 
-                ? 'Your password has been reset successfully. You can now log in with your new password.'
-                : 'Create a new secure password for your account'}
+                ? 'Kata sandi Anda telah diatur ulang dengan sukses. Anda sekarang dapat masuk dengan kata sandi baru Anda.'
+                : 'Buat kata sandi baru yang aman untuk akun Anda'}
             </Text>
           </View>
 
           <Card style={styles.formCard}>
             {!resetSuccessful ? (
-              <>
+              <React.Fragment>
                 <Input
-                  placeholder="New Password"
+                  placeholder="Kata Sandi Baru"
                   value={newPassword}
                   onChangeText={(text) => {
                     setNewPassword(text);
@@ -155,7 +156,7 @@ const ResetPasswordScreen = ({ navigation, route }) => {
                 />
 
                 <Input
-                  placeholder="Confirm New Password"
+                  placeholder="Konfirmasi Kata Sandi Baru"
                   value={confirmPassword}
                   onChangeText={(text) => {
                     setConfirmPassword(text);
@@ -182,17 +183,18 @@ const ResetPasswordScreen = ({ navigation, route }) => {
                     fontWeight: '500',
                     marginBottom: 4,
                   }}>
-                    Password Requirements:
+                    Persyaratan Kata Sandi:
                   </Text>
                   <Text style={{
                     fontSize: 11,
                     color: theme.colors.textSecondary,
                     lineHeight: 16,
                   }}>
-                    • At least 8 characters{'\n'}
-                    • One uppercase letter{'\n'}
-                    • One lowercase letter{'\n'}
-                    • One number
+                    • Minimal 8 karakter{'\n'}
+                    • Satu huruf besar{'\n'}
+                    • Satu huruf kecil{'\n'}
+                    • Satu angka{'\n'}
+                    • Satu karakter khusus (!@#$%^&*(),.?":{}|&lt;&gt;)
                   </Text>
                 </View>
 
@@ -203,12 +205,12 @@ const ResetPasswordScreen = ({ navigation, route }) => {
                 )}
 
                 <Button
-                  title="Reset Password"
+                  title="Atur Ulang Kata Sandi"
                   onPress={handleResetPassword}
                   loading={isLoading}
                   style={styles.resetButton}
                 />
-              </>
+              </React.Fragment>
             ) : (
               <View style={styles.successContainer}>
                 <Icon
@@ -218,14 +220,14 @@ const ResetPasswordScreen = ({ navigation, route }) => {
                   style={styles.successIcon}
                 />
                 <Text style={[styles.successTitle, { color: theme.colors.text }]}>
-                  Password Reset Successful!
+                  Pengaturan Ulang Kata Sandi Berhasil!
                 </Text>
                 <Text style={[styles.successText, { color: theme.colors.textSecondary }]}>
-                  Your password has been reset successfully. You can now log in with your new password.
+                  Kata sandi Anda telah diatur ulang dengan sukses. Anda sekarang dapat masuk dengan kata sandi baru Anda.
                 </Text>
                 
                 <Button
-                  title="Login"
+                  title="Masuk"
                   onPress={navigateToLogin}
                   style={{ marginTop: 24 }}
                 />

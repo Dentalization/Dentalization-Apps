@@ -1,11 +1,11 @@
 // Color schemes for light/dark mode
 export const ColorSchemes = {
   light: {
-    background: '#FFFFFF',
-    surface: '#F5F5F5',
-    surfaceVariant: '#EEEEEE',
-    text: '#212121',
-    textSecondary: '#757575',
+    background: '#F2F1F8',
+    surface: '#FFFFFF',
+    surfaceVariant: '#F2F1F8',
+    text: '#333333',
+    textSecondary: '#6E6E6E',
     border: '#E0E0E0',
     divider: '#BDBDBD',
     elevation: {

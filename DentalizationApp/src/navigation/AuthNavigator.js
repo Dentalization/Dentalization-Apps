@@ -2,7 +2,9 @@ import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 
 import LoginScreen from '../screens/auth/LoginScreen';
-import RegisterScreen from '../screens/auth/RegisterScreen';
+
+import RegisterPatientScreen from '../screens/auth/RegisterPatientScreen';
+import RegisterDoctorScreen from '../screens/auth/RegisterDoctorScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 import EmailVerificationScreen from '../screens/auth/EmailVerificationScreen';
@@ -22,7 +24,9 @@ const AuthNavigator = () => {
       }}
     >
       <Stack.Screen name={ROUTES.LOGIN} component={LoginScreen} />
-      <Stack.Screen name={ROUTES.REGISTER} component={RegisterScreen} />
+
+      <Stack.Screen name={ROUTES.REGISTER_PATIENT} component={RegisterPatientScreen} />
+      <Stack.Screen name={ROUTES.REGISTER_DOCTOR} component={RegisterDoctorScreen} />
       <Stack.Screen name={ROUTES.FORGOT_PASSWORD} component={ForgotPasswordScreen} />
       <Stack.Screen name={ROUTES.RESET_PASSWORD} component={ResetPasswordScreen} />
       <Stack.Screen name={ROUTES.VERIFY_EMAIL} component={EmailVerificationScreen} />

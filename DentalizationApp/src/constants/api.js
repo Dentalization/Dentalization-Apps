@@ -1,11 +1,32 @@
 // API Configuration
 export const API_CONFIG = {
-  // Using localhost special address for iOS simulator
+  // Using localhost for iOS simulator (should work for iOS Simulator)
   BASE_URL: __DEV__ 
-    ? 'http://127.0.0.1:3001' 
+    ? 'http://localhost:3001' 
     : 'https://api.dentalization.com',
-  TIMEOUT: 10000,
+  TIMEOUT: 30000,  // Increased timeout for slow connections
   RETRY_ATTEMPTS: 3,
+  DEBUG_MODE: __DEV__,  // Enable debug mode in development
+  
+  // Alternative development servers (for troubleshooting)
+  DEV_SERVERS: {
+    LOCAL: 'http://127.0.0.1:3001',
+    LOCAL_ALT: 'http://localhost:3001',
+    LOCAL_IOS: 'http://localhost:3001',
+    LOCAL_NETWORK: 'http://192.168.1.X:3001', // Replace X with your machine's IP
+    NGROK: 'https://YOUR-NGROK-TUNNEL.ngrok.io', // Replace with your ngrok URL if using
+    STAGING: 'https://staging-api.dentalization.com',
+    FALLBACK: 'https://dentalization-api-dev.herokuapp.com', // Add your fallback server if available
+  },
+  
+  // Registration specific options for troubleshooting
+  REGISTRATION: {
+    BYPASS_VALIDATION: false, // Set to true to bypass frontend validation (for testing)
+    USE_SIMPLE_PAYLOAD: false, // Set to true to use a simplified payload format
+    RETRY_WITH_DELAY: true, // Enables exponential backoff for retries
+    MAX_RETRIES: 3, // Maximum number of retries for registration
+    LOG_DETAILED_ERRORS: true, // Enable detailed error logging
+  }
 };
 
 // API Endpoints

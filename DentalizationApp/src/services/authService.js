@@ -36,18 +36,51 @@ class AuthService {
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
+        
+        // Set base URL
         config.baseURL = API_CONFIG.BASE_URL;
+        
+        // Add default timeout
+        config.timeout = config.timeout || API_CONFIG.TIMEOUT;
+        
+        // Add diagnostics headers in development
+        if (API_CONFIG.DEBUG_MODE) {
+          config.headers['X-App-Version'] = '1.0.0';
+          config.headers['X-Debug-Mode'] = 'true';
+        }
+        
+        // Log outgoing requests in development
+        if (API_CONFIG.DEBUG_MODE) {
+          console.log(`🚀 [API] ${config.method.toUpperCase()} ${config.baseURL}${config.url}`, 
+            config.data ? `\nPayload: ${JSON.stringify(config.data, null, 2)}` : '');
+        }
+        
         return config;
       },
       (error) => Promise.reject(error)
     );
 
-    // Response interceptor to handle token refresh
+    // Response interceptor to handle token refresh and logging
     axios.interceptors.response.use(
-      (response) => response,
+      (response) => {
+        // Log successful responses in development mode
+        if (API_CONFIG.DEBUG_MODE) {
+          console.log(`✅ [API] ${response.config.method.toUpperCase()} ${response.config.url} - ${response.status}`,
+            response.data ? `\nResponse: ${JSON.stringify(response.data, null, 2)}` : '');
+        }
+        return response;
+      },
       async (error) => {
+        // Log failed responses
+        if (API_CONFIG.DEBUG_MODE) {
+          console.error(`❌ [API] ${error.config?.method?.toUpperCase() || 'REQ'} ${error.config?.url || 'unknown'} - ${error.response?.status || 'ERROR'}`,
+            error.response?.data ? `\nError Data: ${JSON.stringify(error.response.data, null, 2)}` : '',
+            `\nError Message: ${error.message}`);
+        }
+
         const originalRequest = error.config;
 
+        // Handle 401 Unauthorized errors with token refresh
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
 
@@ -67,6 +100,25 @@ class AuthService {
             return Promise.reject(refreshError);
           }
         }
+        
+        // For 500 errors, add more diagnostic information
+        if (error.response?.status === 500) {
+          console.error('💥 SERVER ERROR (500):', {
+            endpoint: `${error.config.baseURL}${error.config.url}`,
+            method: error.config.method?.toUpperCase(),
+            requestData: error.config.data ? JSON.parse(error.config.data) : null,
+            responseData: error.response.data,
+            headers: error.config.headers,
+          });
+          
+          // If this is a registration attempt, log detailed error
+          if (error.config.url.includes('/register')) {
+            console.error('Registration request failed with 500 error:', {
+              requestBody: error.config.data ? JSON.parse(error.config.data) : 'No data',
+              serverError: error.response.data
+            });
+          }
+        }
 
         return Promise.reject(error);
       }
@@ -76,8 +128,22 @@ class AuthService {
   // Store tokens securely
   async storeTokens(accessToken, refreshToken) {
     try {
+      console.log('Storing tokens:', { 
+        accessToken: accessToken ? 'present' : 'missing', 
+        refreshToken: refreshToken ? 'present' : 'missing' 
+      });
+      
+      if (!accessToken) {
+        throw new Error('Access token is required but was not provided');
+      }
+      if (!refreshToken) {
+        throw new Error('Refresh token is required but was not provided');
+      }
+      
       await AsyncStorage.setItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN, accessToken);
       await AsyncStorage.setItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+      
+      console.log('Tokens stored successfully');
     } catch (error) {
       console.error('Error storing tokens:', error);
       throw error;
@@ -158,17 +224,49 @@ class AuthService {
       
       return {
         success: true,
-        data: response.data,
-        message: 'Login successful',
+        data: response.data.data, // Extract the nested data object
+        message: response.data.message || 'Login successful',
       };
     } catch (error) {
       console.error('Login error:', error);
       
-      let errorMessage = 'Login failed';
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
+      let errorMessage = 'Gagal masuk';
+      
+      if (error.response) {
+        // Server responded with an error
+        const statusCode = error.response.status;
+        const serverMessage = error.response.data?.message;
+        
+        switch (statusCode) {
+          case 401:
+            // Invalid credentials
+            if (serverMessage && serverMessage.toLowerCase().includes('invalid email or password')) {
+              errorMessage = 'Email atau kata sandi salah. Silakan periksa kembali kredensial Anda.';
+            } else {
+              errorMessage = 'Email atau kata sandi tidak valid. Pastikan Anda telah mendaftar sebelumnya.';
+            }
+            break;
+          case 400:
+            errorMessage = 'Data login tidak valid. Silakan periksa email dan kata sandi Anda.';
+            break;
+          case 403:
+            errorMessage = 'Akun Anda tidak memiliki izin untuk masuk. Hubungi dukungan teknis.';
+            break;
+          case 404:
+            errorMessage = 'Email belum terdaftar. Silakan daftar terlebih dahulu atau periksa ejaan email Anda.';
+            break;
+          case 500:
+            errorMessage = 'Terjadi kesalahan pada server. Silakan coba lagi nanti.';
+            break;
+          default:
+            errorMessage = serverMessage || `Gagal masuk (${statusCode}). Silakan coba lagi.`;
+        }
+      } else if (error.request) {
+        // Network error
+        errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.';
+      } else {
+        // Other error
+        errorMessage = error.message || 'Terjadi kesalahan tidak terduga saat login.';
       }
       
       return {
@@ -178,29 +276,254 @@ class AuthService {
     }
   }
 
-  // Register user
+  // Register user with enhanced error handling and diagnostics
   async register(userData) {
     try {
-      const response = await axios.post(AUTH_ENDPOINTS.REGISTER, userData);
+      // Enhanced payload validation
+      if (!userData.email || !userData.password || !userData.firstName) {
+        console.error('Missing required registration fields');
+        return {
+          success: false,
+          message: 'Data pendaftaran tidak lengkap',
+          validationErrors: ['Email, password, and firstName are required']
+        };
+      }
+
+      // Ensure patient role has patientDetails
+      if (userData.role === 'PATIENT' && !userData.patientDetails) {
+        console.warn('Patient registration missing patientDetails, adding empty structure');
+        userData.patientDetails = {
+          bpjsNumber: "",
+          emergencyContact: { name: "", phoneNumber: "" },
+          medicalInfo: { allergies: "", chronicConditions: "", additionalInfo: "" }
+        };
+      }
+      
+      // Sanitize phone numbers - remove spaces that might cause backend issues
+      if (userData.phoneNumber) {
+        userData.phoneNumber = userData.phoneNumber.replace(/\s+/g, '');
+      }
+      if (userData.role === 'PATIENT' && userData.patientDetails?.emergencyContact?.phoneNumber) {
+        userData.patientDetails.emergencyContact.phoneNumber = 
+          userData.patientDetails.emergencyContact.phoneNumber.replace(/\s+/g, '');
+      }
+      
+      // Ensure all fields are properly formatted for the backend
+      if (userData.role === 'PATIENT') {
+        // Make sure patientDetails exists and has the right structure
+        userData.patientDetails = userData.patientDetails || {};
+        userData.patientDetails.bpjsNumber = userData.patientDetails.bpjsNumber || '';
+        
+        // Ensure emergencyContact exists
+        userData.patientDetails.emergencyContact = userData.patientDetails.emergencyContact || {};
+        userData.patientDetails.emergencyContact.name = userData.patientDetails.emergencyContact.name || '';
+        userData.patientDetails.emergencyContact.phoneNumber = userData.patientDetails.emergencyContact.phoneNumber || '';
+        
+        // Ensure medicalInfo exists
+        userData.patientDetails.medicalInfo = userData.patientDetails.medicalInfo || {};
+        userData.patientDetails.medicalInfo.allergies = userData.patientDetails.medicalInfo.allergies || '';
+        userData.patientDetails.medicalInfo.chronicConditions = userData.patientDetails.medicalInfo.chronicConditions || '';
+        userData.patientDetails.medicalInfo.additionalInfo = userData.patientDetails.medicalInfo.additionalInfo || '';
+      }
+
+      // Prepare a cleaned copy of the payload with any necessary adjustments
+      const cleanedPayload = {...userData};
+      
+      // Enhance logging for debugging
+      console.log('Sending registration request to:', `${API_CONFIG.BASE_URL}${AUTH_ENDPOINTS.REGISTER}`);
+      console.log('Registration payload:', JSON.stringify(cleanedPayload, null, 2));
+      
+      // Add retry mechanism for transient errors
+      let retryCount = 0;
+      const maxRetries = API_CONFIG.REGISTRATION?.MAX_RETRIES || 3;
+      let lastError = null;
+      
+      while (retryCount <= maxRetries) {
+        try {
+          // If this is a retry, add a small delay with exponential backoff
+          if (retryCount > 0) {
+            console.log(`Retry attempt ${retryCount}/${maxRetries}...`);
+            
+            // Exponential backoff delay: 500ms, 1s, 2s, 4s
+            const delayMs = Math.pow(2, retryCount - 1) * 500; 
+            console.log(`Waiting ${delayMs}ms before retry...`);
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+            
+            // Add retry headers
+            axios.defaults.headers.common['X-Retry-Count'] = retryCount.toString();
+            axios.defaults.headers.common['X-Client-Debug'] = 'true';
+          }
+          
+          // Try different server URLs on retries to work around potential network issues
+          let baseURL = API_CONFIG.BASE_URL;
+          if (retryCount > 0) {
+            const serverOptions = [
+              'http://localhost:3001', 
+              'http://127.0.0.1:3001',
+              API_CONFIG.DEV_SERVERS?.LOCAL_ALT || 'http://localhost:3001'
+            ];
+            baseURL = serverOptions[(retryCount - 1) % serverOptions.length];
+          }
+            
+          console.log(`Using server URL: ${baseURL}`);
+          
+          // Send the registration request
+          const response = await axios.post(AUTH_ENDPOINTS.REGISTER, cleanedPayload, {
+            baseURL: baseURL,
+            timeout: API_CONFIG.TIMEOUT + (retryCount * 5000), // Increase timeout with each retry
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-Debug-Mode': 'true',
+              'X-App-Version': '1.0.0',
+            }
+          });
+          
+          console.log('Registration response:', JSON.stringify(response.data, null, 2));
+          return {
+            success: true,
+            data: response.data.data, // Extract the nested data object
+            message: response.data.message || 'Registration successful',
+            retryCount,
+          };
+        } catch (err) {
+          lastError = err;
+          
+          // Log detailed error for each attempt
+          console.error(`Registration attempt ${retryCount + 1} failed:`, err.message);
+          
+          if (err.response?.data) {
+            console.error('Server error response:', JSON.stringify(err.response.data, null, 2));
+          }
+          
+          // Only retry on 500 errors or network errors
+          if ((err.response && err.response.status === 500) || !err.response) {
+            if (retryCount < maxRetries) {
+              console.log(`Will retry (attempt ${retryCount + 1}/${maxRetries})`);
+              retryCount++;
+              continue;
+            }
+          }
+          
+          // Break on 400 client errors - these won't be fixed by retrying
+          break;
+        }
+      }
+      
+      // If we get here, all retries failed
+      const error = lastError;
+      console.error('Registration error after all retries:', error);
+      
+      // Return error details
+      return {
+        success: false,
+        message: error.response?.data?.message || error.message || 'Registration failed after multiple attempts',
+        error: error,
+        retryCount,
+      };
+    } catch (error) {
+      console.error('Unexpected error in register method:', error);
+      return {
+        success: false,
+        message: 'Unexpected error during registration',
+        error: error,
+      };
+    }
+  }
+
+  // Check if email exists in the system (to prevent duplicate registrations)
+  async checkEmailExists(email) {
+    console.log(`Checking if email exists: ${email}`);
+    
+    try {
+      // First, try making a direct API call to check if the endpoint exists
+      try {
+        console.log(`Attempting to call ${API_CONFIG.BASE_URL}${AUTH_ENDPOINTS.CHECK_EMAIL}`);
+        
+        const response = await axios.post(`${API_CONFIG.BASE_URL}${AUTH_ENDPOINTS.CHECK_EMAIL}`, {
+          email: email.toLowerCase()
+        }, { timeout: 5000 }); // Shorter timeout for this check
+        
+        console.log('Email check response:', response.data);
+        
+        return {
+          success: true,
+          exists: response.data.exists, // Should return true if email exists, false otherwise
+          message: response.data.message
+        };
+      } catch (apiError) {
+        console.log('Error checking email:', apiError.message);
+        
+        // FIXED: Only treat specific status codes as "email exists" scenarios
+        // If we got a 409 (Conflict), that usually means the email exists
+        if (apiError.response && apiError.response.status === 409) {
+          return {
+            success: true, 
+            exists: true,
+            message: 'Email already exists'
+          };
+        }
+        
+        // If the response specifically mentions email exists in the error message
+        if (apiError.response && apiError.response.data && 
+            apiError.response.data.message && 
+            apiError.response.data.message.toLowerCase().includes('exists')) {
+          return {
+            success: true, 
+            exists: true,
+            message: 'Email already exists'
+          };
+        }
+        
+        // If the endpoint doesn't exist (404) or other errors, assume the email is available
+        // This is safer than blocking valid emails
+        if (apiError.response && apiError.response.status === 404) {
+          console.log('CHECK_EMAIL endpoint not available, assuming email is available');
+          return {
+            success: true,
+            exists: false,
+            message: 'Email check endpoint not available, proceeding with registration'
+          };
+        }
+        
+        // For network errors or other issues, proceed with registration
+        return {
+          success: false,
+          exists: false, // We're not sure, so assume it doesn't exist
+          message: 'Could not verify email availability'
+        };
+      }
+    } catch (error) {
+      console.log('Unexpected error checking email:', error);
+      
+      // For all other errors, proceed with registration and let the server handle it
+      return {
+        success: false,
+        exists: false,
+        message: error.message
+      };
+    }
+  }
+
+  // Debug helper for API issues
+  async checkApiConnection() {
+    try {
+      const response = await axios.get(`${API_CONFIG.BASE_URL}/api/health`, {
+        timeout: 5000
+      });
       
       return {
         success: true,
-        data: response.data,
-        message: 'Registration successful',
+        status: response.status,
+        message: 'API connection successful',
+        data: response.data
       };
     } catch (error) {
-      console.error('Registration error:', error);
-      
-      let errorMessage = 'Registration failed';
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
       return {
         success: false,
-        message: errorMessage,
+        status: error.response?.status,
+        message: error.message || 'API connection failed',
+        error: error
       };
     }
   }
@@ -310,56 +633,6 @@ class AuthService {
     }
   }
 
-  // Clear stored data (alias for clearAllData)
-  async clearStoredData() {
-    return this.clearAllData();
-  }
-
-  // Clear biometric credentials - mock version for development
-  async clearBiometricCredentials() {
-    console.log('Biometric credentials clear called (no-op in development mode)');
-    return true;
-  }
-
-  // Refresh access token
-  async refreshAccessToken(refreshToken) {
-    try {
-      const response = await axios.post(AUTH_ENDPOINTS.REFRESH_TOKEN, { refreshToken });
-      return response.data;
-    } catch (error) {
-      console.error('Token refresh error:', error);
-      throw error;
-    }
-  }
-
-  // Logout user
-  async logout() {
-    try {
-      const refreshToken = await this.getRefreshToken();
-      
-      // Call logout API
-      if (refreshToken) {
-        await axios.post(AUTH_ENDPOINTS.LOGOUT, { refreshToken });
-      }
-    } catch (error) {
-      console.error('Logout API error:', error);
-    } finally {
-      // Clear local storage regardless of API call result
-      await this.clearAllData();
-    }
-  }
-
-  // Logout from all devices
-  async logoutAll() {
-    try {
-      await axios.post('/api/auth/logout-all');
-    } catch (error) {
-      console.error('Logout all error:', error);
-    } finally {
-      await this.clearAllData();
-    }
-  }
-
   // Clear all stored data
   async clearAllData() {
     try {
@@ -376,14 +649,31 @@ class AuthService {
     }
   }
 
+  // Alias for clearAllData (for compatibility)
+  async clearStoredData() {
+    return this.clearAllData();
+  }
+
   // Check if user is authenticated
   async isAuthenticated() {
     try {
       const token = await this.getAccessToken();
       const userData = await this.getUserData();
+      
       return !!(token && userData);
     } catch (error) {
-      console.error('Error checking authentication:', error);
+      console.error('Error checking authentication status:', error);
+      return false;
+    }
+  }
+  
+  // Clear biometric credentials - mock version for development
+  async clearBiometricCredentials() {
+    try {
+      console.log('Biometric credential clearing skipped (disabled in development)');
+      return true;
+    } catch (error) {
+      console.error('Error clearing biometric credentials:', error);
       return false;
     }
   }
@@ -420,6 +710,76 @@ class AuthService {
       return {
         success: false,
         message: error.response?.data?.message || 'Failed to change password',
+      };
+    }
+  }
+
+  // Refresh access token
+  async refreshAccessToken(refreshToken) {
+    try {
+      const response = await axios.post(AUTH_ENDPOINTS.REFRESH_TOKEN, {
+        refreshToken,
+      });
+      
+      if (response.data.success) {
+        // Store new tokens
+        await this.storeTokens(response.data.data.token, response.data.data.refreshToken);
+        
+        return {
+          success: true,
+          data: response.data.data,
+        };
+      } else {
+        return {
+          success: false,
+          message: response.data.message || 'Token refresh failed',
+        };
+      }
+    } catch (error) {
+      console.error('Token refresh error:', error);
+      return {
+        success: false,
+        message: 'Gagal memperbarui token. Silakan masuk kembali.',
+      };
+    }
+  }
+
+  // Logout user
+  async logout() {
+    try {
+      const refreshToken = await this.getRefreshToken();
+      
+      if (refreshToken) {
+        // Call backend logout endpoint
+        await axios.post(AUTH_ENDPOINTS.LOGOUT, {
+          refreshToken,
+        });
+      }
+      
+      // Clear local storage
+      await AsyncStorage.multiRemove([
+        AUTH_STORAGE_KEYS.ACCESS_TOKEN,
+        AUTH_STORAGE_KEYS.REFRESH_TOKEN,
+        AUTH_STORAGE_KEYS.USER_DATA,
+      ]);
+      
+      return {
+        success: true,
+        message: 'Berhasil keluar',
+      };
+    } catch (error) {
+      console.error('Logout error:', error);
+      
+      // Even if backend call fails, clear local storage
+      await AsyncStorage.multiRemove([
+        AUTH_STORAGE_KEYS.ACCESS_TOKEN,
+        AUTH_STORAGE_KEYS.REFRESH_TOKEN,
+        AUTH_STORAGE_KEYS.USER_DATA,
+      ]);
+      
+      return {
+        success: true,
+        message: 'Berhasil keluar',
       };
     }
   }

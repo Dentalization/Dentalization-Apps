@@ -1,9 +1,9 @@
 // User roles
 export const USER_ROLES = {
-  DOCTOR: 'doctor',
-  PATIENT: 'patient',
-  ADMIN: 'admin',
-  GUEST: 'guest',
+  DOCTOR: 'DOCTOR',
+  PATIENT: 'PATIENT',
+  ADMIN: 'ADMIN',
+  GUEST: 'GUEST',
 };
 
 export default USER_ROLES;

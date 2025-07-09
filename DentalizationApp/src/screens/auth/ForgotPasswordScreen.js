@@ -35,12 +35,12 @@ const ForgotPasswordScreen = ({ navigation }) => {
     
     // Validate email
     if (!email) {
-      setError('Please enter your email address');
+      setError('Silakan masukkan alamat email Anda');
       return;
     }
 
     if (!validateEmail(email)) {
-      setError('Please enter a valid email address');
+      setError('Silakan masukkan alamat email yang valid');
       return;
     }
 
@@ -54,15 +54,15 @@ const ForgotPasswordScreen = ({ navigation }) => {
         setEmailSent(true);
         // Success feedback
         Alert.alert(
-          'Email Sent',
-          'Password reset instructions have been sent to your email address.',
+          'Email Terkirim',
+          'Instruksi reset kata sandi telah dikirim ke alamat email Anda.',
         );
       } else {
         // Handle error from service
-        throw new Error(response.message || 'Failed to send reset email. Please try again.');
+        throw new Error(response.message || 'Gagal mengirim email reset. Silakan coba lagi.');
       }
     } catch (error) {
-      setError(error.message || 'An error occurred while sending reset email. Please try again.');
+      setError(error.message || 'Terjadi kesalahan saat mengirim email reset. Silakan coba lagi.');
     } finally {
       setIsLoading(false);
     }
@@ -99,10 +99,10 @@ const ForgotPasswordScreen = ({ navigation }) => {
               />
             </View>
             <Text style={[styles.title, { color: theme.colors.text }]}>
-              Forgot Password?
+              Lupa Kata Sandi?
             </Text>
             <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-              Enter your email address and we'll send you instructions to reset your password
+              Masukkan alamat email Anda dan kami akan mengirimkan instruksi untuk mereset kata sandi Anda
             </Text>
           </View>
 
@@ -110,7 +110,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
             {!emailSent ? (
               <>
                 <Input
-                  placeholder="Email Address"
+                  placeholder="Alamat Email"
                   value={email}
                   onChangeText={(text) => {
                     setEmail(text);
@@ -129,7 +129,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
                 )}
 
                 <Button
-                  title="Send Reset Instructions"
+                  title="Kirim Instruksi Reset"
                   onPress={handleSendResetEmail}
                   loading={isLoading}
                   style={styles.sendButton}
@@ -144,14 +144,14 @@ const ForgotPasswordScreen = ({ navigation }) => {
                   style={styles.successIcon}
                 />
                 <Text style={[styles.successTitle, { color: theme.colors.text }]}>
-                  Email Sent!
+                  Email Terkirim!
                 </Text>
                 <Text style={[styles.successText, { color: theme.colors.textSecondary }]}>
-                  Check your email for password reset instructions. The link will expire in 24 hours.
+                  Periksa email Anda untuk instruksi reset kata sandi. Tautan akan kedaluwarsa dalam 24 jam.
                 </Text>
                 
                 <Button
-                  title="Back to Sign In"
+                  title="Kembali ke Halaman Masuk"
                   onPress={navigateToLogin}
                   variant="outline"
                   style={{ marginTop: 20 }}
@@ -163,10 +163,10 @@ const ForgotPasswordScreen = ({ navigation }) => {
           {!emailSent && (
             <View style={styles.footer}>
               <Text style={[styles.footerText, { color: theme.colors.textSecondary }]}>
-                Remember your password?{' '}
+                Ingat kata sandi Anda?{' '}
               </Text>
               <Button
-                title="Back to Sign In"
+                title="Kembali ke Halaman Masuk"
                 variant="ghost"
                 onPress={navigateToLogin}
                 style={styles.backButton}

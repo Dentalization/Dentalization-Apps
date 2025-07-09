@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TouchableOpacity } from 'react-native';
+import { View, TouchableOpacity, Text } from 'react-native';
 import { useTheme } from './ThemeProvider';
 
 const Card = ({
@@ -32,6 +32,24 @@ const Card = ({
     ...style,
   };
 
+  // Helper function to wrap text children in Text components if needed
+  const wrapTextChildren = (children) => {
+    if (typeof children === 'string' || typeof children === 'number') {
+      // If the child is a string or number, wrap it in a Text component
+      return <Text>{children}</Text>;
+    } else if (Array.isArray(children)) {
+      // If it's an array, map over each child and wrap text children
+      return React.Children.map(children, child => {
+        if (typeof child === 'string' || typeof child === 'number') {
+          return <Text>{child}</Text>;
+        }
+        return child;
+      });
+    }
+    // For React elements or null/undefined, return as is
+    return children;
+  };
+
   if (onPress) {
     return (
       <TouchableOpacity
@@ -40,14 +58,14 @@ const Card = ({
         activeOpacity={0.7}
         {...props}
       >
-        {children}
+        {wrapTextChildren(children)}
       </TouchableOpacity>
     );
   }
 
   return (
     <View style={cardStyle} {...props}>
-      {children}
+      {wrapTextChildren(children)}
     </View>
   );
 };

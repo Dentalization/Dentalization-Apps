@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import authService from '../../services/authService';
 import biometricService from '../../services/biometricService';
+import { getReadableError } from '../../utils/errorHandler';
 
 // Async thunks for authentication actions
 export const loginUser = createAsyncThunk(
@@ -96,7 +97,9 @@ export const registerUser = createAsyncThunk(
           refreshToken: response.data.refreshToken,
         };
       } else {
-        return rejectWithValue(response.message || 'Registration failed');
+        // Convert technical error to user-friendly message in Indonesian
+        const userFriendlyMessage = getReadableError(response.message || response.error);
+        return rejectWithValue(userFriendlyMessage);
       }
     } catch (error) {
       return rejectWithValue(error.message || 'Network error');
@@ -204,11 +207,15 @@ const authSlice = createSlice({
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.isLoading = false;
+        state.isInitializing = false; // Set initializing to false after successful login
         state.isAuthenticated = true;
         state.user = action.payload.user;
         state.token = action.payload.token;
         state.refreshToken = action.payload.refreshToken;
         state.error = null;
+        
+        console.log('🔍 Redux - User data stored:', JSON.stringify(action.payload.user, null, 2));
+        console.log('🔍 Redux - Profile complete:', action.payload.user?.profile?.profileComplete);
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;
@@ -244,6 +251,7 @@ const authSlice = createSlice({
       })
       .addCase(registerUser.fulfilled, (state, action) => {
         state.isLoading = false;
+        state.isInitializing = false; // Set initializing to false after successful registration
         state.isAuthenticated = true;
         state.user = action.payload.user;
         state.token = action.payload.token;
@@ -252,6 +260,8 @@ const authSlice = createSlice({
       })
       .addCase(registerUser.rejected, (state, action) => {
         state.isLoading = false;
+        console.error('Registration rejected with payload:', action.payload);
+        // Store the user-friendly error message
         state.error = action.payload;
       })
       
@@ -264,6 +274,9 @@ const authSlice = createSlice({
         state.isAuthenticated = action.payload.isAuthenticated;
         state.user = action.payload.user;
         state.token = action.payload.token;
+        
+        console.log('🔍 Redux - CheckAuth user data:', JSON.stringify(action.payload.user, null, 2));
+        console.log('🔍 Redux - CheckAuth profile complete:', action.payload.user?.profile?.profileComplete);
       })
       .addCase(checkAuthStatus.rejected, (state) => {
         state.isInitializing = false;

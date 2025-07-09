@@ -50,7 +50,7 @@ const Input = ({
         : theme.colors.gray300 || '#E5E7EB',
       backgroundColor: disabled
         ? theme.colors.gray100 || '#F3F4F6'
-        : theme.colors.surface || '#FFFFFF',
+        : theme.colors.white || '#FFFFFF', // Ensuring white background for all inputs
       borderRadius: 8,
       paddingHorizontal: 12,
       minHeight: 48,
@@ -130,6 +130,8 @@ const Input = ({
           editable={!disabled}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
+          textContentType={secureTextEntry ? 'none' : undefined} // Prevents autofill styling
+          autoComplete={secureTextEntry ? 'off' : undefined} // Prevents autofill styling
           {...props}
         />
         
