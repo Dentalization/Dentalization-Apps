@@ -8,7 +8,13 @@ class AuthController {
   // Register new user
   async register(req, res) {
     try {
-      const { email, password, role, firstName, lastName, ...additionalData } = req.body;
+      const { email, password, role, firstName, lastName, patientDetails, ...additionalData } = req.body;
+
+      console.log("Registration request received:", JSON.stringify({
+        email, role, firstName, lastName, 
+        patientDetails: patientDetails ? "present" : "absent",
+        additionalKeys: Object.keys(additionalData)
+      }));
 
       // Check if user already exists
       const existingUser = await prisma.user.findUnique({
@@ -38,14 +44,54 @@ class AuthController {
 
         // Create role-specific profile
         if (role === 'PATIENT') {
-          await prisma.patientProfile.create({
-            data: {
+          try {
+            // Extract patient-specific fields from the patientDetails object
+            let emergencyContactInfo = '';
+            if (patientDetails?.emergencyContact) {
+              const contactName = patientDetails.emergencyContact.name || '';
+              const contactPhone = patientDetails.emergencyContact.phoneNumber || '';
+              emergencyContactInfo = `${contactName}${contactName && contactPhone ? ' - ' : ''}${contactPhone}`;
+            }
+              
+            const allergies = patientDetails?.medicalInfo?.allergies || '';
+            const medicalHistory = patientDetails?.medicalInfo?.additionalInfo || '';
+            const chronicConditions = patientDetails?.medicalInfo?.chronicConditions || '';
+            const bpjsNumber = patientDetails?.bpjsNumber || '';
+            
+            // Phone number from either patientDetails or top-level
+            const phone = additionalData.phoneNumber || phoneNumber || '';
+            
+            console.log('Creating patient profile with data:', {
               userId: user.id,
               firstName,
               lastName,
-              ...additionalData,
-            },
-          });
+              phone,
+              emergencyContact: emergencyContactInfo,
+              allergies,
+              medicalHistory,
+              insuranceInfo: bpjsNumber
+            });
+            
+            await prisma.patientProfile.create({
+              data: {
+                userId: user.id,
+                firstName,
+                lastName,
+                phone,
+                emergencyContact: emergencyContactInfo,
+                allergies,
+                medicalHistory,
+                insuranceInfo: bpjsNumber,
+                // Optional fields with default values
+                profileComplete: true, // Mark as complete for testing
+              },
+            });
+            
+            console.log('Patient profile created successfully');
+          } catch (profileError) {
+            console.error('Error creating patient profile:', profileError);
+            throw profileError;
+          }
         } else if (role === 'DOCTOR') {
           await prisma.doctorProfile.create({
             data: {
@@ -68,6 +114,7 @@ class AuthController {
       await prisma.session.create({
         data: {
           userId: result.id,
+          token: token, // Add the missing token field
           refreshToken,
           expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
         },
@@ -88,10 +135,27 @@ class AuthController {
         },
       });
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('Registration error details:', error);
+      
+      // Check for specific error types to provide better responses
+      if (error.code === 'P2002') {
+        // Prisma unique constraint violation error
+        return res.status(409).json({
+          success: false,
+          message: 'User with this email already exists',
+        });
+      } else if (error.code === 'P2003') {
+        // Prisma foreign key constraint error
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid reference ID in request',
+        });
+      }
+      
       res.status(500).json({
         success: false,
         message: 'Internal server error during registration',
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
     }
   }
@@ -142,6 +206,7 @@ class AuthController {
       await prisma.session.create({
         data: {
           userId: user.id,
+          token: token, // Add the missing token field
           refreshToken,
           expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
         },
@@ -377,6 +442,37 @@ class AuthController {
       res.status(500).json({
         success: false,
         message: 'Internal server error while changing password',
+      });
+    }
+  }
+
+  // Check if email exists
+  async checkEmailExists(req, res) {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email is required',
+        });
+      }
+
+      const existingUser = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() },
+        select: { id: true, email: true }
+      });
+
+      return res.json({
+        success: true,
+        exists: !!existingUser,
+        message: existingUser ? 'Email is already registered' : 'Email is available',
+      });
+    } catch (error) {
+      console.error('Error checking email:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error during email check',
       });
     }
   }

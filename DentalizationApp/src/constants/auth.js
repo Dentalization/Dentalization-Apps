@@ -7,6 +7,7 @@ export const AUTH_ENDPOINTS = {
   FORGOT_PASSWORD: '/api/auth/forgot-password',
   RESET_PASSWORD: '/api/auth/reset-password',
   VERIFY_EMAIL: '/api/auth/verify-email',
+  CHECK_EMAIL: '/api/auth/check-email',  // Endpoint to check if email exists
 };
 
 export const AUTH_STORAGE_KEYS = {
@@ -25,9 +26,9 @@ export const AUTH_STATUSES = {
 };
 
 export const USER_ROLES = {
-  DOCTOR: 'doctor',
-  PATIENT: 'patient',
-  ADMIN: 'admin',
+  DOCTOR: 'DOCTOR',
+  PATIENT: 'PATIENT',
+  ADMIN: 'ADMIN',
 };
 
 export const AUTH_ERRORS = {

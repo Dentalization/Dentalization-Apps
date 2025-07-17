@@ -25,6 +25,7 @@ import {
 } from '../../store/slices/authSlice';
 import biometricService from '../../services/biometricService';
 import { ROUTES } from '../../constants';
+import { getReadableError } from '../../utils/errorHandler';
 
 const LoginScreen = ({ navigation }) => {
   const theme = useTheme();
@@ -60,22 +61,22 @@ const LoginScreen = ({ navigation }) => {
 
   const validateForm = () => {
     if (!formData.email.trim()) {
-      Alert.alert('Error', 'Please enter your email address');
+      Alert.alert('Error', 'Silakan masukkan alamat email Anda');
       return false;
     }
     
     if (!formData.email.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      Alert.alert('Error', 'Silakan masukkan alamat email yang valid');
       return false;
     }
     
     if (!formData.password.trim()) {
-      Alert.alert('Error', 'Please enter your password');
+      Alert.alert('Error', 'Silakan masukkan kata sandi Anda');
       return false;
     }
     
     if (formData.password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
+      Alert.alert('Error', 'Kata sandi minimal harus 6 karakter');
       return false;
     }
 
@@ -94,12 +95,30 @@ const LoginScreen = ({ navigation }) => {
 
       // Navigation will be handled by RootNavigator based on auth state
     } catch (error) {
-      Alert.alert('Login Failed', error || 'An error occurred during login');
+      const errorMessage = getReadableError(error, 'Terjadi kesalahan saat proses masuk');
+      
+      // Show different actions based on error type
+      if (errorMessage.includes('Email belum terdaftar') || errorMessage.includes('email atau kata sandi')) {
+        Alert.alert(
+          'Gagal Masuk', 
+          errorMessage,
+          [
+            { text: 'Coba Lagi', style: 'cancel' },
+            { 
+              text: 'Daftar Sekarang', 
+              onPress: () => navigation.navigate(ROUTES.ROLE_SELECTION),
+              style: 'default'
+            }
+          ]
+        );
+      } else {
+        Alert.alert('Gagal Masuk', errorMessage);
+      }
     }
   };
 
   const handleBiometricLogin = async () => {
-    Alert.alert('Biometric Login Disabled', 'Biometric authentication is disabled in development mode');
+    Alert.alert('Login Biometrik Dinonaktifkan', 'Autentikasi biometrik dinonaktifkan dalam mode pengembangan');
     return;
     
     /* Original code disabled for development:
@@ -107,7 +126,7 @@ const LoginScreen = ({ navigation }) => {
       const result = await dispatch(loginWithBiometric()).unwrap();
       // Navigation will be handled by RootNavigator based on auth state
     } catch (error) {
-      Alert.alert('Biometric Login Failed', error || 'Biometric authentication failed');
+      Alert.alert('Login Biometrik Gagal', getReadableError(error, 'Autentikasi biometrik gagal'));
     }
     */
   };
@@ -173,21 +192,21 @@ const LoginScreen = ({ navigation }) => {
                 color: theme.colors.text,
                 marginBottom: 8,
               }}>
-                Welcome Back
+                Selamat Datang Kembali
               </Text>
               <Text style={{
                 fontSize: 16,
                 color: theme.colors.textSecondary,
                 textAlign: 'center',
               }}>
-                Sign in to continue to Dentalization
+                Masuk untuk melanjutkan ke Dentalization
               </Text>
             </View>
 
             {/* Login Form */}
             <Card style={{ marginBottom: 24 }}>
               <Input
-                placeholder="Email Address"
+                placeholder="Alamat Email"
                 value={formData.email}
                 onChangeText={(value) => handleInputChange('email', value)}
                 keyboardType="email-address"
@@ -197,7 +216,7 @@ const LoginScreen = ({ navigation }) => {
               />
               
               <Input
-                placeholder="Password"
+                placeholder="Kata Sandi"
                 value={formData.password}
                 onChangeText={(value) => handleInputChange('password', value)}
                 secureTextEntry={!showPassword}
@@ -233,7 +252,7 @@ const LoginScreen = ({ navigation }) => {
                     fontSize: 14,
                     color: theme.colors.text,
                   }}>
-                    Remember me
+                    Ingat saya
                   </Text>
                 </TouchableOpacity>
 
@@ -246,14 +265,14 @@ const LoginScreen = ({ navigation }) => {
                     color: theme.colors.primary,
                     fontWeight: '500',
                   }}>
-                    Forgot Password?
+                    Lupa Kata Sandi?
                   </Text>
                 </TouchableOpacity>
               </View>
 
               {/* Login Button */}
               <Button
-                title="Sign In"
+                title="Masuk"
                 onPress={handleLogin}
                 loading={isLoading}
                 style={{ marginTop: 24 }}
@@ -262,7 +281,7 @@ const LoginScreen = ({ navigation }) => {
               {/* Biometric Login - Disabled for Development */}
               {false && ( // biometricAvailable && biometricEnabled - always false in dev mode
                 <Button
-                  title="Biometric Login (Disabled in Dev Mode)"
+                  title="Login Biometrik (Dinonaktifkan dalam Mode Dev)"
                   onPress={handleBiometricLogin}
                   variant="outline"
                   leftIcon="security"
@@ -303,10 +322,10 @@ const LoginScreen = ({ navigation }) => {
                 fontSize: 16,
                 color: theme.colors.textSecondary,
               }}>
-                Don't have an account?{' '}
+                Belum punya akun?{' '}
               </Text>
               <TouchableOpacity
-                onPress={() => navigation.navigate(ROUTES.REGISTER)}
+                onPress={() => navigation.navigate(ROUTES.ROLE_SELECTION)}
                 disabled={isLoading}
               >
                 <Text style={{
@@ -314,10 +333,11 @@ const LoginScreen = ({ navigation }) => {
                   color: theme.colors.primary,
                   fontWeight: '600',
                 }}>
-                  Sign Up
+                  Daftar
                 </Text>
               </TouchableOpacity>
             </View>
+
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

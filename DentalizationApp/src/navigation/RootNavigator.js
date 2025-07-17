@@ -7,8 +7,6 @@ import AuthNavigator from './AuthNavigator';
 import PatientNavigator from './PatientNavigator';
 import DoctorNavigator from './DoctorNavigator';
 import LoadingScreen from '../screens/shared/LoadingScreen';
-import PatientProfileSetupScreen from '../screens/patient/profile/PatientProfileSetupScreen';
-import DoctorProfileSetupScreen from '../screens/doctor/profile/DoctorProfileSetupScreen';
 
 import { checkAuthStatus, setBiometricAvailable } from '../store/slices/authSlice';
 import biometricService from '../services/biometricService';
@@ -47,21 +45,16 @@ const RootNavigator = () => {
       return <AuthNavigator />;
     }
 
-    // Check if profile setup is complete
-    const needsProfileSetup = !user.profileComplete;
-
-    if (needsProfileSetup) {
-      // Route to appropriate profile setup based on user role
-      switch (user.role) {
-        case USER_ROLES.PATIENT:
-          return <PatientProfileSetupScreen />;
-        case USER_ROLES.DOCTOR:
-          return <DoctorProfileSetupScreen />;
-        default:
-          return <AuthNavigator />;
-      }
+    // Ensure we have complete user data before making routing decisions
+    if (!user.profile) {
+      console.log('WARNING: RootNavigator - No profile data available, loading...');
+      return <LoadingScreen />;
     }
 
+    // Always route to dashboard/home page after login
+    // Profile setup will be available in the profile section
+    console.log('ROUTING: Going to home/dashboard for role:', user.role);
+    
     // Route to appropriate interface based on user role
     switch (user.role) {
       case USER_ROLES.PATIENT:

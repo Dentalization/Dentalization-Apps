@@ -165,12 +165,13 @@ model DoctorProfile {
 }
 
 model Session {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  token     String   @unique
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token       String   @unique
+  refreshToken String?
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
 
   @@map("sessions")
 }
