@@ -25,6 +25,35 @@ const KEYCHAIN_SERVICE = 'DentalizationApp';
 class AuthService {
   constructor() {
     this.setupAxiosInterceptors();
+    // Rate limiting tracking
+    this.lastApiCall = {};
+    this.rateLimitBackoff = 1000; // Start with 1 second backoff
+  }
+
+  // Add rate limiting protection
+  async checkRateLimit(endpoint) {
+    const now = Date.now();
+    const lastCall = this.lastApiCall[endpoint] || 0;
+    const timeSinceLastCall = now - lastCall;
+    
+    if (timeSinceLastCall < this.rateLimitBackoff) {
+      const waitTime = this.rateLimitBackoff - timeSinceLastCall;
+      console.log(`⚠️ Rate limiting: waiting ${waitTime}ms before calling ${endpoint}`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+    
+    this.lastApiCall[endpoint] = Date.now();
+  }
+
+  // Reset rate limit backoff on successful calls
+  resetRateLimit() {
+    this.rateLimitBackoff = 1000;
+  }
+
+  // Increase backoff time when rate limited
+  increaseBackoff() {
+    this.rateLimitBackoff = Math.min(this.rateLimitBackoff * 2, 30000); // Max 30 seconds
+    console.log(`📊 Increased rate limit backoff to ${this.rateLimitBackoff}ms`);
   }
 
   // Setup axios interceptors for automatic token handling
@@ -71,34 +100,96 @@ class AuthService {
         return response;
       },
       async (error) => {
-        // Log failed responses
+        // Log failed responses (reduced verbosity)
         if (API_CONFIG.DEBUG_MODE) {
-          console.error(`❌ [API] ${error.config?.method?.toUpperCase() || 'REQ'} ${error.config?.url || 'unknown'} - ${error.response?.status || 'ERROR'}`,
-            error.response?.data ? `\nError Data: ${JSON.stringify(error.response.data, null, 2)}` : '',
-            `\nError Message: ${error.message}`);
+          if (error.response?.status === 401) {
+            console.warn(`🔑 [AUTH] Token expired/invalid for ${error.config?.url || 'unknown'}`);
+          } else if (error.response?.status === 429) {
+            console.warn(`⚠️ [RATE_LIMIT] Too many requests for ${error.config?.url || 'unknown'} - backing off`);
+          } else {
+            console.error(`❌ [API] ${error.config?.method?.toUpperCase() || 'REQ'} ${error.config?.url || 'unknown'} - ${error.response?.status || 'NETWORK_ERROR'}`,
+              error.response?.data?.message ? `\nError: ${error.response.data.message}` : '');
+          }
+        }
+
+        // Handle rate limiting (429) before other errors
+        if (error.response?.status === 429) {
+          console.log('🔍 Rate limit hit, implementing backoff strategy');
+          // Don't retry immediately for rate limits - let the calling code handle it
+          return Promise.reject(error);
+        }
+
+        // Handle network errors specifically
+        if (error.code === 'NETWORK_ERROR' || error.message === 'Network Error' || !error.response) {
+          console.error('🔍 Network Error Details:', {
+            message: error.message,
+            code: error.code,
+            config: error.config,
+            isNetworkError: true,
+            baseURL: error.config?.baseURL
+          });
+          
+          // Try fallback URLs for development
+          if (__DEV__ && !error.config?._retryFallback) {
+            const fallbackURLs = [
+              'http://localhost:3001',
+              'http://127.0.0.1:3001',
+              'http://10.0.2.2:3001' // Android emulator
+            ];
+            
+            for (const fallbackURL of fallbackURLs) {
+              if (fallbackURL !== error.config?.baseURL) {
+                try {
+                  console.log(`🔄 Trying fallback URL: ${fallbackURL}`);
+                  const retryConfig = {
+                    ...error.config,
+                    baseURL: fallbackURL,
+                    _retryFallback: true
+                  };
+                  const response = await axios(retryConfig);
+                  console.log(`✅ Fallback successful with: ${fallbackURL}`);
+                  return response;
+                } catch (fallbackError) {
+                  console.log(`❌ Fallback failed with: ${fallbackURL}`, fallbackError.message);
+                }
+              }
+            }
+          }
         }
 
         const originalRequest = error.config;
 
         // Handle 401 Unauthorized errors with token refresh
         if (error.response?.status === 401 && !originalRequest._retry) {
+          console.log('🔍 Received 401 error, attempting token refresh...');
           originalRequest._retry = true;
 
           try {
             const refreshToken = await this.getRefreshToken();
             if (refreshToken) {
+              console.log('🔄 Attempting to refresh access token...');
               const response = await this.refreshAccessToken(refreshToken);
               if (response.success) {
+                console.log('✅ Token refresh successful, retrying original request');
                 await this.storeTokens(response.data.token, response.data.refreshToken);
                 originalRequest.headers.Authorization = `Bearer ${response.data.token}`;
                 return axios(originalRequest);
+              } else {
+                console.log('❌ Token refresh failed:', response.message);
               }
+            } else {
+              console.log('❌ No refresh token available');
             }
           } catch (refreshError) {
-            console.log('Token refresh failed:', refreshError);
-            await this.logout();
-            return Promise.reject(refreshError);
+            console.log('❌ Token refresh error:', refreshError.message);
           }
+          
+          // If refresh fails, clear stored data and don't auto-logout to avoid loops
+          console.log('🔍 Clearing stored auth data due to failed token refresh');
+          await this.clearAllData();
+          
+          // Don't call logout() here as it might cause infinite loops
+          // Instead, let the app handle the auth state change
         }
         
         // For 500 errors, add more diagnostic information
@@ -531,18 +622,87 @@ class AuthService {
   // Verify token with backend
   async verifyToken() {
     try {
+      // Get current token
+      const token = await this.getAccessToken();
+      if (!token) {
+        console.log('🔍 No access token found for verification');
+        return {
+          success: false,
+          message: 'No access token available',
+          requiresLogin: true
+        };
+      }
+
+      // Check rate limiting before making API call
+      await this.checkRateLimit('/api/auth/profile');
+
+      console.log('🔍 Verifying token with backend...');
+      
       // Since there's no specific verify token endpoint, we'll use the profile endpoint
       // to check if the token is still valid
       const response = await axios.get('/api/auth/profile');
+      
+      // Reset backoff on successful call
+      this.resetRateLimit();
+      
+      console.log('✅ Token verification successful');
       return {
         success: true,
         data: response.data,
       };
     } catch (error) {
-      console.error('Token verification error:', error);
+      console.error('Token verification error:', error?.message || error);
+      
+      // Handle different types of errors
+      if (error?.response?.status === 401) {
+        console.log('🔍 Token expired or invalid (401) - attempting refresh');
+        
+        // Try to refresh token
+        const refreshToken = await this.getRefreshToken();
+        if (refreshToken) {
+          try {
+            const refreshResult = await this.refreshAccessToken(refreshToken);
+            if (refreshResult.success) {
+              console.log('✅ Token refreshed successfully, retrying verification');
+              // Retry verification with new token
+              const retryResponse = await axios.get('/api/auth/profile');
+              this.resetRateLimit();
+              return {
+                success: true,
+                data: retryResponse.data,
+                tokenRefreshed: true
+              };
+            }
+          } catch (refreshError) {
+            console.error('❌ Token refresh failed:', refreshError.message);
+          }
+        }
+        
+        // If refresh failed or no refresh token, require login
+        return {
+          success: false,
+          message: 'Token expired and refresh failed',
+          requiresLogin: true
+        };
+      }
+      
+      // Handle rate limiting (429 error)
+      if (error.response?.status === 429) {
+        console.warn('⚠️ Rate limit exceeded (429) - backing off');
+        this.increaseBackoff();
+        return {
+          success: false,
+          message: 'Too many requests, please try again later',
+          requiresLogin: false,
+          rateLimited: true
+        };
+      }
+      
+      // For other errors, return error but don't force login
       return {
         success: false,
-        message: error.message,
+        message: error.response?.data?.message || error.message,
+        requiresLogin: false
       };
     }
   }
@@ -664,6 +824,32 @@ class AuthService {
     } catch (error) {
       console.error('Error checking authentication status:', error);
       return false;
+    }
+  }
+
+  // Check if token is likely expired (basic check without network call)
+  async isTokenLikelyExpired() {
+    try {
+      const token = await this.getAccessToken();
+      if (!token) return true;
+
+      // Simple JWT expiry check (if the token is in JWT format)
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const now = Math.floor(Date.now() / 1000);
+        if (payload.exp && payload.exp < now) {
+          console.log('🔍 Token has expired based on JWT payload');
+          return true;
+        }
+      } catch (jwtError) {
+        // Not a JWT or couldn't parse - assume token is valid for now
+        console.log('🔍 Could not parse token as JWT, assuming valid');
+      }
+
+      return false;
+    } catch (error) {
+      console.error('Error checking token expiry:', error);
+      return true; // Assume expired if we can't check
     }
   }
   

@@ -1,10 +1,10 @@
 // API Configuration
 export const API_CONFIG = {
-  // Using localhost for iOS simulator (should work for iOS Simulator)
+  // Using localhost now that server is running
   BASE_URL: __DEV__ 
     ? 'http://localhost:3001' 
     : 'https://api.dentalization.com',
-  TIMEOUT: 30000,  // Increased timeout for slow connections
+  TIMEOUT: 45000,  // Increased timeout for slow connections
   RETRY_ATTEMPTS: 3,
   DEBUG_MODE: __DEV__,  // Enable debug mode in development
   

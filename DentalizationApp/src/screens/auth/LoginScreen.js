@@ -338,30 +338,6 @@ const LoginScreen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
 
-            {/* Debug: Check stored user data */}
-            <TouchableOpacity
-              style={{
-                backgroundColor: '#ff6b6b',
-                padding: 10,
-                borderRadius: 5,
-                marginVertical: 10,
-              }}
-              onPress={async () => {
-                try {
-                  const authService = require('../../services/authService').default;
-                  const userData = await authService.getUserData();
-                  console.log('DEBUG - Stored user data:', JSON.stringify(userData, null, 2));
-                  Alert.alert('Debug', `User data: ${JSON.stringify(userData, null, 2)}`);
-                } catch (error) {
-                  console.log('DEBUG - Error getting user data:', error);
-                  Alert.alert('Debug Error', error.message);
-                }
-              }}
-            >
-              <Text style={{ color: 'white', textAlign: 'center', fontWeight: 'bold' }}>
-                DEBUG: Check Stored User Data
-              </Text>
-            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

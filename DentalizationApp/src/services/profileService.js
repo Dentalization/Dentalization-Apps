@@ -82,6 +82,8 @@ class ProfileService {
 
   async uploadProfilePhoto(imageUri, userId) {
     try {
+      console.log('🚀 [API] Uploading profile photo:', { imageUri, userId });
+      
       const headers = await this.getAuthHeaders();
       delete headers['Content-Type']; // Let FormData set the content type
 
@@ -92,6 +94,8 @@ class ProfileService {
         name: `profile_${userId}.jpg`,
       });
 
+      console.log('🚀 [API] POST', `${this.baseURL}/profile/upload-photo`);
+
       const response = await fetch(`${this.baseURL}/profile/upload-photo`, {
         method: 'POST',
         headers,
@@ -101,17 +105,20 @@ class ProfileService {
       const data = await response.json();
 
       if (response.ok) {
+        console.log('✅ [API] POST /profile/upload-photo -', response.status, '\nResponse:', data);
         return {
           success: true,
           data: data,
         };
       } else {
+        console.log('❌ [API] POST /profile/upload-photo -', response.status, '\nResponse:', data);
         return {
           success: false,
           message: data.message || 'Photo upload failed',
         };
       }
     } catch (error) {
+      console.log('❌ [API] POST /profile/upload-photo - Error:', error);
       return {
         success: false,
         message: error.message || 'Network error',
