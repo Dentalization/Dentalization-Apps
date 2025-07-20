@@ -208,49 +208,38 @@ const RegisterDoctorScreen = ({ navigation }) => {
   const sanitizeDataForDatabase = (data) => {
     const sanitized = { ...data };
     
-    // Ensure arrays are properly formatted
-    sanitized.professionalDetails.consultationTypes = Array.isArray(sanitized.professionalDetails.consultationTypes) 
-      ? sanitized.professionalDetails.consultationTypes.filter(type => type && type.trim())
-      : [];
-      
-    sanitized.professionalDetails.servicesOffered = Array.isArray(sanitized.professionalDetails.servicesOffered) 
-      ? sanitized.professionalDetails.servicesOffered.filter(service => service && service.trim())
-      : [];
+    // Ensure required fields are present and properly formatted
+    if (sanitized.licenseNumber) sanitized.licenseNumber = sanitized.licenseNumber.trim();
+    if (sanitized.phone) sanitized.phone = sanitized.phone.trim();
     
-    // Ensure strings are trimmed and not empty
+    // Ensure string fields are trimmed
     const stringFields = [
-      'email', 'firstName', 'lastName', 'phoneNumber',
-      'professionalDetails.title', 'professionalDetails.licenseNumber', 
-      'professionalDetails.licenseIssuingBody', 'professionalDetails.registrationNumber',
-      'professionalDetails.clinicName', 'professionalDetails.clinicAddress', 
-      'professionalDetails.clinicWorkingHours', 'professionalDetails.about'
+      'email', 'firstName', 'lastName', 'phone', 'licenseNumber',
+      'specialization', 'education', 'clinicName', 'clinicAddress', 
+      'workingHours', 'bio'
     ];
     
     stringFields.forEach(field => {
-      const keys = field.split('.');
-      let obj = sanitized;
-      for (let i = 0; i < keys.length - 1; i++) {
-        obj = obj[keys[i]];
-      }
-      const lastKey = keys[keys.length - 1];
-      if (obj[lastKey] && typeof obj[lastKey] === 'string') {
-        obj[lastKey] = obj[lastKey].trim();
+      if (sanitized[field] && typeof sanitized[field] === 'string') {
+        sanitized[field] = sanitized[field].trim();
       }
     });
     
     // Ensure numeric fields are properly formatted
-    if (sanitized.professionalDetails.yearsOfExperience) {
-      sanitized.professionalDetails.yearsOfExperience = parseInt(sanitized.professionalDetails.yearsOfExperience) || 0;
+    if (sanitized.experience) {
+      sanitized.experience = parseInt(sanitized.experience) || 0;
     }
     
-    if (sanitized.professionalDetails.consultationFee) {
-      sanitized.professionalDetails.consultationFee = parseFloat(sanitized.professionalDetails.consultationFee) || null;
+    if (sanitized.consultationFee) {
+      sanitized.consultationFee = parseFloat(sanitized.consultationFee) || null;
     }
     
-    // Ensure boolean fields are proper booleans
-    sanitized.professionalDetails.acceptsInsurance = Boolean(sanitized.professionalDetails.acceptsInsurance);
-    sanitized.professionalDetails.acceptsBPJS = Boolean(sanitized.professionalDetails.acceptsBPJS);
-    sanitized.professionalDetails.emergencyAvailability = Boolean(sanitized.professionalDetails.emergencyAvailability);
+    // Ensure arrays are properly formatted
+    if (sanitized.services) {
+      sanitized.services = Array.isArray(sanitized.services) 
+        ? sanitized.services.filter(service => service && service.trim())
+        : [];
+    }
     
     return sanitized;
   };
@@ -520,29 +509,20 @@ const RegisterDoctorScreen = ({ navigation }) => {
       password: formData.password,
       firstName: firstName,
       lastName: lastName,
-      phoneNumber: formData.phoneNumber.trim(),
       role: formData.role,
-      professionalDetails: {
-        title: formData.title,
-        licenseNumber: formData.licenseNumber,
-        licenseIssuingBody: formData.licenseIssuingBody,
-        licenseExpiryDate: formData.licenseExpiryDate ? formData.licenseExpiryDate.toISOString() : null,
-        registrationNumber: formData.registrationNumber,
-        primarySpecialization: formData.primarySpecialization,
-        educationQualification: formData.educationQualification,
-        yearsOfExperience: parseInt(formData.yearsOfExperience),
-        clinicName: formData.clinicName,
-        clinicAddress: formData.clinicAddress,
-        clinicWorkingHours: formData.clinicWorkingHours,
-        workingHoursStructured: selectedDays,
-        acceptsInsurance: formData.acceptsInsurance,
-        acceptsBPJS: formData.acceptsBPJS,
-        emergencyAvailability: formData.emergencyAvailability,
-        consultationTypes: formData.consultationTypes,
-        servicesOffered: formData.servicesOffered,
-        consultationFee: formData.consultationFee ? parseFloat(parseCurrency(formData.consultationFee)) : null,
-        about: formData.about || "",
-      }
+      // Only include fields that are confirmed to exist in DoctorProfile schema
+      licenseNumber: formData.licenseNumber.trim(),
+      phone: formData.phoneNumber.trim(),
+      specialization: formData.primarySpecialization,
+      experience: parseInt(formData.yearsOfExperience) || 0,
+      education: formData.educationQualification,
+      clinicName: formData.clinicName.trim(),
+      clinicAddress: formData.clinicAddress.trim(),
+      workingHours: formData.clinicWorkingHours.trim(),
+      consultationFee: formData.consultationFee ? parseFloat(parseCurrency(formData.consultationFee)) : null,
+      bio: formData.about || "",
+      // Map to correct schema field names based on available options
+      services: formData.servicesOffered,
     };
     
     setPayloadPreview(registrationData);
@@ -607,31 +587,22 @@ const RegisterDoctorScreen = ({ navigation }) => {
         password: formData.password,
         firstName: firstName,
         lastName: lastName,
-        phoneNumber: formData.phoneNumber.trim(),
         role: formData.role,
-        professionalDetails: {
-          title: formData.title.trim(),
-          licenseNumber: formData.licenseNumber.trim(),
-          licenseIssuingBody: formData.licenseIssuingBody.trim(),
-          licenseExpiryDate: formData.licenseExpiryDate ? formData.licenseExpiryDate.toISOString() : null,
-          registrationNumber: formData.registrationNumber.trim(),
-          primarySpecialization: formData.primarySpecialization,
-          educationQualification: formData.educationQualification,
-          yearsOfExperience: parseInt(formData.yearsOfExperience) || 0,
-          clinicName: formData.clinicName.trim(),
-          clinicAddress: formData.clinicAddress.trim(),
-          clinicWorkingHours: formData.clinicWorkingHours.trim(),
-          workingHoursStructured: selectedDays, // Add structured working hours for database
-          acceptsInsurance: Boolean(formData.acceptsInsurance),
-          acceptsBPJS: Boolean(formData.acceptsBPJS),
-          emergencyAvailability: Boolean(formData.emergencyAvailability),
-          consultationTypes: Array.isArray(formData.consultationTypes) ? formData.consultationTypes : [],
-          servicesOffered: Array.isArray(formData.servicesOffered) ? formData.servicesOffered : [],
-          consultationFee: formData.consultationFee && formData.consultationFee.trim() 
-            ? parseFloat(parseCurrency(formData.consultationFee)) 
-            : null,
-          about: formData.about ? formData.about.trim() : "",
-        }
+        // Only include fields that are confirmed to exist in DoctorProfile schema
+        licenseNumber: formData.licenseNumber.trim(),
+        phone: formData.phoneNumber.trim(),
+        specialization: formData.primarySpecialization,
+        experience: parseInt(formData.yearsOfExperience) || 0,
+        education: formData.educationQualification,
+        clinicName: formData.clinicName.trim(),
+        clinicAddress: formData.clinicAddress.trim(),
+        workingHours: formData.clinicWorkingHours.trim(),
+        consultationFee: formData.consultationFee && formData.consultationFee.trim() 
+          ? parseFloat(parseCurrency(formData.consultationFee)) 
+          : null,
+        bio: formData.about ? formData.about.trim() : "",
+        // Map to correct schema field names based on available options
+        services: Array.isArray(formData.servicesOffered) ? formData.servicesOffered : [],
       };
 
       // Sanitize data before sending
