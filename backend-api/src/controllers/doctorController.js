@@ -16,7 +16,7 @@ class DoctorController {
       const todayAppointments = await prisma.appointment.findMany({
         where: {
           doctorId,
-          appointmentDate: {
+          scheduledAt: {
             gte: today,
             lt: tomorrow,
           },
@@ -29,7 +29,7 @@ class DoctorController {
           },
         },
         orderBy: {
-          appointmentDate: 'asc',
+          scheduledAt: 'asc',
         },
       });
 
@@ -53,39 +53,82 @@ class DoctorController {
       });
 
       // Get recent patient photos requiring review
-      const photosForReview = await prisma.photo.findMany({
+      const photosForReview = await prisma.dentalPhoto.findMany({
         where: {
           analysisStatus: 'PENDING',
-          patient: {
-            patientAppointments: {
-              some: {
-                doctorId,
-              },
-            },
-          },
         },
         include: {
           patient: {
             include: {
-              patientProfile: true,
+              user: true,
             },
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          uploadedAt: 'desc',
         },
         take: 5,
       });
 
+      // Filter photos for patients who have appointments with this doctor
+      const doctorPatientIds = await prisma.appointment.findMany({
+        where: { doctorId },
+        select: { patientId: true },
+        distinct: ['patientId'],
+      });
+      
+      const patientIds = doctorPatientIds.map(apt => apt.patientId);
+      const filteredPhotos = photosForReview.filter(photo => 
+        patientIds.includes(photo.patient.userId)
+      );
+
       // Get statistics
-      const stats = await this.getDoctorStats(doctorId);
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+      const totalPatients = await prisma.appointment.groupBy({
+        by: ['patientId'],
+        where: {
+          doctorId,
+        },
+      });
+
+      const monthlyAppointments = await prisma.appointment.count({
+        where: {
+          doctorId,
+          createdAt: {
+            gte: monthStart,
+          },
+        },
+      });
+
+      const completedAppointments = await prisma.appointment.count({
+        where: {
+          doctorId,
+          status: 'COMPLETED',
+        },
+      });
+
+      const pendingRequests = await prisma.appointment.count({
+        where: {
+          doctorId,
+          status: 'PENDING',
+        },
+      });
+
+      const stats = {
+        totalPatients: totalPatients.length,
+        monthlyAppointments,
+        completedAppointments,
+        pendingRequests,
+      };
 
       res.json({
         success: true,
         data: {
           todayAppointments,
           pendingAppointments,
-          photosForReview,
+          photosForReview: filteredPhotos,
           stats,
         },
       });
@@ -175,6 +218,7 @@ class DoctorController {
       const { search, page = 1, limit = 20 } = req.query;
 
       const where = {
+        role: 'PATIENT',
         patientAppointments: {
           some: {
             doctorId,
@@ -217,7 +261,7 @@ class DoctorController {
               doctorId,
             },
             orderBy: {
-              appointmentDate: 'desc',
+              scheduledAt: 'desc',
             },
             take: 1,
           },
@@ -278,14 +322,17 @@ class DoctorController {
       const patient = await prisma.user.findUnique({
         where: { id: patientId },
         include: {
-          patientProfile: true,
+          patientProfile: {
+            include: {
+              dentalPhotos: {
+                orderBy: { uploadedAt: 'desc' },
+                take: 10,
+              },
+            },
+          },
           patientAppointments: {
             where: { doctorId },
-            orderBy: { appointmentDate: 'desc' },
-          },
-          photos: {
-            orderBy: { createdAt: 'desc' },
-            take: 10,
+            orderBy: { scheduledAt: 'desc' },
           },
         },
       });
@@ -306,7 +353,7 @@ class DoctorController {
             profile: patient.patientProfile,
           },
           appointments: patient.patientAppointments,
-          recentPhotos: patient.photos,
+          recentPhotos: patient.patientProfile?.dentalPhotos || [],
         },
       });
     } catch (error) {
@@ -328,7 +375,7 @@ class DoctorController {
         doctorId,
         ...(status && { status }),
         ...(date && {
-          appointmentDate: {
+          scheduledAt: {
             gte: new Date(date),
             lt: new Date(new Date(date).getTime() + 24 * 60 * 60 * 1000),
           },
@@ -345,7 +392,7 @@ class DoctorController {
           },
         },
         orderBy: {
-          appointmentDate: 'asc',
+          scheduledAt: 'asc',
         },
         skip: (page - 1) * limit,
         take: parseInt(limit),

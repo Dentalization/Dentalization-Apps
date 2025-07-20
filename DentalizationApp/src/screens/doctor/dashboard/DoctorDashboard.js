@@ -54,7 +54,32 @@ const DoctorDashboard = ({ navigation }) => {
   ];
   
   // Use dashboard data from API or fallback to default
-  const quickStats = dashboardData?.stats || defaultStats;
+  const quickStats = dashboardData?.data?.stats ? [
+    {
+      title: 'Today\'s Patients',
+      value: dashboardData.data.todayAppointments?.length.toString() || '0',
+      icon: 'people',
+      color: theme.colors.doctor.primary,
+    },
+    {
+      title: 'Pending Reviews',
+      value: dashboardData.data.stats.pendingRequests?.toString() || '0',
+      icon: 'rate-review',
+      color: theme.colors.warning,
+    },
+    {
+      title: 'This Month',
+      value: dashboardData.data.stats.monthlyAppointments?.toString() || '0',
+      icon: 'trending-up',
+      color: theme.colors.info,
+    },
+    {
+      title: 'Total Patients',
+      value: dashboardData.data.stats.totalPatients?.toString() || '0',
+      icon: 'priority-high',
+      color: theme.colors.success,
+    },
+  ] : defaultStats;
 
   // Fetch dashboard data from API
   const fetchDashboardData = async () => {
@@ -65,8 +90,8 @@ const DoctorDashboard = ({ navigation }) => {
       const result = await apiService.getDoctorDashboard();
       
       if (result.success) {
-        console.log('Dashboard data loaded:', result.data);
-        setDashboardData(result.data);
+        console.log('Dashboard data loaded:', JSON.stringify(result.data, null, 2));
+        setDashboardData(result);
       } else {
         console.error('Failed to fetch dashboard data:', result.error);
         setError('Failed to load dashboard data. Please try again.');
@@ -193,7 +218,7 @@ const DoctorDashboard = ({ navigation }) => {
         }>
         <View style={styles.header}>
           <Text style={[styles.greeting, { color: theme.scheme.text }]}>
-            Good morning, Dr. {user?.name?.split(' ').pop() || 'Doctor'}!
+            Good morning, {user?.profile?.firstName || 'Doctor'}!
           </Text>
           <Text style={[styles.subtitle, { color: theme.scheme.textSecondary }]}>
             Here's your practice overview

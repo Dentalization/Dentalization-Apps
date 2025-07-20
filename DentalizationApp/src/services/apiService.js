@@ -1,4 +1,5 @@
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, API_ENDPOINTS } from '../constants/api';
 
 class ApiService {
@@ -15,10 +16,20 @@ class ApiService {
   }
 
   setupInterceptors() {
-    // Request interceptor
+    // Request interceptor to add auth token
     this.client.interceptors.request.use(
-      (config) => {
+      async (config) => {
         console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
+        
+        // Add auth token to requests
+        const token = await AsyncStorage.getItem('@dentalization_access_token');
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+          console.log(`🔐 Added auth token to request`);
+        } else {
+          console.warn(`⚠️ No auth token found for request`);
+        }
+        
         return config;
       },
       (error) => {
