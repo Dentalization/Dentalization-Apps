@@ -11,7 +11,7 @@ class PatientController {
       const upcomingAppointments = await prisma.appointment.findMany({
         where: {
           patientId,
-          appointmentDate: {
+          scheduledAt: {
             gte: new Date(),
           },
           status: {
@@ -26,18 +26,18 @@ class PatientController {
           },
         },
         orderBy: {
-          appointmentDate: 'asc',
+          scheduledAt: 'asc',
         },
         take: 5,
       });
 
       // Get recent photos
-      const recentPhotos = await prisma.photo.findMany({
+      const recentPhotos = await prisma.dentalPhoto.findMany({
         where: {
           patientId,
         },
         orderBy: {
-          createdAt: 'desc',
+          uploadedAt: 'desc',
         },
         take: 5,
       });
@@ -124,7 +124,7 @@ class PatientController {
           },
         },
         orderBy: {
-          appointmentDate: 'desc',
+          scheduledAt: 'desc',
         },
         skip: (page - 1) * limit,
         take: parseInt(limit),
@@ -179,7 +179,7 @@ class PatientController {
       const existingAppointment = await prisma.appointment.findFirst({
         where: {
           doctorId,
-          appointmentDate: new Date(appointmentDate),
+          scheduledAt: new Date(appointmentDate),
           status: {
             in: ['PENDING', 'CONFIRMED'],
           },
@@ -197,7 +197,7 @@ class PatientController {
         data: {
           patientId,
           doctorId,
-          appointmentDate: new Date(appointmentDate),
+          scheduledAt: new Date(appointmentDate),
           reason,
           notes,
           status: 'PENDING',
@@ -242,18 +242,18 @@ class PatientController {
       const patientId = req.user.id;
       const { page = 1, limit = 20 } = req.query;
 
-      const photos = await prisma.photo.findMany({
+      const photos = await prisma.dentalPhoto.findMany({
         where: {
           patientId,
         },
         orderBy: {
-          createdAt: 'desc',
+          uploadedAt: 'desc',
         },
         skip: (page - 1) * limit,
         take: parseInt(limit),
       });
 
-      const total = await prisma.photo.count({
+      const total = await prisma.dentalPhoto.count({
         where: { patientId },
       });
 
@@ -292,11 +292,10 @@ class PatientController {
       }
 
       // In a real app, you'd upload to cloud storage (Cloudinary, AWS S3, etc.)
-      const photo = await prisma.photo.create({
+      const photo = await prisma.dentalPhoto.create({
         data: {
           patientId,
-          url: req.file.path, // This would be the cloud storage URL
-          filename: req.file.filename,
+          imageUrl: req.file.path, // This would be the cloud storage URL
           description,
           tags: tags ? tags.split(',').map(tag => tag.trim()) : [],
         },
