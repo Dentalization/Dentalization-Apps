@@ -66,8 +66,10 @@ class AuthService {
           config.headers.Authorization = `Bearer ${token}`;
         }
         
-        // Set base URL
-        config.baseURL = API_CONFIG.BASE_URL;
+        // Set base URL only if not already set (prevent double baseURL)
+        if (!config.baseURL) {
+          config.baseURL = API_CONFIG.BASE_URL;
+        }
         
         // Add default timeout
         config.timeout = config.timeout || API_CONFIG.TIMEOUT;
@@ -599,7 +601,7 @@ class AuthService {
   // Debug helper for API issues
   async checkApiConnection() {
     try {
-      const response = await axios.get(`${API_CONFIG.BASE_URL}/api/health`, {
+      const response = await axios.get(`${API_CONFIG.BASE_URL}/health`, {
         timeout: 5000
       });
       

@@ -50,7 +50,7 @@ const PatientDashboard = ({ navigation }) => {
     {
       id: 1,
       name: 'Dr. Kriss Hemsworth',
-      specialty: 'Brain specialist',
+      specialty: 'Periodontic Specialist',
       experience: '6 yrs',
       rating: 4.9,
       reviews: 234,

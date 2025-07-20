@@ -10,6 +10,8 @@ import { useSelector } from 'react-redux';
 import PatientDashboard from '../screens/patient/dashboard/PatientDashboard';
 import CameraScreen from '../screens/patient/camera/CameraScreen';
 import AppointmentsScreen from '../screens/patient/appointments/AppointmentsScreen';
+import AppointmentBookingScreen from '../screens/patient/appointments/AppointmentBookingScreen';
+import DoctorListScreen from '../screens/patient/appointments/DoctorListScreen';
 import HistoryScreen from '../screens/patient/history/HistoryScreen';
 import ProfileScreen from '../screens/patient/profile/ProfileScreen';
 import PatientProfileSetupScreen from '../screens/patient/profile/PatientProfileSetupScreen';
@@ -145,6 +147,16 @@ const PatientNavigator = () => {
           title: 'Lengkapi Profil',
           headerBackTitle: 'Kembali'
         }}
+      />
+      <Stack.Screen 
+        name="DoctorList" 
+        component={DoctorListScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="AppointmentBooking" 
+        component={AppointmentBookingScreen}
+        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );

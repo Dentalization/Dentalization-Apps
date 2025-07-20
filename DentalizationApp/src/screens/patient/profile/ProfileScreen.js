@@ -17,7 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 
 import { useTheme } from '../../../components/common/ThemeProvider';
-import { logoutUser, checkAuthStatus, updateUser } from '../../../store/slices/authSlice';
+import { logoutUser, checkAuthStatus, updateUserData } from '../../../store/slices/authSlice';
 import profileService from '../../../services/profileService';
 
 const ProfileScreen = ({ navigation }) => {
@@ -57,8 +57,8 @@ const ProfileScreen = ({ navigation }) => {
         }
       };
       
-      dispatch(updateUser(updatedUser));
-      console.log('✅ ProfileScreen - Invalid profile picture URL cleaned up');
+      dispatch(updateUserData(updatedUser));
+      console.log('✅ ProfileScreen - Invalid profile picture URL cleaned up and saved to AsyncStorage');
     } catch (error) {
       console.error('❌ ProfileScreen - Error cleaning up profile picture:', error);
     }
@@ -385,9 +385,10 @@ const ProfileScreen = ({ navigation }) => {
         }
         
         console.log('✅ Photo uploaded successfully, full URL:', fullPhotoUrl);
+        console.log('🔍 Current user before update:', JSON.stringify(user, null, 2));
         
         if (fullPhotoUrl) {
-          // Update Redux store immediately for UI feedback
+          // STEP 1: Update Redux store immediately for UI feedback
           const updatedUser = {
             ...user,
             profile: {
@@ -396,7 +397,43 @@ const ProfileScreen = ({ navigation }) => {
             }
           };
           
-          dispatch(updateUser(updatedUser));
+          console.log('🔍 Updated user to save:', JSON.stringify(updatedUser, null, 2));
+          dispatch(updateUserData(updatedUser));
+          
+          // STEP 2: Update profile in backend to persist the photo URL
+          try {
+            console.log('🔍 Updating profile in backend with photo URL...');
+            const updateResponse = await profileService.updateProfile({
+              profilePicture: fullPhotoUrl,
+            });
+            
+            console.log('🔍 Profile update response:', updateResponse);
+            
+            if (updateResponse.success) {
+              console.log('✅ ProfileScreen - Photo URL successfully saved to backend database');
+            } else {
+              console.error('❌ ProfileScreen - Failed to save photo URL to backend:', updateResponse.message);
+              Alert.alert('Peringatan', 'Foto terupload tetapi gagal disimpan ke profil. Coba upload ulang.');
+              return;
+            }
+          } catch (error) {
+            console.error('❌ ProfileScreen - Error updating profile:', error);
+            Alert.alert('Error', 'Gagal menyimpan foto ke profil. Coba upload ulang.');
+            return;
+          }
+          
+          console.log('✅ ProfileScreen - Photo URL updated and saved to AsyncStorage:', fullPhotoUrl);
+          
+          // STEP 3: Double check: verify the photo URL was saved by backend
+          setTimeout(async () => {
+            try {
+              console.log('🔍 Double-checking backend data after 2 seconds...');
+              dispatch(checkAuthStatus());
+            } catch (error) {
+              console.error('❌ Error checking backend data:', error);
+            }
+          }, 2000);
+          
           Alert.alert('Berhasil', 'Foto profil berhasil diperbarui!');
         } else {
           console.log('❌ Invalid photo URL received from server');
