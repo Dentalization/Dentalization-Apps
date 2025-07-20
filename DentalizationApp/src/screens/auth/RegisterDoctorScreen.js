@@ -83,6 +83,18 @@ const RegisterDoctorScreen = ({ navigation }) => {
     'Kunjungan Rumah'
   ];
   
+  // Working hours state
+  const [showWorkingHoursModal, setShowWorkingHoursModal] = useState(false);
+  const [selectedDays, setSelectedDays] = useState({
+    senin: { active: false, start: '09:00', end: '17:00' },
+    selasa: { active: false, start: '09:00', end: '17:00' },
+    rabu: { active: false, start: '09:00', end: '17:00' },
+    kamis: { active: false, start: '09:00', end: '17:00' },
+    jumat: { active: false, start: '09:00', end: '17:00' },
+    sabtu: { active: false, start: '09:00', end: '14:00' },
+    minggu: { active: false, start: '09:00', end: '14:00' }
+  });
+  
   // Date picker state
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerField, setDatePickerField] = useState(null);
@@ -128,8 +140,119 @@ const RegisterDoctorScreen = ({ navigation }) => {
     dispatch(clearError());
   }, [dispatch]);
 
+  // Function to format working hours from selectedDays
+  const formatWorkingHours = () => {
+    const dayNames = {
+      senin: 'Sen', selasa: 'Sel', rabu: 'Rab', kamis: 'Kam', 
+      jumat: 'Jum', sabtu: 'Sab', minggu: 'Min'
+    };
+    
+    const activeDays = Object.entries(selectedDays)
+      .filter(([_, data]) => data.active)
+      .map(([day, data]) => `${dayNames[day]}: ${data.start}-${data.end}`);
+    
+    return activeDays.length > 0 ? activeDays.join(', ') : '';
+  };
+
+  // Function to update working hours when modal closes
+  const updateWorkingHours = () => {
+    const formattedHours = formatWorkingHours();
+    setFormData(prev => ({ ...prev, clinicWorkingHours: formattedHours }));
+    setShowWorkingHoursModal(false);
+  };
+
+  // Function to toggle day selection
+  const toggleDay = (day) => {
+    setSelectedDays(prev => ({
+      ...prev,
+      [day]: { ...prev[day], active: !prev[day].active }
+    }));
+  };
+
+  // Function to update time for a specific day
+  const updateDayTime = (day, field, value) => {
+    setSelectedDays(prev => ({
+      ...prev,
+      [day]: { ...prev[day], [field]: value }
+    }));
+  };
+
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Function to format currency input
+  const formatCurrency = (value) => {
+    // Remove all non-numeric characters
+    const numericValue = value.replace(/[^0-9]/g, '');
+    
+    // Convert to number and format with thousands separators
+    if (numericValue === '') return '';
+    
+    const number = parseInt(numericValue);
+    return number.toLocaleString('id-ID');
+  };
+
+  // Function to parse currency back to number
+  const parseCurrency = (formattedValue) => {
+    if (!formattedValue) return '';
+    return formattedValue.replace(/[^0-9]/g, '');
+  };
+
+  const handleCurrencyChange = (value) => {
+    const formatted = formatCurrency(value);
+    setFormData(prev => ({ ...prev, consultationFee: formatted }));
+  };
+
+  // Function to sanitize and prepare data for database
+  const sanitizeDataForDatabase = (data) => {
+    const sanitized = { ...data };
+    
+    // Ensure arrays are properly formatted
+    sanitized.professionalDetails.consultationTypes = Array.isArray(sanitized.professionalDetails.consultationTypes) 
+      ? sanitized.professionalDetails.consultationTypes.filter(type => type && type.trim())
+      : [];
+      
+    sanitized.professionalDetails.servicesOffered = Array.isArray(sanitized.professionalDetails.servicesOffered) 
+      ? sanitized.professionalDetails.servicesOffered.filter(service => service && service.trim())
+      : [];
+    
+    // Ensure strings are trimmed and not empty
+    const stringFields = [
+      'email', 'firstName', 'lastName', 'phoneNumber',
+      'professionalDetails.title', 'professionalDetails.licenseNumber', 
+      'professionalDetails.licenseIssuingBody', 'professionalDetails.registrationNumber',
+      'professionalDetails.clinicName', 'professionalDetails.clinicAddress', 
+      'professionalDetails.clinicWorkingHours', 'professionalDetails.about'
+    ];
+    
+    stringFields.forEach(field => {
+      const keys = field.split('.');
+      let obj = sanitized;
+      for (let i = 0; i < keys.length - 1; i++) {
+        obj = obj[keys[i]];
+      }
+      const lastKey = keys[keys.length - 1];
+      if (obj[lastKey] && typeof obj[lastKey] === 'string') {
+        obj[lastKey] = obj[lastKey].trim();
+      }
+    });
+    
+    // Ensure numeric fields are properly formatted
+    if (sanitized.professionalDetails.yearsOfExperience) {
+      sanitized.professionalDetails.yearsOfExperience = parseInt(sanitized.professionalDetails.yearsOfExperience) || 0;
+    }
+    
+    if (sanitized.professionalDetails.consultationFee) {
+      sanitized.professionalDetails.consultationFee = parseFloat(sanitized.professionalDetails.consultationFee) || null;
+    }
+    
+    // Ensure boolean fields are proper booleans
+    sanitized.professionalDetails.acceptsInsurance = Boolean(sanitized.professionalDetails.acceptsInsurance);
+    sanitized.professionalDetails.acceptsBPJS = Boolean(sanitized.professionalDetails.acceptsBPJS);
+    sanitized.professionalDetails.emergencyAvailability = Boolean(sanitized.professionalDetails.emergencyAvailability);
+    
+    return sanitized;
   };
 
   const toggleService = (service) => {
@@ -158,18 +281,52 @@ const RegisterDoctorScreen = ({ navigation }) => {
   };
 
   const handleDateChange = (event, selectedDate) => {
-    // Set showDatePicker to false for Android, keep it visible for iOS
-    const isIOS = Platform?.OS === 'ios';
-    setShowDatePicker(isIOS);
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
     
     if (selectedDate && datePickerField) {
       setFormData(prev => ({ ...prev, [datePickerField]: selectedDate }));
     }
     
-    // Clear datePicker field on Android after selection
-    if (!isIOS) {
+    // Clear datePicker field after selection
+    if (Platform.OS === 'android') {
       setDatePickerField(null);
     }
+  };
+
+  const closeDatePicker = () => {
+    setShowDatePicker(false);
+    setDatePickerField(null);
+  };
+
+  // Function to format date in a more readable format
+  const formatDateForDisplay = (date) => {
+    if (!date) return 'Pilih tanggal';
+    
+    const options = { 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric',
+      weekday: 'long'
+    };
+    return date.toLocaleDateString('id-ID', options);
+  };
+
+  // Function to get relative date info
+  const getDateInfo = (date) => {
+    if (!date) return null;
+    
+    const today = new Date();
+    const diffTime = date.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const diffYears = Math.floor(diffDays / 365);
+    
+    return {
+      daysFromNow: diffDays,
+      yearsFromNow: diffYears,
+      isValid: diffDays > 0
+    };
   };
 
   const validateForm = () => {
@@ -230,6 +387,17 @@ const RegisterDoctorScreen = ({ navigation }) => {
       return false;
     }
     
+    // Validate that license expiry date is in the future
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+    const expiryDate = new Date(formData.licenseExpiryDate);
+    expiryDate.setHours(0, 0, 0, 0);
+    
+    if (expiryDate <= today) {
+      Alert.alert('Error', 'Tanggal berakhir SIP harus di masa depan');
+      return false;
+    }
+    
     if (!formData.registrationNumber.trim()) {
       Alert.alert('Error', 'Silakan masukkan nomor STR Anda');
       return false;
@@ -250,9 +418,10 @@ const RegisterDoctorScreen = ({ navigation }) => {
       return false;
     }
     
-    // Validate years of experience is a number
-    if (isNaN(formData.yearsOfExperience) || parseInt(formData.yearsOfExperience) < 0) {
-      Alert.alert('Error', 'Tahun pengalaman harus berupa angka yang valid');
+    // Validate years of experience is a number and reasonable
+    const experience = parseInt(formData.yearsOfExperience);
+    if (isNaN(experience) || experience < 0 || experience > 60) {
+      Alert.alert('Error', 'Tahun pengalaman harus berupa angka yang valid (0-60 tahun)');
       return false;
     }
     
@@ -268,7 +437,7 @@ const RegisterDoctorScreen = ({ navigation }) => {
     }
     
     if (!formData.clinicWorkingHours.trim()) {
-      Alert.alert('Error', 'Silakan masukkan jam praktik klinik Anda');
+      Alert.alert('Error', 'Silakan atur jam praktik klinik Anda');
       return false;
     }
     
@@ -285,9 +454,23 @@ const RegisterDoctorScreen = ({ navigation }) => {
     }
     
     // Validate consultation fee if provided
-    if (formData.consultationFee.trim() && (isNaN(formData.consultationFee) || parseFloat(formData.consultationFee) < 0)) {
-      Alert.alert('Error', 'Biaya konsultasi harus berupa angka yang valid');
-      return false;
+    if (formData.consultationFee.trim()) {
+      const numericFee = parseCurrency(formData.consultationFee);
+      if (!numericFee || isNaN(numericFee) || parseFloat(numericFee) < 0) {
+        Alert.alert('Error', 'Biaya konsultasi harus berupa angka yang valid');
+        return false;
+      }
+      
+      // Check if fee is reasonable (between 10,000 and 10,000,000)
+      const feeValue = parseFloat(numericFee);
+      if (feeValue < 10000) {
+        Alert.alert('Error', 'Biaya konsultasi minimal Rp 10.000');
+        return false;
+      }
+      if (feeValue > 10000000) {
+        Alert.alert('Error', 'Biaya konsultasi maksimal Rp 10.000.000');
+        return false;
+      }
     }
     
     if (!formData.password.trim()) {
@@ -351,12 +534,13 @@ const RegisterDoctorScreen = ({ navigation }) => {
         clinicName: formData.clinicName,
         clinicAddress: formData.clinicAddress,
         clinicWorkingHours: formData.clinicWorkingHours,
+        workingHoursStructured: selectedDays,
         acceptsInsurance: formData.acceptsInsurance,
         acceptsBPJS: formData.acceptsBPJS,
         emergencyAvailability: formData.emergencyAvailability,
         consultationTypes: formData.consultationTypes,
         servicesOffered: formData.servicesOffered,
-        consultationFee: formData.consultationFee ? parseFloat(formData.consultationFee) : null,
+        consultationFee: formData.consultationFee ? parseFloat(parseCurrency(formData.consultationFee)) : null,
         about: formData.about || "",
       }
     };
@@ -426,32 +610,60 @@ const RegisterDoctorScreen = ({ navigation }) => {
         phoneNumber: formData.phoneNumber.trim(),
         role: formData.role,
         professionalDetails: {
-          title: formData.title,
-          licenseNumber: formData.licenseNumber,
-          licenseIssuingBody: formData.licenseIssuingBody,
+          title: formData.title.trim(),
+          licenseNumber: formData.licenseNumber.trim(),
+          licenseIssuingBody: formData.licenseIssuingBody.trim(),
           licenseExpiryDate: formData.licenseExpiryDate ? formData.licenseExpiryDate.toISOString() : null,
-          registrationNumber: formData.registrationNumber,
+          registrationNumber: formData.registrationNumber.trim(),
           primarySpecialization: formData.primarySpecialization,
           educationQualification: formData.educationQualification,
-          yearsOfExperience: parseInt(formData.yearsOfExperience),
-          clinicName: formData.clinicName,
-          clinicAddress: formData.clinicAddress,
-          clinicWorkingHours: formData.clinicWorkingHours,
-          acceptsInsurance: formData.acceptsInsurance,
-          acceptsBPJS: formData.acceptsBPJS,
-          emergencyAvailability: formData.emergencyAvailability,
-          consultationTypes: formData.consultationTypes,
-          servicesOffered: formData.servicesOffered,
-          consultationFee: formData.consultationFee ? parseFloat(formData.consultationFee) : null,
-          about: formData.about || "",
+          yearsOfExperience: parseInt(formData.yearsOfExperience) || 0,
+          clinicName: formData.clinicName.trim(),
+          clinicAddress: formData.clinicAddress.trim(),
+          clinicWorkingHours: formData.clinicWorkingHours.trim(),
+          workingHoursStructured: selectedDays, // Add structured working hours for database
+          acceptsInsurance: Boolean(formData.acceptsInsurance),
+          acceptsBPJS: Boolean(formData.acceptsBPJS),
+          emergencyAvailability: Boolean(formData.emergencyAvailability),
+          consultationTypes: Array.isArray(formData.consultationTypes) ? formData.consultationTypes : [],
+          servicesOffered: Array.isArray(formData.servicesOffered) ? formData.servicesOffered : [],
+          consultationFee: formData.consultationFee && formData.consultationFee.trim() 
+            ? parseFloat(parseCurrency(formData.consultationFee)) 
+            : null,
+          about: formData.about ? formData.about.trim() : "",
         }
       };
 
-      console.log('Sending registration data:', JSON.stringify(registrationData, null, 2));
-      const result = await dispatch(registerUser(registrationData)).unwrap();
+      // Sanitize data before sending
+      const sanitizedData = sanitizeDataForDatabase(registrationData);
+
+      console.log('Sending registration data:', JSON.stringify(sanitizedData, null, 2));
+      
+      // Additional logging for debugging
+      console.log('🔍 Registration Debug Info:');
+      console.log('- Email:', email);
+      console.log('- License Expiry Date:', formData.licenseExpiryDate);
+      console.log('- License Expiry ISO:', formData.licenseExpiryDate ? formData.licenseExpiryDate.toISOString() : 'null');
+      console.log('- Consultation Types Count:', formData.consultationTypes.length);
+      console.log('- Services Offered Count:', formData.servicesOffered.length);
+      console.log('- Years of Experience:', parseInt(formData.yearsOfExperience) || 0);
+      console.log('- Consultation Fee (formatted):', formData.consultationFee);
+      console.log('- Consultation Fee (numeric):', formData.consultationFee ? parseFloat(parseCurrency(formData.consultationFee)) : null);
+      
+      const result = await dispatch(registerUser(sanitizedData)).unwrap();
+      
+      console.log('✅ Registration successful:', result);
       
       // Navigation will be handled by RootNavigator based on auth state
-      Alert.alert('Berhasil', 'Akun berhasil dibuat!');
+      Alert.alert('Berhasil', 'Akun dokter berhasil dibuat! Silakan tunggu verifikasi dari admin.', [
+        {
+          text: 'OK',
+          onPress: () => {
+            console.log('Registration completed, navigating to login');
+            navigation.navigate(ROUTES.LOGIN);
+          }
+        }
+      ]);
     } catch (error) {
       console.error('Registration error details:', error);
       
@@ -554,7 +766,7 @@ const RegisterDoctorScreen = ({ navigation }) => {
           // Add extra logging for 500 errors
           console.error('SERVER ERROR DETAILS:');
           console.error('Endpoint:', `${API_CONFIG.BASE_URL}${AUTH_ENDPOINTS.REGISTER}`);
-          console.error('Request payload:', JSON.stringify(registrationData, null, 2));
+          console.error('Request payload:', JSON.stringify(sanitizedData, null, 2));
           console.error('Response data:', JSON.stringify(error.response?.data, null, 2));
           console.error('Response status:', error.response?.status);
           console.error('Response headers:', JSON.stringify(error.response?.headers, null, 2));
@@ -595,6 +807,17 @@ const RegisterDoctorScreen = ({ navigation }) => {
     // Format: dokter.test_[timestamp]_[random]_[randomString]@dentalization.com
     const uniqueEmail = `dokter.test_${timestamp}_${randomNum}_${randomString}@dentalization.com`;
     
+    // Set random working hours
+    setSelectedDays({
+      senin: { active: true, start: '09:00', end: '17:00' },
+      selasa: { active: true, start: '09:00', end: '17:00' },
+      rabu: { active: true, start: '09:00', end: '17:00' },
+      kamis: { active: true, start: '09:00', end: '17:00' },
+      jumat: { active: true, start: '09:00', end: '17:00' },
+      sabtu: { active: true, start: '09:00', end: '14:00' },
+      minggu: { active: false, start: '09:00', end: '14:00' }
+    });
+    
     setFormData({
       email: uniqueEmail,
       password: 'Test1234!',
@@ -612,8 +835,8 @@ const RegisterDoctorScreen = ({ navigation }) => {
       yearsOfExperience: `${Math.floor(Math.random() * 20) + 1}`,
       clinicName: `Klinik Gigi Test ${randomNum}`,
       clinicAddress: `Jalan Test No. ${randomNum}, Jakarta Selatan`,
-      clinicWorkingHours: 'Sen-Jum: 09.00-17.00, Sab: 09.00-14.00',
-      consultationFee: `${Math.floor(Math.random() * 500) + 100}000`,
+      clinicWorkingHours: 'Sen-Jum: 09:00-17:00, Sab: 09:00-14:00',
+      consultationFee: formatCurrency(`${(Math.floor(Math.random() * 500) + 100) * 1000}`),
       acceptsInsurance: Math.random() > 0.5,
       acceptsBPJS: Math.random() > 0.5,
       emergencyAvailability: Math.random() > 0.5,
@@ -629,7 +852,7 @@ const RegisterDoctorScreen = ({ navigation }) => {
   
   const testServerConnection = async () => {
     try {
-      const response = await axios.get(`${API_CONFIG.BASE_URL}/api/health`, {
+      const response = await axios.get(`${API_CONFIG.BASE_URL}/health`, {
         timeout: 5000,
       });
       
@@ -700,42 +923,20 @@ const RegisterDoctorScreen = ({ navigation }) => {
           }}>
             {/* Header */}
             <View style={{ alignItems: 'center', marginBottom: 32 }}>
-              <View style={{
-                width: 80,
-                height: 80,
-                borderRadius: 40,
-                backgroundColor: theme.colors.doctor?.primary || theme.colors.primary,
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginBottom: 24,
-              }}>
+              <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: theme.colors.doctor?.primary || theme.colors.primary, justifyContent: 'center', alignItems: 'center', marginBottom: 24 }}>
                 <Icon name="medical-services" size={40} color={theme.colors.background} />
               </View>
-              <Text style={{
-                fontSize: 28,
-                fontWeight: 'bold',
-                color: theme.colors.text,
-                marginBottom: 8,
-              }}>
+              <Text style={{ fontSize: 28, fontWeight: 'bold', color: theme.colors.text, marginBottom: 8 }}>
                 Buat Akun Dokter Gigi
               </Text>
-              <Text style={{
-                fontSize: 16,
-                color: theme.colors.textSecondary,
-                textAlign: 'center',
-              }}>
+              <Text style={{ fontSize: 16, color: theme.colors.textSecondary, textAlign: 'center' }}>
                 Bergabung dengan Dentalization untuk mengelola praktik gigi Anda
               </Text>
             </View>
 
             {/* Registration Form */}
             <Card style={{ marginBottom: 24, padding: 24 }}>
-              <Text style={{
-                fontSize: 18,
-                fontWeight: '700',
-                color: theme.colors.text,
-                marginBottom: 24,
-              }}>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: theme.colors.text, marginBottom: 24 }}>
                 Informasi Pribadi
               </Text>
 
@@ -773,12 +974,7 @@ const RegisterDoctorScreen = ({ navigation }) => {
                 />
               </View>
 
-              <Text style={{
-                fontSize: 18,
-                fontWeight: '700',
-                color: theme.colors.text,
-                marginBottom: 24,
-              }}>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: theme.colors.text, marginBottom: 24 }}>
                 Informasi Profesional
               </Text>
 
@@ -813,34 +1009,64 @@ const RegisterDoctorScreen = ({ navigation }) => {
 
                 {/* License Expiry Date */}
                 <View style={{ marginBottom: 16 }}>
-                  <Text style={{
-                    fontSize: 14,
-                    fontWeight: '600',
-                    color: theme.colors.text,
-                    marginBottom: 8,
-                    marginLeft: 8,
-                  }}>
-                    Tanggal Berakhir SIP:
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: theme.colors.text, marginBottom: 8, marginLeft: 8 }}>
+                    Tanggal Berakhir SIP: *
                   </Text>
                   <TouchableOpacity 
                     onPress={() => showDatePickerDialog('licenseExpiryDate')}
+                    style={{ borderWidth: 1, borderColor: formData.licenseExpiryDate ? theme.colors.primary : '#E5E5E5', borderRadius: 8, backgroundColor: formData.licenseExpiryDate ? `${theme.colors.primary}05` : '#FFFFFF' }}
                   >
-                    <View style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      borderWidth: 1,
-                      borderColor: '#E5E5E5',
-                      borderRadius: 8,
-                      padding: 12,
-                    }}>
-                      <Icon name="event" size={20} color={theme.colors.primary} style={{ marginRight: 10 }} />
-                      <Text style={{ flex: 1, color: formData.licenseExpiryDate ? theme.colors.text : '#999' }}>
-                        {formData.licenseExpiryDate
-                          ? formData.licenseExpiryDate.toLocaleDateString('id-ID')
-                          : 'Pilih tanggal'}
-                      </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16 }}>
+                      <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: formData.licenseExpiryDate ? theme.colors.primary : '#E5E5E5', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                        <Icon name="event" size={20} color={formData.licenseExpiryDate ? '#FFFFFF' : '#999'} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 12, color: theme.colors.textSecondary, marginBottom: 2 }}>
+                          Tanggal Berakhir SIP
+                        </Text>
+                        <Text style={{ fontSize: 16, fontWeight: '500', color: formData.licenseExpiryDate ? theme.colors.text : '#999' }}>
+                          {formData.licenseExpiryDate ? formatDateForDisplay(formData.licenseExpiryDate) : 'Pilih tanggal berakhir SIP'}
+                        </Text>
+                      </View>
+                      {formData.licenseExpiryDate ? (
+                        <TouchableOpacity 
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            handleInputChange('licenseExpiryDate', null);
+                          }}
+                          style={{ padding: 8, borderRadius: 20, backgroundColor: '#FF6B6B20' }}
+                        >
+                          <Icon name="clear" size={16} color="#FF6B6B" />
+                        </TouchableOpacity>
+                      ) : (
+                        <Icon name="chevron-right" size={24} color="#999" />
+                      )}
                     </View>
                   </TouchableOpacity>
+                  {formData.licenseExpiryDate && (
+                    <View style={{ marginTop: 12, padding: 12, backgroundColor: `${theme.colors.success}10`, borderRadius: 8, borderLeftWidth: 4, borderLeftColor: theme.colors.success }}>
+                      <Text style={{ fontSize: 12, color: theme.colors.success, fontWeight: '600', marginBottom: 4 }}>
+                        ✓ Tanggal berakhir SIP dipilih
+                      </Text>
+                      <Text style={{ fontSize: 14, color: theme.colors.text, marginBottom: 2 }}>
+                        {formatDateForDisplay(formData.licenseExpiryDate)}
+                      </Text>
+                      {(() => {
+                        const dateInfo = getDateInfo(formData.licenseExpiryDate);
+                        if (dateInfo) {
+                          return (
+                            <Text style={{ fontSize: 12, color: theme.colors.textSecondary }}>
+                              {dateInfo.yearsFromNow > 0 
+                                ? `Berlaku ${dateInfo.yearsFromNow} tahun lagi`
+                                : `Berlaku ${dateInfo.daysFromNow} hari lagi`
+                              }
+                            </Text>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </View>
+                  )}
                 </View>
 
                 <Input
@@ -853,51 +1079,22 @@ const RegisterDoctorScreen = ({ navigation }) => {
                 />
                 
                 {/* Education Qualification */}
-                <Text style={{ 
-                  fontSize: 14,
-                  fontWeight: '600',
-                  marginBottom: 8, 
-                  color: theme.colors.text,
-                  marginTop: 16,
-                  marginLeft: 8
-                }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 8, color: theme.colors.text, marginTop: 16, marginLeft: 8 }}>
                   Kualifikasi Pendidikan:
                 </Text>
                 <ScrollView 
                   horizontal 
                   showsHorizontalScrollIndicator={false}
-                  style={{ 
-                    paddingVertical: 8,
-                    marginBottom: 16,
-                  }}
-                  contentContainerStyle={{
-                    paddingRight: 24,
-                  }}
+                  style={{ paddingVertical: 8, marginBottom: 16 }}
+                  contentContainerStyle={{ paddingRight: 24 }}
                 >
                   {educationQualifications.map((qualification) => (
                     <TouchableOpacity
                       key={qualification}
                       onPress={() => handleInputChange('educationQualification', qualification)}
-                      style={{
-                        padding: 12,
-                        borderRadius: 8,
-                        marginLeft: 8,
-                        borderWidth: 2,
-                        borderColor: formData.educationQualification === qualification 
-                          ? theme.colors.primary 
-                          : '#E5E5E5',
-                        backgroundColor: formData.educationQualification === qualification 
-                          ? `${theme.colors.primary}10` 
-                          : theme.colors.background,
-                      }}
+                      style={{ padding: 12, borderRadius: 8, marginLeft: 8, borderWidth: 2, borderColor: formData.educationQualification === qualification ? theme.colors.primary : '#E5E5E5', backgroundColor: formData.educationQualification === qualification ? `${theme.colors.primary}10` : theme.colors.background }}
                     >
-                      <Text style={{
-                        fontSize: 14,
-                        fontWeight: '500',
-                        color: formData.educationQualification === qualification 
-                          ? theme.colors.primary 
-                          : theme.colors.text,
-                      }}>
+                      <Text style={{ fontSize: 14, fontWeight: '500', color: formData.educationQualification === qualification ? theme.colors.primary : theme.colors.text }}>
                         {qualification}
                       </Text>
                     </TouchableOpacity>
@@ -905,50 +1102,22 @@ const RegisterDoctorScreen = ({ navigation }) => {
                 </ScrollView>
                 
                 {/* Specialization */}
-                <Text style={{ 
-                  fontSize: 14,
-                  fontWeight: '600',
-                  marginBottom: 8, 
-                  color: theme.colors.text,
-                  marginLeft: 8
-                }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', marginBottom: 8, color: theme.colors.text, marginLeft: 8 }}>
                   Spesialisasi Utama:
                 </Text>
                 <ScrollView 
                   horizontal 
                   showsHorizontalScrollIndicator={false}
-                  style={{ 
-                    paddingVertical: 8,
-                    marginBottom: 16,
-                  }}
-                  contentContainerStyle={{
-                    paddingRight: 24,
-                  }}
+                  style={{ paddingVertical: 8, marginBottom: 16 }}
+                  contentContainerStyle={{ paddingRight: 24 }}
                 >
                   {dentalSpecializations.map((specialization) => (
                     <TouchableOpacity
                       key={specialization}
                       onPress={() => handleInputChange('primarySpecialization', specialization)}
-                      style={{
-                        padding: 12,
-                        borderRadius: 8,
-                        marginLeft: 8,
-                        borderWidth: 2,
-                        borderColor: formData.primarySpecialization === specialization 
-                          ? theme.colors.primary 
-                          : '#E5E5E5',
-                        backgroundColor: formData.primarySpecialization === specialization 
-                          ? `${theme.colors.primary}10` 
-                          : theme.colors.background,
-                      }}
+                      style={{ padding: 12, borderRadius: 8, marginLeft: 8, borderWidth: 2, borderColor: formData.primarySpecialization === specialization ? theme.colors.primary : '#E5E5E5', backgroundColor: formData.primarySpecialization === specialization ? `${theme.colors.primary}10` : theme.colors.background }}
                     >
-                      <Text style={{
-                        fontSize: 14,
-                        fontWeight: '500',
-                        color: formData.primarySpecialization === specialization 
-                          ? theme.colors.primary 
-                          : theme.colors.text,
-                      }}>
+                      <Text style={{ fontSize: 14, fontWeight: '500', color: formData.primarySpecialization === specialization ? theme.colors.primary : theme.colors.text }}>
                         {specialization}
                       </Text>
                     </TouchableOpacity>
@@ -966,12 +1135,7 @@ const RegisterDoctorScreen = ({ navigation }) => {
                 />
               </View>
 
-              <Text style={{
-                fontSize: 18,
-                fontWeight: '700',
-                color: theme.colors.text,
-                marginBottom: 24,
-              }}>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: theme.colors.text, marginBottom: 24 }}>
                 Informasi Klinik
               </Text>
 
@@ -996,47 +1160,48 @@ const RegisterDoctorScreen = ({ navigation }) => {
                   required
                 />
 
-                <Input
-                  label="Jam Praktik"
-                  placeholder="Contoh: Sen-Jum: 9.00-17.00, Sab: 9.00-13.00"
-                  value={formData.clinicWorkingHours}
-                  onChangeText={(text) => handleInputChange('clinicWorkingHours', text)}
-                  leftIcon="access-time"
-                  required
-                />
+                {/* Working Hours with Custom Picker */}
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '600', color: theme.colors.text, marginBottom: 8, marginLeft: 8 }}>
+                    Jam Praktik:
+                  </Text>
+                  <TouchableOpacity 
+                    onPress={() => setShowWorkingHoursModal(true)}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#E5E5E5', borderRadius: 8, padding: 12, minHeight: 48 }}>
+                      <Icon name="access-time" size={20} color={theme.colors.primary} style={{ marginRight: 10 }} />
+                      <Text style={{ flex: 1, color: formData.clinicWorkingHours ? theme.colors.text : '#999', fontSize: 14 }}>
+                        {formData.clinicWorkingHours || 'Pilih jam praktik'}
+                      </Text>
+                      <Icon name="chevron-right" size={20} color="#999" />
+                    </View>
+                  </TouchableOpacity>
+                </View>
 
                 <Input
                   label="Biaya Konsultasi (Opsional)"
-                  placeholder="Masukkan biaya konsultasi dalam Rupiah"
+                  placeholder="Contoh: 150.000"
                   value={formData.consultationFee}
-                  onChangeText={(text) => handleInputChange('consultationFee', text)}
-                  leftIcon="attach-money"
+                  onChangeText={handleCurrencyChange}
+                  leftIcon="payments"
                   keyboardType="numeric"
+                  prefix="Rp "
                 />
+                {formData.consultationFee && (
+                  <Text style={{ fontSize: 12, color: theme.colors.textSecondary, marginTop: 4, marginLeft: 8 }}>
+                    Nilai: Rp {formData.consultationFee}
+                  </Text>
+                )}
               </View>
 
-              <Text style={{
-                fontSize: 16,
-                fontWeight: '600',
-                color: theme.colors.text,
-                marginBottom: 16,
-              }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: theme.colors.text, marginBottom: 16 }}>
                 Opsi Pembayaran & Ketersediaan:
               </Text>
 
               {/* Payment & Availability Options */}
               <View style={{ marginBottom: 24 }}>
                 {/* Accept Insurance */}
-                <View style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: 12,
-                  paddingHorizontal: 8,
-                  padding: 12,
-                  borderRadius: 8,
-                  backgroundColor: theme.colors.background,
-                }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingHorizontal: 8, padding: 12, borderRadius: 8, backgroundColor: theme.colors.background }}>
                   <Text style={{ fontSize: 14, color: theme.colors.text }}>
                     Menerima Asuransi
                   </Text>
@@ -1049,16 +1214,7 @@ const RegisterDoctorScreen = ({ navigation }) => {
                 </View>
 
                 {/* Accept BPJS */}
-                <View style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: 12,
-                  paddingHorizontal: 8,
-                  padding: 12,
-                  borderRadius: 8,
-                  backgroundColor: theme.colors.background,
-                }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, paddingHorizontal: 8, padding: 12, borderRadius: 8, backgroundColor: theme.colors.background }}>
                   <Text style={{ fontSize: 14, color: theme.colors.text }}>
                     Menerima BPJS
                   </Text>
@@ -1071,15 +1227,7 @@ const RegisterDoctorScreen = ({ navigation }) => {
                 </View>
 
                 {/* Emergency Availability */}
-                <View style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingHorizontal: 8,
-                  padding: 12,
-                  borderRadius: 8,
-                  backgroundColor: theme.colors.background,
-                }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, padding: 12, borderRadius: 8, backgroundColor: theme.colors.background }}>
                   <Text style={{ fontSize: 14, color: theme.colors.text }}>
                     Tersedia untuk Keadaan Darurat
                   </Text>
@@ -1092,23 +1240,13 @@ const RegisterDoctorScreen = ({ navigation }) => {
                 </View>
               </View>
 
-              <Text style={{
-                fontSize: 16,
-                fontWeight: '600',
-                color: theme.colors.text,
-                marginBottom: 8,
-              }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: theme.colors.text, marginBottom: 8 }}>
                 Jenis Konsultasi yang Ditawarkan:
               </Text>
               
               {/* Consultation Types */}
               <View style={{ marginBottom: 24 }}>
-                <Text style={{
-                  fontSize: 12,
-                  color: theme.colors.textSecondary,
-                  marginBottom: 12,
-                  marginLeft: 8,
-                }}>
+                <Text style={{ fontSize: 12, color: theme.colors.textSecondary, marginBottom: 12, marginLeft: 8 }}>
                   Pilih semua jenis konsultasi yang Anda tawarkan:
                 </Text>
                 
@@ -1117,26 +1255,9 @@ const RegisterDoctorScreen = ({ navigation }) => {
                     <TouchableOpacity
                       key={type}
                       onPress={() => toggleConsultationType(type)}
-                      style={{
-                        paddingVertical: 10,
-                        paddingHorizontal: 16,
-                        borderRadius: 8,
-                        borderWidth: 2,
-                        borderColor: formData.consultationTypes.includes(type) 
-                          ? theme.colors.primary 
-                          : '#E5E5E5',
-                        backgroundColor: formData.consultationTypes.includes(type) 
-                          ? `${theme.colors.primary}10` 
-                          : theme.colors.background,
-                      }}
+                      style={{ paddingVertical: 10, paddingHorizontal: 16, borderRadius: 8, borderWidth: 2, borderColor: formData.consultationTypes.includes(type) ? theme.colors.primary : '#E5E5E5', backgroundColor: formData.consultationTypes.includes(type) ? `${theme.colors.primary}10` : theme.colors.background }}
                     >
-                      <Text style={{
-                        fontSize: 14,
-                        fontWeight: '500',
-                        color: formData.consultationTypes.includes(type) 
-                          ? theme.colors.primary 
-                          : theme.colors.text,
-                      }}>
+                      <Text style={{ fontSize: 14, fontWeight: '500', color: formData.consultationTypes.includes(type) ? theme.colors.primary : theme.colors.text }}>
                         {type}
                       </Text>
                     </TouchableOpacity>
@@ -1144,23 +1265,13 @@ const RegisterDoctorScreen = ({ navigation }) => {
                 </View>
               </View>
               
-              <Text style={{
-                fontSize: 16,
-                fontWeight: '600',
-                color: theme.colors.text,
-                marginBottom: 8,
-              }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: theme.colors.text, marginBottom: 8 }}>
                 Layanan yang Ditawarkan:
               </Text>
               
               {/* Services Offered */}
               <View style={{ marginBottom: 24 }}>
-                <Text style={{
-                  fontSize: 12,
-                  color: theme.colors.textSecondary,
-                  marginBottom: 12,
-                  marginLeft: 8,
-                }}>
+                <Text style={{ fontSize: 12, color: theme.colors.textSecondary, marginBottom: 12, marginLeft: 8 }}>
                   Pilih semua layanan perawatan yang Anda sediakan:
                 </Text>
                 
@@ -1169,26 +1280,9 @@ const RegisterDoctorScreen = ({ navigation }) => {
                     <TouchableOpacity
                       key={service}
                       onPress={() => toggleService(service)}
-                      style={{
-                        padding: 12,
-                        borderRadius: 8,
-                        margin: 4,
-                        borderWidth: 2,
-                        borderColor: formData.servicesOffered.includes(service) 
-                          ? theme.colors.primary 
-                          : '#E5E5E5',
-                        backgroundColor: formData.servicesOffered.includes(service) 
-                          ? `${theme.colors.primary}10` 
-                          : theme.colors.background,
-                      }}
+                      style={{ padding: 12, borderRadius: 8, margin: 4, borderWidth: 2, borderColor: formData.servicesOffered.includes(service) ? theme.colors.primary : '#E5E5E5', backgroundColor: formData.servicesOffered.includes(service) ? `${theme.colors.primary}10` : theme.colors.background }}
                     >
-                      <Text style={{
-                        fontSize: 14,
-                        fontWeight: '500',
-                        color: formData.servicesOffered.includes(service) 
-                          ? theme.colors.primary 
-                          : theme.colors.text,
-                      }}>
+                      <Text style={{ fontSize: 14, fontWeight: '500', color: formData.servicesOffered.includes(service) ? theme.colors.primary : theme.colors.text }}>
                         {service}
                       </Text>
                     </TouchableOpacity>
@@ -1207,22 +1301,12 @@ const RegisterDoctorScreen = ({ navigation }) => {
                   multiline
                   numberOfLines={3}
                 />
-                <Text style={{
-                  fontSize: 12,
-                  color: theme.colors.textSecondary,
-                  marginTop: 4,
-                  marginLeft: 8,
-                }}>
+                <Text style={{ fontSize: 12, color: theme.colors.textSecondary, marginTop: 4, marginLeft: 8 }}>
                   * Biografi ini akan ditampilkan pada profil publik Anda
                 </Text>
               </View>
 
-              <Text style={{
-                fontSize: 18,
-                fontWeight: '700',
-                color: theme.colors.text,
-                marginBottom: 24,
-              }}>
+              <Text style={{ fontSize: 18, fontWeight: '700', color: theme.colors.text, marginBottom: 24 }}>
                 Kata Sandi
               </Text>
 
@@ -1253,73 +1337,34 @@ const RegisterDoctorScreen = ({ navigation }) => {
                 />
                 
                 {/* Password Requirements */}
-                <Text style={{
-                  fontSize: 14,
-                  color: theme.colors.textSecondary,
-                  marginTop: 8,
-                  marginBottom: 16,
-                }}>
+                <Text style={{ fontSize: 14, color: theme.colors.textSecondary, marginTop: 8, marginBottom: 16 }}>
                   Kata sandi harus mengandung:
                 </Text>
                 <View style={{ marginLeft: 8 }}>
-                  <Text style={{
-                    fontSize: 12,
-                    color: formData.password.length >= 8 ? theme.colors.success : theme.colors.textSecondary,
-                    marginBottom: 4,
-                  }}>
+                  <Text style={{ fontSize: 12, color: formData.password.length >= 8 ? theme.colors.success : theme.colors.textSecondary, marginBottom: 4 }}>
                     • Minimal 8 karakter
                   </Text>
-                  <Text style={{
-                    fontSize: 12,
-                    color: /[A-Z]/.test(formData.password) ? theme.colors.success : theme.colors.textSecondary,
-                    marginBottom: 4,
-                  }}>
+                  <Text style={{ fontSize: 12, color: /[A-Z]/.test(formData.password) ? theme.colors.success : theme.colors.textSecondary, marginBottom: 4 }}>
                     • Minimal satu huruf besar (A-Z)
                   </Text>
-                  <Text style={{
-                    fontSize: 12,
-                    color: /[a-z]/.test(formData.password) ? theme.colors.success : theme.colors.textSecondary,
-                    marginBottom: 4,
-                  }}>
+                  <Text style={{ fontSize: 12, color: /[a-z]/.test(formData.password) ? theme.colors.success : theme.colors.textSecondary, marginBottom: 4 }}>
                     • Minimal satu huruf kecil (a-z)
                   </Text>
-                  <Text style={{
-                    fontSize: 12,
-                    color: /\d/.test(formData.password) ? theme.colors.success : theme.colors.textSecondary,
-                    marginBottom: 4,
-                  }}>
+                  <Text style={{ fontSize: 12, color: /\d/.test(formData.password) ? theme.colors.success : theme.colors.textSecondary, marginBottom: 4 }}>
                     • Minimal satu angka (0-9)
                   </Text>
-                  <Text style={{
-                    fontSize: 12,
-                    color: /[!@#$%^&*(),.?":{}|<>\[\]]/.test(formData.password) ? theme.colors.success : theme.colors.textSecondary,
-                  }}>
+                  <Text style={{ fontSize: 12, color: /[!@#$%^&*(),.?":{}|<>\[\]]/.test(formData.password) ? theme.colors.success : theme.colors.textSecondary }}>
                     • Minimal satu karakter khusus {'(!@#$%^&*(),.?":{}|<>[])'}
                   </Text>
                 </View>
               </View>
 
               {/* Document Upload Notice */}
-              <View style={{ 
-                marginBottom: 24,
-                padding: 16,
-                backgroundColor: `${theme.colors.warning}20`,
-                borderRadius: 8,
-                borderLeftWidth: 4,
-                borderLeftColor: theme.colors.warning,
-              }}>
-                <Text style={{ 
-                  fontSize: 14,
-                  fontWeight: '600',
-                  color: theme.colors.warning
-                }}>
+              <View style={{ marginBottom: 24, padding: 16, backgroundColor: `${theme.colors.warning}20`, borderRadius: 8, borderLeftWidth: 4, borderLeftColor: theme.colors.warning }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: theme.colors.warning }}>
                   Upload Dokumen Diperlukan
                 </Text>
-                <Text style={{ 
-                  fontSize: 13,
-                  marginTop: 4,
-                  color: theme.colors.warning,
-                }}>
+                <Text style={{ fontSize: 13, marginTop: 4, color: theme.colors.warning }}>
                   Setelah pendaftaran, Anda perlu mengupload salinan SIP, STR, kartu identitas, dan ijazah untuk verifikasi.
                 </Text>
               </View>
@@ -1345,10 +1390,7 @@ const RegisterDoctorScreen = ({ navigation }) => {
                   onPress={() => navigation.navigate(ROUTES.LOGIN)}
                   style={{ alignSelf: 'center', marginTop: 8, padding: 8 }}
                 >
-                  <Text style={{
-                    fontSize: 14,
-                    color: theme.colors.primary,
-                  }}>
+                  <Text style={{ fontSize: 14, color: theme.colors.primary }}>
                     Sudah memiliki akun? Masuk di sini
                   </Text>
                 </TouchableOpacity>
@@ -1396,6 +1438,124 @@ const RegisterDoctorScreen = ({ navigation }) => {
               </Card>
             )}
             
+            {/* Date Picker Modal */}
+            <Modal
+              visible={showDatePicker}
+              transparent={true}
+              animationType="slide"
+              onRequestClose={closeDatePicker}
+            >
+              <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 16 }}>
+                <Card style={{ padding: 20 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: theme.colors.text }}>
+                      Pilih Tanggal Berakhir SIP
+                    </Text>
+                    <TouchableOpacity onPress={closeDatePicker} style={{ padding: 8 }}>
+                      <Icon name="close" size={24} color="#999" />
+                    </TouchableOpacity>
+                  </View>
+                  
+                  <DateTimePicker
+                    value={formData[datePickerField] || new Date()}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleDateChange}
+                    minimumDate={new Date()}
+                    style={{ backgroundColor: 'transparent' }}
+                  />
+                  
+                  {Platform.OS === 'ios' && (
+                    <View style={{ flexDirection: 'row', marginTop: 20, justifyContent: 'space-between', gap: 12 }}>
+                      <Button 
+                        title="Batal" 
+                        type="outline"
+                        onPress={closeDatePicker}
+                        style={{ flex: 1 }}
+                      />
+                      <Button 
+                        title="Pilih"
+                        onPress={closeDatePicker}
+                        style={{ flex: 1 }}
+                      />
+                    </View>
+                  )}
+                </Card>
+              </View>
+            </Modal>
+
+            {/* Working Hours Modal */}
+            <Modal
+              visible={showWorkingHoursModal}
+              transparent={true}
+              animationType="slide"
+              onRequestClose={() => setShowWorkingHoursModal(false)}
+            >
+              <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 16 }}>
+                <Card style={{ padding: 20, maxHeight: '90%' }}>
+                  <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 16, color: theme.colors.text }}>
+                    Atur Jam Praktik
+                  </Text>
+                  <ScrollView style={{ maxHeight: 400 }}>
+                    {Object.entries(selectedDays).map(([day, data]) => {
+                      const dayLabels = {
+                        senin: 'Senin', selasa: 'Selasa', rabu: 'Rabu', kamis: 'Kamis',
+                        jumat: 'Jumat', sabtu: 'Sabtu', minggu: 'Minggu'
+                      };
+                      
+                      return (
+                        <View key={day} style={{ marginBottom: 16, padding: 12, backgroundColor: data.active ? `${theme.colors.primary}10` : '#F9F9F9', borderRadius: 8, borderWidth: 1, borderColor: data.active ? theme.colors.primary : '#E5E5E5' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: data.active ? 12 : 0 }}>
+                            <Text style={{ fontSize: 16, fontWeight: '600', color: theme.colors.text }}>
+                              {dayLabels[day]}
+                            </Text>
+                            <Switch
+                              value={data.active}
+                              onValueChange={() => toggleDay(day)}
+                              trackColor={{ false: '#E5E5E5', true: theme.colors.primary }}
+                              thumbColor="#FFFFFF"
+                            />
+                          </View>
+                          
+                          {data.active && (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                              <View style={{ flex: 1 }}>
+                                <Text style={{ fontSize: 12, color: theme.colors.textSecondary, marginBottom: 4 }}>Jam Buka</Text>
+                                <TouchableOpacity style={{ borderWidth: 1, borderColor: '#E5E5E5', borderRadius: 6, padding: 8 }}>
+                                  <Text style={{ fontSize: 14, color: theme.colors.text }}>{data.start}</Text>
+                                </TouchableOpacity>
+                              </View>
+                              <Text style={{ fontSize: 16, color: theme.colors.textSecondary, marginTop: 16 }}>-</Text>
+                              <View style={{ flex: 1 }}>
+                                <Text style={{ fontSize: 12, color: theme.colors.textSecondary, marginBottom: 4 }}>Jam Tutup</Text>
+                                <TouchableOpacity style={{ borderWidth: 1, borderColor: '#E5E5E5', borderRadius: 6, padding: 8 }}>
+                                  <Text style={{ fontSize: 14, color: theme.colors.text }}>{data.end}</Text>
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+                          )}
+                        </View>
+                      );
+                    })}
+                  </ScrollView>
+                  
+                  <View style={{ flexDirection: 'row', marginTop: 16, justifyContent: 'space-between', gap: 12 }}>
+                    <Button 
+                      title="Batal" 
+                      type="outline"
+                      onPress={() => setShowWorkingHoursModal(false)}
+                      style={{ flex: 1 }}
+                    />
+                    <Button 
+                      title="Simpan"
+                      onPress={updateWorkingHours}
+                      style={{ flex: 1 }}
+                    />
+                  </View>
+                </Card>
+              </View>
+            </Modal>
+
             {/* Payload Preview Modal */}
             <Modal
               visible={!!payloadPreview}
@@ -1403,12 +1563,7 @@ const RegisterDoctorScreen = ({ navigation }) => {
               animationType="slide"
               onRequestClose={() => setPayloadPreview(null)}
             >
-              <View style={{
-                flex: 1,
-                justifyContent: 'center',
-                backgroundColor: 'rgba(0,0,0,0.5)',
-                padding: 16,
-              }}>
+              <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 16 }}>
                 <Card style={{ padding: 16, maxHeight: '80%' }}>
                   <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 12 }}>
                     Preview Data Pendaftaran
@@ -1439,15 +1594,7 @@ const RegisterDoctorScreen = ({ navigation }) => {
         </ScrollView>
       </KeyboardAvoidingView>
       
-      {/* Date Picker (shown conditionally) */}
-      {showDatePicker && (
-        <DateTimePicker
-          value={formData[datePickerField] || new Date()}
-          mode="date"
-          display={Platform?.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleDateChange}
-        />
-      )}
+      {/* Remove standalone date picker - now handled in modal */}
     </SafeAreaView>
   );
 };

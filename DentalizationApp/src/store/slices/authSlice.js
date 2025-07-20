@@ -107,6 +107,24 @@ export const registerUser = createAsyncThunk(
   }
 );
 
+// Update user data with persistence to AsyncStorage
+export const updateUserData = createAsyncThunk(
+  'auth/updateUserData',
+  async (userData, { rejectWithValue }) => {
+    try {
+      console.log('🔍 updateUserData - Saving to AsyncStorage:', JSON.stringify(userData, null, 2));
+      
+      // Store updated user data to AsyncStorage
+      await authService.storeUserData(userData);
+      
+      return userData;
+    } catch (error) {
+      console.error('❌ updateUserData - Error saving to AsyncStorage:', error);
+      return rejectWithValue(error.message || 'Failed to update user data');
+    }
+  }
+);
+
 export const checkAuthStatus = createAsyncThunk(
   'auth/checkAuthStatus',
   async (_, { rejectWithValue }) => {
@@ -464,6 +482,20 @@ const authSlice = createSlice({
         state.token = null;
         state.refreshToken = null;
         state.biometricEnabled = false;
+        state.error = action.payload;
+      })
+      
+    // Update user data with persistence
+      .addCase(updateUserData.pending, (state) => {
+        // Don't set loading state for user updates to avoid UI flicker
+        console.log('🔍 Redux - updateUserData pending');
+      })
+      .addCase(updateUserData.fulfilled, (state, action) => {
+        console.log('🔍 Redux - updateUserData fulfilled:', JSON.stringify(action.payload, null, 2));
+        state.user = { ...state.user, ...action.payload };
+      })
+      .addCase(updateUserData.rejected, (state, action) => {
+        console.error('❌ Redux - updateUserData rejected:', action.payload);
         state.error = action.payload;
       });
   },
