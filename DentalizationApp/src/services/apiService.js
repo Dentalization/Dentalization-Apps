@@ -1,6 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, API_ENDPOINTS } from '../constants/api';
+import { AUTH_STORAGE_KEYS } from '../constants/auth';
 
 class ApiService {
   constructor() {
@@ -22,7 +23,7 @@ class ApiService {
         console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
         
         // Add auth token to requests
-        const token = await AsyncStorage.getItem('@dentalization_access_token');
+        const token = await AsyncStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
           console.log(`🔐 Added auth token to request`);

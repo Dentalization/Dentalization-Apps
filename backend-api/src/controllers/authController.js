@@ -93,12 +93,26 @@ class AuthController {
             throw profileError;
           }
         } else if (role === 'DOCTOR') {
+          console.log('Creating doctor profile with additionalData:', additionalData);
+          // Extract phoneNumber from additionalData and nested doctor data
+          const { phoneNumber, additionalData: nestedData, ...restData } = additionalData || {};
+          const doctorData = nestedData || {};
+          const { licenseNumber, specialization, ...otherData } = doctorData;
+          console.log('Extracted licenseNumber:', licenseNumber, 'phoneNumber:', phoneNumber);
+          
+          if (!licenseNumber) {
+            throw new Error('License number is required for doctor registration');
+          }
+          
           await prisma.doctorProfile.create({
             data: {
               userId: user.id,
               firstName,
               lastName,
-              ...additionalData,
+              licenseNumber,
+              specialization,
+              phone: phoneNumber,
+              ...otherData,
             },
           });
         }
@@ -163,6 +177,7 @@ class AuthController {
   // Login user
   async login(req, res) {
     try {
+      console.log('🔐 [AUTH] Login attempt:', { email: req.body.email, hasPassword: !!req.body.password, body: req.body });
       const { email, password } = req.body;
 
       // Find user with profile data
@@ -175,14 +190,18 @@ class AuthController {
       });
 
       if (!user) {
+        console.log('🔐 [AUTH] User not found for email:', email);
         return res.status(401).json({
           success: false,
           message: 'Invalid email or password',
         });
       }
 
+      console.log('🔐 [AUTH] User found:', { id: user.id, email: user.email, status: user.status });
+
       // Check password
       const isPasswordValid = await bcrypt.compare(password, user.password);
+      console.log('🔐 [AUTH] Password validation:', { isValid: isPasswordValid });
       if (!isPasswordValid) {
         return res.status(401).json({
           success: false,
@@ -192,11 +211,14 @@ class AuthController {
 
       // Check user status
       if (user.status !== 'ACTIVE') {
+        console.log('🔐 [AUTH] User status not active:', user.status);
         return res.status(401).json({
           success: false,
           message: 'Account is not active. Please contact support.',
         });
       }
+
+      console.log('🔐 [AUTH] All checks passed, generating tokens');
 
       // Generate tokens
       const token = generateToken(user.id, user.role);

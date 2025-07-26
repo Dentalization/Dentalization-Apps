@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AUTH_STORAGE_KEYS } from '../constants/auth';
 
 class AppointmentService {
   constructor() {
@@ -8,7 +9,7 @@ class AppointmentService {
   }
 
   async getAuthHeaders() {
-    const token = await AsyncStorage.getItem('@dentalization_access_token');
+    const token = await AsyncStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
     return {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,

@@ -61,9 +61,25 @@ class AuthService {
     // Request interceptor to add auth token
     axios.interceptors.request.use(
       async (config) => {
-        const token = await this.getAccessToken();
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
+        // List of endpoints that should NOT have authentication headers
+        const publicEndpoints = [
+          AUTH_ENDPOINTS.LOGIN,
+          AUTH_ENDPOINTS.REGISTER,
+          AUTH_ENDPOINTS.REFRESH_TOKEN,
+          AUTH_ENDPOINTS.CHECK_EMAIL,
+          '/health' // Health check endpoint
+        ];
+        
+        // Only add auth token if this is not a public endpoint
+        const isPublicEndpoint = publicEndpoints.some(endpoint => 
+          config.url && config.url.includes(endpoint)
+        );
+        
+        if (!isPublicEndpoint) {
+          const token = await this.getAccessToken();
+          if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+          }
         }
         
         // Set base URL only if not already set (prevent double baseURL)
