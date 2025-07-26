@@ -1,34 +1,21 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useTheme } from '../../components/common/ThemeProvider';
-import Card from '../../components/common/Card';
+import { View, Text, SafeAreaView } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 
 const NotificationsScreen = () => {
-  const theme = useTheme();
-
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.scheme.background }]}>
-      <View style={styles.content}>
-        <Card style={styles.placeholderCard}>
-          <Icon name="notifications" size={60} color={theme.colors.info} style={styles.icon} />
-          <Text style={[styles.title, { color: theme.scheme.text }]}>Notifications</Text>
-          <Text style={[styles.description, { color: theme.scheme.textSecondary }]}>
-            Notification management will be implemented here
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#F2F1F8' }}>
+      <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24 }}>
+        <View style={{ backgroundColor: '#FFFFFF', borderRadius: 12, alignItems: 'center', padding: 40, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }}>
+          <MaterialIcons name="notifications" size={60} color="#483AA0" style={{ marginBottom: 16 }} />
+          <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: 8, textAlign: 'center', color: '#333333' }}>Notifications</Text>
+          <Text style={{ fontSize: 14, textAlign: 'center', lineHeight: 20, color: '#6E6E6E' }}>
+            Notification management and alerts will be implemented here
           </Text>
-        </Card>
+        </View>
       </View>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
-  placeholderCard: { alignItems: 'center', padding: 40 },
-  icon: { marginBottom: 16 },
-  title: { fontSize: 20, fontWeight: 'bold', marginBottom: 8, textAlign: 'center' },
-  description: { fontSize: 14, textAlign: 'center', lineHeight: 20 },
-});
 
 export default NotificationsScreen;
