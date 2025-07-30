@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,13 +8,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Animated,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { useTheme } from '../../components/common/ThemeProvider';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
-import Card from '../../components/common/Card';
 import { ROUTES } from '../../constants/routes';
 import authService from '../../services/authService';
 
@@ -28,6 +29,8 @@ const ResetPasswordScreen = ({ navigation, route }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [token, setToken] = useState('');
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
   
   // Extract token from route params or deep link
   useEffect(() => {
@@ -35,6 +38,21 @@ const ResetPasswordScreen = ({ navigation, route }) => {
       setToken(route.params.token);
     }
   }, [route.params]);
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   // Password validation
   const validatePassword = (password) => {
@@ -103,42 +121,49 @@ const ResetPasswordScreen = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-        <ScrollView
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
+    <LinearGradient
+      colors={['#667eea', '#764ba2', '#f093fb']}
+      style={styles.container}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
         >
-          <View style={styles.header}>
-            <View style={{
-              width: 80,
-              height: 80,
-              borderRadius: 40,
-              backgroundColor: theme.colors.primary + '20',
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginBottom: 24,
-            }}>
-              <Icon
-                name={resetSuccessful ? 'check-circle' : 'lock-reset'}
-                size={40}
-                color={resetSuccessful ? theme.colors.success : theme.colors.primary}
-              />
+          <ScrollView
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Animated.View 
+              style={[
+                styles.animatedContainer,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }],
+                },
+              ]}
+            >
+            <View style={styles.header}>
+              <View style={styles.iconContainer}>
+                <Icon
+                  name={resetSuccessful ? 'check-circle' : 'lock-reset'}
+                  size={40}
+                  color="white"
+                />
+              </View>
+              <Text style={styles.title}>
+                {resetSuccessful ? 'Pengaturan Ulang Kata Sandi Berhasil' : 'Atur Ulang Kata Sandi Anda'}
+              </Text>
+              <Text style={styles.subtitle}>
+                {resetSuccessful 
+                  ? 'Kata sandi Anda telah diatur ulang dengan sukses. Anda sekarang dapat masuk dengan kata sandi baru Anda.'
+                  : 'Buat kata sandi baru yang aman untuk akun Anda'}
+              </Text>
             </View>
-            <Text style={[styles.title, { color: theme.colors.text }]}>
-              {resetSuccessful ? 'Pengaturan Ulang Kata Sandi Berhasil' : 'Atur Ulang Kata Sandi Anda'}
-            </Text>
-            <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-              {resetSuccessful 
-                ? 'Kata sandi Anda telah diatur ulang dengan sukses. Anda sekarang dapat masuk dengan kata sandi baru Anda.'
-                : 'Buat kata sandi baru yang aman untuk akun Anda'}
-            </Text>
-          </View>
 
-          <Card style={styles.formCard}>
+            <Animated.View style={styles.formCard}>
             {!resetSuccessful ? (
               <React.Fragment>
                 <Input
@@ -233,7 +258,7 @@ const ResetPasswordScreen = ({ navigation, route }) => {
                 />
               </View>
             )}
-          </Card>
+            </Animated.View>
 
           {!resetSuccessful && (
             <View style={styles.footer}>
@@ -248,14 +273,19 @@ const ResetPasswordScreen = ({ navigation, route }) => {
               />
             </View>
           )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+            </Animated.View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  safeArea: {
     flex: 1,
   },
   content: {
@@ -264,26 +294,65 @@ const styles = StyleSheet.create({
     paddingVertical: 32,
     justifyContent: 'center',
   },
+  animatedContainer: {
+    flex: 1,
+  },
   header: {
     alignItems: 'center',
     marginBottom: 32,
   },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
     marginBottom: 16,
     textAlign: 'center',
+    color: 'white',
+    letterSpacing: 1,
   },
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 24,
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   formCard: {
     marginBottom: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   resetButton: {
     marginTop: 16,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingVertical: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   successContainer: {
     alignItems: 'center',
@@ -297,11 +366,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 12,
     textAlign: 'center',
+    color: 'white',
   },
   successText: {
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
+    color: 'rgba(255, 255, 255, 0.9)',
   },
   footer: {
     flexDirection: 'row',
@@ -311,6 +382,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
   backButton: {
     paddingHorizontal: 0,
@@ -319,13 +391,13 @@ const styles = StyleSheet.create({
   errorContainer: {
     marginTop: 16,
     padding: 12,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: 'rgba(239, 68, 68, 0.2)',
     borderRadius: 8,
     borderLeftWidth: 4,
     borderLeftColor: '#EF4444',
   },
   errorText: {
-    color: '#EF4444',
+    color: '#FF6B6B',
     fontSize: 14,
   },
 });

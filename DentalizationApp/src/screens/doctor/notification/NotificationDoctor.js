@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, StatusBar, Modal } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, StatusBar, Modal, Animated, PanResponder } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../../../constants/colors';
@@ -8,6 +8,8 @@ const NotificationDoctor = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [filterVisible, setFilterVisible] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [showArchivePopup, setShowArchivePopup] = useState(false);
+  const [notificationToArchive, setNotificationToArchive] = useState(null);
 
   const [notifications, setNotifications] = useState([
     {
@@ -119,27 +121,103 @@ const NotificationDoctor = ({ navigation }) => {
     );
   };
 
-  const NotificationItem = ({ notification }) => (
-    <TouchableOpacity 
-      style={{
-        backgroundColor: '#FFFFFF',
+  const deleteNotification = (id) => {
+    setNotifications(prev => prev.filter(notification => notification.id !== id));
+  };
+
+  const archiveNotification = (id) => {
+    setNotifications(prev => 
+      prev.map(notification => 
+        notification.id === id 
+          ? { ...notification, archived: true }
+          : notification
+      )
+    );
+  };
+
+  const NotificationItem = ({ notification }) => {
+    const translateX = new Animated.Value(0);
+    const [showActions, setShowActions] = useState(false);
+
+    const panResponder = PanResponder.create({
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        return Math.abs(gestureState.dx) > 20;
+      },
+      onPanResponderMove: (evt, gestureState) => {
+        // Swipe ke kanan untuk archive (positive dx)
+        if (gestureState.dx > 0) {
+          translateX.setValue(Math.min(gestureState.dx, 100));
+        }
+        // Swipe ke kiri untuk delete (negative dx)
+        else if (gestureState.dx < 0) {
+          translateX.setValue(Math.max(gestureState.dx, -100));
+        }
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        // Swipe ke kanan untuk archive
+        if (gestureState.dx > 30) {
+          setNotificationToArchive(notification.id);
+          setShowArchivePopup(true);
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start();
+        }
+        // Swipe ke kiri untuk delete
+        else if (gestureState.dx < -30) {
+          Animated.timing(translateX, {
+            toValue: -400,
+            duration: 300,
+            useNativeDriver: true,
+          }).start(() => {
+            deleteNotification(notification.id);
+          });
+        }
+        // Kembali ke posisi semula jika swipe tidak cukup jauh
+        else {
+          Animated.spring(translateX, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    });
+
+
+
+    return (
+      <View style={{
         marginHorizontal: 16,
         marginVertical: 8,
-        borderRadius: 24,
-        padding: 20,
-        shadowColor: notification.isNew ? notification.color : '#000',
-        shadowOffset: { width: 0, height: notification.isNew ? 8 : 4 },
-        shadowOpacity: notification.isNew ? 0.25 : 0.12,
-        shadowRadius: notification.isNew ? 16 : 8,
-        elevation: notification.isNew ? 8 : 4,
-        borderWidth: notification.isNew ? 1.5 : 0,
-        borderColor: notification.isNew ? `${notification.color}30` : 'transparent',
-        opacity: notification.isNew ? 1 : 0.85,
-        transform: [{ scale: notification.isNew ? 1.02 : 1 }]
-      }}
-      onPress={() => markAsRead(notification.id)}
-      activeOpacity={0.7}
-    >
+        position: 'relative',
+      }}>
+
+
+        {/* Notification Content */}
+        <Animated.View
+          style={{
+            transform: [{ translateX }],
+          }}
+          {...panResponder.panHandlers}
+        >
+          <TouchableOpacity 
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 24,
+              padding: 20,
+              shadowColor: notification.isNew ? notification.color : '#000',
+              shadowOffset: { width: 0, height: notification.isNew ? 8 : 4 },
+              shadowOpacity: notification.isNew ? 0.25 : 0.12,
+              shadowRadius: notification.isNew ? 16 : 8,
+              elevation: notification.isNew ? 8 : 4,
+              borderWidth: notification.isNew ? 1.5 : 0,
+              borderColor: notification.isNew ? `${notification.color}30` : 'transparent',
+              opacity: notification.isNew ? 1 : 0.85,
+              transform: [{ scale: notification.isNew ? 1.02 : 1 }]
+            }}
+            onPress={() => markAsRead(notification.id)}
+            activeOpacity={0.7}
+          >
       <View style={{
         position: 'absolute',
         top: 0,
@@ -241,10 +319,13 @@ const NotificationDoctor = ({ navigation }) => {
               </View>
             )}
           </View>
-        </View>
+            </View>
+          </View>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
-    </TouchableOpacity>
-  );
+    );
+  };
 
   const FilterModal = () => (
     <Modal
@@ -494,7 +575,7 @@ const NotificationDoctor = ({ navigation }) => {
       {/* Notifications List */}
       <ScrollView
         style={{ flex: 1, backgroundColor: '#F5F5F5' }}
-        contentContainerStyle={{ paddingVertical: 16, paddingTop: 150 }}
+        contentContainerStyle={{ paddingVertical: 16, paddingTop: 140 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -559,6 +640,117 @@ const NotificationDoctor = ({ navigation }) => {
       </ScrollView>
 
       <FilterModal />
+      
+      {/* Archive Popup */}
+      {showArchivePopup && (
+        <Modal
+          visible={showArchivePopup}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowArchivePopup(false)}
+        >
+          <TouchableOpacity 
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(0,0,0,0.3)',
+              justifyContent: 'flex-end',
+              alignItems: 'flex-end',
+              paddingRight: 20,
+              paddingBottom: 100
+            }}
+            onPress={() => setShowArchivePopup(false)}
+          >
+            <View
+              style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                backdropFilter: 'blur(20px)',
+                borderRadius: 20,
+                padding: 20,
+                minWidth: 200,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.25,
+                shadowRadius: 20,
+                elevation: 10,
+                borderWidth: 1,
+                borderColor: 'rgba(255, 255, 255, 0.3)'
+              }}
+            >
+              <Text style={{
+                fontSize: 18,
+                fontWeight: '700',
+                color: '#333',
+                marginBottom: 15,
+                textAlign: 'center'
+              }}>
+                Archive Notification
+              </Text>
+              
+              <Text style={{
+                fontSize: 14,
+                color: '#666',
+                marginBottom: 20,
+                textAlign: 'center',
+                lineHeight: 20
+              }}>
+                Move this notification to archive?
+              </Text>
+              
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    backgroundColor: 'rgba(108, 117, 125, 0.2)',
+                    paddingVertical: 12,
+                    borderRadius: 12,
+                    marginRight: 8,
+                    borderWidth: 1,
+                    borderColor: 'rgba(108, 117, 125, 0.3)'
+                  }}
+                  onPress={() => setShowArchivePopup(false)}
+                >
+                  <Text style={{
+                    color: '#666',
+                    fontWeight: '600',
+                    textAlign: 'center',
+                    fontSize: 14
+                  }}>
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    backgroundColor: 'rgba(255, 193, 7, 0.3)',
+                    paddingVertical: 12,
+                    borderRadius: 12,
+                    marginLeft: 8,
+                    borderWidth: 1,
+                    borderColor: 'rgba(255, 193, 7, 0.5)'
+                  }}
+                  onPress={() => {
+                    if (notificationToArchive) {
+                      archiveNotification(notificationToArchive);
+                    }
+                    setShowArchivePopup(false);
+                    setNotificationToArchive(null);
+                  }}
+                >
+                  <Text style={{
+                    color: '#B8860B',
+                    fontWeight: '700',
+                    textAlign: 'center',
+                    fontSize: 14
+                  }}>
+                    Archive
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
     </View>
   );
 };

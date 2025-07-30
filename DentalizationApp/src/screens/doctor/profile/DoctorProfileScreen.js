@@ -9,84 +9,118 @@ import {
   Animated,
   Dimensions,
   StatusBar,
-  Easing
+  Easing,
+  Alert
 } from 'react-native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useDispatch } from 'react-redux';
+import { logoutUser } from '../../../store/slices/authSlice';
+import { useNavigation } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 
 const DoctorProfileScreen = () => {
+  const dispatch = useDispatch();
+  const navigation = useNavigation();
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Konfirmasi Logout',
+      'Apakah Anda yakin ingin keluar dari akun ini?',
+      [
+        {
+          text: 'Batal',
+          style: 'cancel',
+        },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await dispatch(logoutUser()).unwrap();
+              // Navigation will be handled by the auth state change
+            } catch (error) {
+              Alert.alert('Error', 'Gagal logout. Silakan coba lagi.');
+            }
+          },
+        },
+      ],
+    );
+  };
   const [scaleAnim] = useState(new Animated.Value(1));
   const scrollY = useState(new Animated.Value(0))[0];
   const [isScrolled, setIsScrolled] = useState(false);
 
   const handlePressIn = () => {
     Animated.timing(scaleAnim, {
-      toValue: 0.95,
-      duration: 150,
-      easing: Easing.out(Easing.cubic),
+      toValue: 0.96,
+      duration: 120,
+      easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
       useNativeDriver: true,
     }).start();
   };
 
   const handlePressOut = () => {
-    Animated.timing(scaleAnim, {
+    Animated.spring(scaleAnim, {
       toValue: 1,
-      duration: 200,
-      easing: Easing.elastic(1.2),
+      tension: 300,
+      friction: 10,
       useNativeDriver: true,
     }).start();
   };
 
-  // Handle scroll for profile header animation
+  // Handle scroll for profile header animation with modern smooth transitions
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
     {
       useNativeDriver: false,
       listener: (event) => {
         const offsetY = event.nativeEvent.contentOffset.y;
-        setIsScrolled(offsetY > 30);
+        setIsScrolled(offsetY > 20);
       },
     }
   );
 
-  // Smooth opacity animation for profile header
+  // Modern smooth opacity animation with refined curve
   const profileOpacity = scrollY.interpolate({
-    inputRange: [0, 50, 90],
-    outputRange: [1, 0.9, 0],
+    inputRange: [0, 30, 60, 100],
+    outputRange: [1, 0.95, 0.7, 0],
     extrapolate: 'clamp',
   });
 
-  // Smooth transform animation for profile header
+  // Enhanced transform animation with smoother progression
   const profileTranslateY = scrollY.interpolate({
-    inputRange: [0, 80],
-    outputRange: [0, -20],
+    inputRange: [0, 40, 80, 120],
+    outputRange: [0, -8, -16, -30],
     extrapolate: 'clamp',
   });
 
-  // Smooth scale animation for profile header
+  // Refined scale animation with subtle transitions
   const profileScale = scrollY.interpolate({
-    inputRange: [0, 80],
-    outputRange: [1, 0.9],
+    inputRange: [0, 40, 80, 120],
+    outputRange: [1, 0.98, 0.95, 0.88],
     extrapolate: 'clamp',
   });
 
+  // Smoother border radius transition
   const headerBorderRadius = scrollY.interpolate({
-    inputRange: [0, 30],
-    outputRange: [30, 0],
+    inputRange: [0, 20, 40],
+    outputRange: [30, 15, 0],
     extrapolate: 'clamp',
   });
 
+  // Enhanced stats animation with modern easing curve
   const statsOpacity = scrollY.interpolate({
-    inputRange: [0, 20, 60],
-    outputRange: [0, 1, 1],
+    inputRange: [0, 15, 35, 60],
+    outputRange: [0, 0.3, 0.8, 1],
     extrapolate: 'clamp',
   });
 
+  // Smoother stats slide-in animation
   const statsTranslateY = scrollY.interpolate({
-    inputRange: [0, 40],
-    outputRange: [20, 0],
+    inputRange: [0, 25, 50],
+    outputRange: [30, 10, 0],
     extrapolate: 'clamp',
   });
 
@@ -369,7 +403,7 @@ const DoctorProfileScreen = () => {
           contentContainerStyle={{ paddingTop: 280, paddingBottom: 100 }}
           showsVerticalScrollIndicator={false}
           onScroll={handleScroll}
-          scrollEventThrottle={4}
+          scrollEventThrottle={2}
           bounces={true}
           decelerationRate="normal"
         >
@@ -458,7 +492,7 @@ const DoctorProfileScreen = () => {
             icon="logout"
             title="Sign Out"
             subtitle="Sign out from your account"
-            onPress={() => console.log('Logout')}
+            onPress={handleLogout}
             showArrow={false}
           />
         </View>

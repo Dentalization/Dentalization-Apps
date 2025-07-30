@@ -9,10 +9,13 @@ import {
   Alert,
   TouchableOpacity,
   Modal,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { LinearGradient } from 'expo-linear-gradient';
 import axios from 'axios';
 
 import { useTheme } from '../../components/common/ThemeProvider';
@@ -25,7 +28,13 @@ import { API_CONFIG } from '../../constants/api';
 import { AUTH_ENDPOINTS } from '../../constants/auth';
 import authService from '../../services/authService';
 
+const { width, height } = Dimensions.get('window');
+
 const RegisterPatientScreen = ({ navigation }) => {
+  // Animation values
+  const fadeAnim = useState(new Animated.Value(0))[0];
+  const slideAnim = useState(new Animated.Value(50))[0];
+  const scaleAnim = useState(new Animated.Value(0.9))[0];
   const theme = useTheme();
   const dispatch = useDispatch();
   const { isLoading, error } = useSelector(state => state.auth);
@@ -59,6 +68,25 @@ const RegisterPatientScreen = ({ navigation }) => {
   const [isLoadingEmailCheck, setIsLoading] = useState(false);
   
   useEffect(() => {
+    // Start entrance animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
     // Clear previous registration errors when mounting
     dispatch(clearError());
   }, [dispatch]);
@@ -631,61 +659,102 @@ const RegisterPatientScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <KeyboardAvoidingView
-        behavior={Platform?.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+    <LinearGradient
+      colors={['#667eea', '#764ba2', '#f093fb']}
+      style={{ flex: 1 }}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
+      <SafeAreaView style={{ flex: 1 }}>
+        <KeyboardAvoidingView
+          behavior={Platform?.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
         >
-          <View style={{
-            flex: 1,
-            paddingHorizontal: 24,
-            paddingVertical: 32,
-          }}>
+          <ScrollView
+            contentContainerStyle={{ flexGrow: 1 }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Animated.View style={{
+              flex: 1,
+              paddingHorizontal: 24,
+              paddingVertical: 32,
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
+            }}>
             {/* Header */}
-            <View style={{ alignItems: 'center', marginBottom: 32 }}>
+            <Animated.View style={{ 
+              alignItems: 'center', 
+              marginBottom: 40,
+              transform: [{ scale: scaleAnim }]
+            }}>
               <View style={{
-                width: 80,
-                height: 80,
-                borderRadius: 40,
-                backgroundColor: theme.colors.primary,
+                width: 100,
+                height: 100,
+                borderRadius: 50,
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
                 justifyContent: 'center',
                 alignItems: 'center',
-                marginBottom: 24,
+                marginBottom: 32,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.3,
+                shadowRadius: 16,
+                elevation: 8,
               }}>
-                <Icon name="person" size={40} color={theme.colors.background} />
+                <Icon name="person-add" size={50} color="#FFFFFF" />
               </View>
               <Text style={{
-                fontSize: 28,
-                fontWeight: 'bold',
-                color: theme.colors.text,
-                marginBottom: 8,
+                fontSize: 32,
+                fontWeight: '800',
+                color: '#FFFFFF',
+                marginBottom: 12,
+                textShadowColor: 'rgba(0, 0, 0, 0.3)',
+                textShadowOffset: { width: 0, height: 2 },
+                textShadowRadius: 4,
+                letterSpacing: 0.5,
+                textAlign: 'center',
               }}>
                 Buat Akun Pasien
               </Text>
               <Text style={{
-                fontSize: 16,
-                color: theme.colors.textSecondary,
+                fontSize: 18,
+                color: 'rgba(255, 255, 255, 0.9)',
                 textAlign: 'center',
+                fontWeight: '500',
+                letterSpacing: 0.3,
+                paddingHorizontal: 20,
               }}>
-                Bergabung dengan Dentalization untuk mendapatkan perawatan gigi terbaik
+                Daftar untuk mendapatkan layanan dental terbaik
               </Text>
-            </View>
+            </Animated.View>
 
             {/* Registration Form */}
-            <Card style={{ marginBottom: 24, padding: 24 }}>
+            <Animated.View style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              borderRadius: 24,
+              padding: 32,
+              marginBottom: 32,
+              backdropFilter: 'blur(20px)',
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 20 },
+              shadowOpacity: 0.25,
+              shadowRadius: 25,
+              elevation: 15,
+              opacity: fadeAnim,
+            }}>
               <Text style={{
-                fontSize: 18,
-                fontWeight: '700',
-                color: theme.colors.text,
-                marginBottom: 24,
-              }}>
-                Informasi Pribadi
-              </Text>
+                  fontSize: 20,
+                  fontWeight: '700',
+                  color: '#FFFFFF',
+                  marginBottom: 28,
+                  textAlign: 'center',
+                  letterSpacing: 0.5,
+                }}>
+                  Informasi Pribadi
+                </Text>
 
               {/* Basic Information */}
               <View style={{ marginBottom: 24 }}>
@@ -697,6 +766,18 @@ const RegisterPatientScreen = ({ navigation }) => {
                   leftIcon="person"
                   autoCapitalize="words"
                   required
+                  style={{ 
+                    marginBottom: 20,
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    borderRadius: 16,
+                    borderWidth: 0,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 8,
+                    elevation: 4,
+                  }}
+                  placeholderTextColor="rgba(0, 0, 0, 0.6)"
                 />
 
                 <Input
@@ -708,6 +789,18 @@ const RegisterPatientScreen = ({ navigation }) => {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   required
+                  style={{ 
+                    marginBottom: 20,
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    borderRadius: 16,
+                    borderWidth: 0,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 8,
+                    elevation: 4,
+                  }}
+                  placeholderTextColor="rgba(0, 0, 0, 0.6)"
                 />
 
                 <Input
@@ -718,6 +811,18 @@ const RegisterPatientScreen = ({ navigation }) => {
                   leftIcon="phone"
                   keyboardType="phone-pad"
                   required
+                  style={{ 
+                    marginBottom: 20,
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    borderRadius: 16,
+                    borderWidth: 0,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 8,
+                    elevation: 4,
+                  }}
+                  placeholderTextColor="rgba(0, 0, 0, 0.6)"
                 />
               </View>
 
@@ -880,11 +985,28 @@ const RegisterPatientScreen = ({ navigation }) => {
                 />
                 
                 <Button
-                  title="Daftar"
+                  title="Daftar Sekarang"
                   onPress={handleRegister}
                   loading={isLoading}
                   disabled={isLoading}
                   leftIcon="how-to-reg"
+                  style={{ 
+                    marginTop: 32,
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: 16,
+                    paddingVertical: 18,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 8 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 12,
+                    elevation: 8,
+                  }}
+                  textStyle={{
+                    color: '#667eea',
+                    fontSize: 18,
+                    fontWeight: '700',
+                    letterSpacing: 0.5,
+                  }}
                 />
 
                 <TouchableOpacity
@@ -899,7 +1021,7 @@ const RegisterPatientScreen = ({ navigation }) => {
                   </Text>
                 </TouchableOpacity>
               </View>
-            </Card>
+            </Animated.View>
 
             {/* Debug Options */}
             <TouchableOpacity
@@ -912,7 +1034,19 @@ const RegisterPatientScreen = ({ navigation }) => {
             </TouchableOpacity>
             
             {showDebug && (
-              <Card style={{ padding: 16, marginBottom: 24 }}>
+              <Animated.View style={{
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: 20,
+                padding: 20,
+                marginBottom: 24,
+                borderWidth: 1,
+                borderColor: 'rgba(255, 255, 255, 0.15)',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 10 },
+                shadowOpacity: 0.2,
+                shadowRadius: 15,
+                elevation: 10,
+              }}>
                 <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 16, color: theme.colors.text }}>
                   Opsi Debug
                 </Text>
@@ -976,7 +1110,7 @@ const RegisterPatientScreen = ({ navigation }) => {
                     leftIcon="check-circle"
                   />
                 </View>
-              </Card>
+              </Animated.View>
             )}
             
             {/* Payload Preview Modal */}
@@ -992,7 +1126,20 @@ const RegisterPatientScreen = ({ navigation }) => {
                 backgroundColor: 'rgba(0,0,0,0.5)',
                 padding: 16,
               }}>
-                <Card style={{ padding: 16, maxHeight: '80%' }}>
+                <Animated.View style={{
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  borderRadius: 20,
+                  padding: 24,
+                  maxHeight: '80%',
+                  backdropFilter: 'blur(20px)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(255, 255, 255, 0.3)',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 15 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 20,
+                  elevation: 20,
+                }}>
                   <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 12 }}>
                     Preview Data Pendaftaran
                   </Text>
@@ -1015,23 +1162,24 @@ const RegisterPatientScreen = ({ navigation }) => {
                       }}
                     />
                   </View>
-                </Card>
+                </Animated.View>
               </View>
             </Modal>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-      
-      {/* Date Picker (shown conditionally) */}
-      {showDatePicker && (
-        <DateTimePicker
-          value={formData[datePickerField] || new Date()}
-          mode="date"
-          display={Platform?.OS === 'ios' ? 'spinner' : 'default'}
-          onChange={handleDateChange}
-        />
-      )}
-    </SafeAreaView>
+            </Animated.View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+        
+        {/* Date Picker (shown conditionally) */}
+        {showDatePicker && (
+          <DateTimePicker
+            value={formData[datePickerField] || new Date()}
+            mode="date"
+            display={Platform?.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={handleDateChange}
+          />
+        )}
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
 

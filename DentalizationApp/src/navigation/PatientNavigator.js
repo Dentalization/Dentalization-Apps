@@ -20,7 +20,7 @@ import ChatScreen from '../screens/patient/messages/ChatScreen';
 
 // Shared screens
 import SettingsScreen from '../screens/shared/SettingsScreen';
-import NotificationsScreen from '../screens/shared/NotificationsScreen';
+import NotificationPatient from '../screens/patient/Notification/NotificationPatient';
 
 import { Colors, ROUTES } from '../constants';
 
@@ -138,7 +138,7 @@ const PatientNavigator = () => {
       <Stack.Screen name="PatientTabs" component={PatientTabNavigator} />
       <Stack.Screen name={ROUTES.CHAT} component={ChatScreen} />
       <Stack.Screen name={ROUTES.SETTINGS} component={SettingsScreen} />
-      <Stack.Screen name={ROUTES.NOTIFICATIONS} component={NotificationsScreen} />
+      <Stack.Screen name={ROUTES.NOTIFICATIONS} component={NotificationPatient} />
       <Stack.Screen 
         name="PatientProfileSetup" 
         component={PatientProfileSetupScreen}

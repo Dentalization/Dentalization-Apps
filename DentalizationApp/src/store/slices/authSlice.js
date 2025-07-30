@@ -29,7 +29,9 @@ export const loginUser = createAsyncThunk(
         return rejectWithValue(response.message || 'Login failed');
       }
     } catch (error) {
-      return rejectWithValue(error.message || 'Network error');
+      // AuthService already handles errors properly and returns user-friendly messages
+      // If we reach here, it's likely a network or unexpected error
+      return rejectWithValue('Terjadi kesalahan tidak terduga. Silakan coba lagi.');
     }
   }
 );

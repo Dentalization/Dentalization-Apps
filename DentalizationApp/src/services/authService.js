@@ -125,8 +125,7 @@ class AuthService {
           } else if (error.response?.status === 429) {
             console.warn(`⚠️ [RATE_LIMIT] Too many requests for ${error.config?.url || 'unknown'} - backing off`);
           } else {
-            console.error(`❌ [API] ${error.config?.method?.toUpperCase() || 'REQ'} ${error.config?.url || 'unknown'} - ${error.response?.status || 'NETWORK_ERROR'}`,
-              error.response?.data?.message ? `\nError: ${error.response.data.message}` : '');
+            console.error(`❌ [API] ${error.config?.method?.toUpperCase() || 'REQ'} ${error.config?.url || 'unknown'} - ${error.response?.status || 'NETWORK_ERROR'}`);
           }
         }
 
@@ -337,7 +336,10 @@ class AuthService {
         message: response.data.message || 'Login successful',
       };
     } catch (error) {
-      console.error('Login error:', error);
+      // Log error for debugging without exposing sensitive details
+      if (__DEV__) {
+        console.log('Login attempt failed:', error.response?.status || 'Network error');
+      }
       
       let errorMessage = 'Gagal masuk';
       
