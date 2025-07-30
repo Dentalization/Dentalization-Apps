@@ -15,7 +15,6 @@ import DoctorProfileScreen from '../screens/doctor/profile/DoctorProfileScreen';
 // Shared screens
 import ChatScreen from '../screens/shared/ChatScreen';
 import SettingsScreen from '../screens/shared/SettingsScreen';
-import NotificationsScreen from '../screens/shared/NotificationsScreen';
 import NotificationDoctor from '../screens/doctor/notification/NotificationDoctor';
 
 import { Colors, ROUTES } from '../constants';
@@ -121,7 +120,7 @@ const DoctorNavigator = () => {
       <Stack.Screen name="DoctorTabs" component={DoctorTabNavigator} />
       <Stack.Screen name={ROUTES.CHAT} component={ChatScreen} />
       <Stack.Screen name={ROUTES.SETTINGS} component={SettingsScreen} />
-      <Stack.Screen name={ROUTES.NOTIFICATIONS} component={NotificationsScreen} />
+      <Stack.Screen name={ROUTES.NOTIFICATIONS} component={NotificationDoctor} />
       <Stack.Screen name="NotificationDoctor" component={NotificationDoctor} />
     </Stack.Navigator>
   );

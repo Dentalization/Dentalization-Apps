@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { ROUTES } from '../../../constants';
 
 const { width } = Dimensions.get('window');
 const PatientDashboard = ({ navigation }) => {
@@ -16,6 +17,7 @@ const PatientDashboard = ({ navigation }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollViewRef = React.useRef(null);
   const scrollY = useRef(new Animated.Value(0)).current;
+  const scrollX = useRef(new Animated.Value(0)).current;
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
@@ -29,7 +31,7 @@ const PatientDashboard = ({ navigation }) => {
     // Set initial position to middle set for infinite scroll
     setTimeout(() => {
       if (scrollViewRef.current) {
-        const cardWidth = width - 40;
+        const cardWidth = width - 60;
         scrollViewRef.current.scrollTo({ 
           x: featuredDoctors.length * cardWidth, 
           animated: false 
@@ -178,39 +180,63 @@ const PatientDashboard = ({ navigation }) => {
   );
 
   // Handle scroll for infinite loop with better calculation
-  const handleScroll = (event) => {
-    const contentOffset = event.nativeEvent.contentOffset;
-    const cardWidth = width - 40;
-    const pageNum = Math.round(contentOffset.x / cardWidth);
-    const actualIndex = pageNum % featuredDoctors.length;
-    setCurrentIndex(actualIndex < 0 ? featuredDoctors.length + actualIndex : actualIndex);
-  };
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+    {
+      useNativeDriver: false,
+      listener: (event) => {
+         const contentOffset = event.nativeEvent.contentOffset;
+         const cardWidth = width - 60; // Consistent with snapToInterval
+         const pageNum = Math.round(contentOffset.x / cardWidth);
+         const actualIndex = pageNum % featuredDoctors.length;
+         setCurrentIndex(actualIndex < 0 ? featuredDoctors.length + actualIndex : actualIndex);
+       },
+    }
+  );
 
   const onMomentumScrollEnd = (event) => {
     const contentOffset = event.nativeEvent.contentOffset;
-    const cardWidth = width - 40;
+    const cardWidth = width - 60;
     const pageNum = Math.round(contentOffset.x / cardWidth);
     
-    // Create infinite loop effect with smoother transitions
+    // Create infinite loop effect with consistent positioning
+    // Always reset to middle section to maintain consistency
     if (pageNum >= featuredDoctors.length * 2) {
-      setTimeout(() => {
+      const targetIndex = pageNum % featuredDoctors.length;
+      requestAnimationFrame(() => {
         scrollViewRef.current?.scrollTo({ 
-          x: featuredDoctors.length * cardWidth, 
+          x: (featuredDoctors.length + targetIndex) * cardWidth, 
           animated: false 
         });
-      }, 50);
+      });
     } else if (pageNum < featuredDoctors.length) {
-      setTimeout(() => {
+      const targetIndex = pageNum < 0 ? 0 : pageNum;
+      requestAnimationFrame(() => {
         scrollViewRef.current?.scrollTo({ 
-          x: (featuredDoctors.length + pageNum) * cardWidth, 
+          x: (featuredDoctors.length + targetIndex) * cardWidth, 
           animated: false 
         });
-      }, 50);
+      });
     }
   };
 
   // Create infinite data array for smooth infinite scrolling
+  // Always start from the first doctor to ensure consistency
   const infiniteDoctors = [...featuredDoctors, ...featuredDoctors, ...featuredDoctors];
+  
+  // Ensure we always start from the middle section for consistent infinite scrolling
+  useEffect(() => {
+    if (scrollViewRef.current) {
+      const cardWidth = width - 60;
+      // Start from the middle section (second copy) to allow smooth infinite scrolling
+      const initialPosition = featuredDoctors.length * cardWidth;
+      // Reset currentIndex to 0 for consistency
+      setCurrentIndex(0);
+      setTimeout(() => {
+        scrollViewRef.current.scrollTo({ x: initialPosition, animated: false });
+      }, 100);
+    }
+  }, []);
 
   const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
@@ -361,7 +387,17 @@ const PatientDashboard = ({ navigation }) => {
                 {user?.profile?.firstName || user?.name || 'Siren.uix'} 👋
               </Text>
             </View>
-            <TouchableOpacity onPress={() => navigation.navigate('NotificationPatient')} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' }}>
+            <TouchableOpacity 
+              onPress={() => navigation.navigate(ROUTES.NOTIFICATIONS)}
+              style={{ 
+                width: 40, 
+                height: 40, 
+                borderRadius: 20, 
+                backgroundColor: 'rgba(255,255,255,0.2)', 
+                justifyContent: 'center', 
+                alignItems: 'center' 
+              }}
+            >
               <Icon name="notifications-none" size={20} color="white" />
             </TouchableOpacity>
           </View>
@@ -409,10 +445,7 @@ const PatientDashboard = ({ navigation }) => {
           </ScrollView>
         </LinearGradient>
       </Animated.View>
-
-      {/* Spacer for fixed header */}
-      <View style={{ height: isScrolled ? 140 : 160 }} />
-
+      
       {/* Enhanced Scrollable Content */}
       <SafeAreaView style={{ flex: 1 }}>
         <Animated.ScrollView 
@@ -476,37 +509,76 @@ const PatientDashboard = ({ navigation }) => {
           )}
 
           {/* Enhanced Featured Doctor Cards Carousel */}
-          <View style={{ marginTop: 25, marginBottom: 30 }}>
+          <View style={{ marginTop: 25, marginBottom: 30, paddingTop: 180 }}>
             <ScrollView
               ref={scrollViewRef}
               horizontal
               showsHorizontalScrollIndicator={false}
               pagingEnabled={false}
-              decelerationRate="normal"
-              snapToInterval={width - 40}
-              snapToAlignment="center"
-              contentContainerStyle={{ paddingHorizontal: 20 }}
+              decelerationRate={0.98}
+              snapToInterval={width - 60}
+              snapToAlignment="start"
+              contentContainerStyle={{ paddingHorizontal: 10 }}
+              disableIntervalMomentum={true}
               onScroll={handleScroll}
               onMomentumScrollEnd={onMomentumScrollEnd}
-              scrollEventThrottle={16}
+              scrollEventThrottle={1}
               bounces={false}
             >
-              {infiniteDoctors.map((doctor, index) => (
-                <Animated.View 
-                  key={`${doctor.id}-${Math.floor(index / featuredDoctors.length)}`}
-                  style={{ 
-                    width: width - 60, 
-                    marginHorizontal: 10,
-                    transform: [{ scale: scaleAnim }] 
-                  }}
-                >
-                  <LinearGradient
-                    colors={['#667eea', '#764ba2']}
-                    style={{ borderRadius: 25, padding: 0, overflow: 'hidden', shadowColor: '#667eea', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 15 }}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
+              {infiniteDoctors.map((doctor, index) => {
+                const cardWidth = width - 60; // Match snapToInterval
+                const inputRange = [
+                  (index - 1) * cardWidth,
+                  index * cardWidth,
+                  (index + 1) * cardWidth,
+                ];
+                
+                return (
+                  <Animated.View 
+                    key={`${doctor.id}-${Math.floor(index / featuredDoctors.length)}`}
+                    style={{ 
+                      width: width - 80, 
+                      marginHorizontal: 10,
+                      transform: [
+                        {
+                          scale: scrollX.interpolate({
+                            inputRange,
+                            outputRange: [0.85, 1, 0.85],
+                            extrapolate: 'clamp',
+                          }),
+                        },
+                        {
+                          translateY: scrollX.interpolate({
+                            inputRange,
+                            outputRange: [20, 0, 20],
+                            extrapolate: 'clamp',
+                          }),
+                        },
+                      ],
+                      opacity: scrollX.interpolate({
+                        inputRange,
+                        outputRange: [0.6, 1, 0.6],
+                        extrapolate: 'clamp',
+                      }),
+                    }}
                   >
-                    <View style={{ padding: 25, position: 'relative' }}>
+                  <LinearGradient
+                     colors={['#667eea', '#764ba2']}
+                     style={{ 
+                       borderRadius: 25, 
+                       padding: 0, 
+                       overflow: 'hidden', 
+                       shadowColor: '#667eea', 
+                       shadowOffset: { width: 0, height: 12 }, 
+                       shadowOpacity: 0.3, 
+                       shadowRadius: 20, 
+                       elevation: 15,
+                       height: 220
+                     }}
+                     start={{ x: 0, y: 0 }}
+                     end={{ x: 1, y: 1 }}
+                   >
+                     <View style={{ padding: 25, position: 'relative', flex: 1, justifyContent: 'space-between' }}>
                       {/* Floating elements for visual appeal */}
                       <View style={{ position: 'absolute', top: -10, right: -10, width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(255,255,255,0.1)' }} />
                       <View style={{ position: 'absolute', bottom: -20, left: -20, width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255,255,255,0.05)' }} />
@@ -519,36 +591,60 @@ const PatientDashboard = ({ navigation }) => {
                         
                         <View style={{ flex: 1, marginLeft: 20 }}>
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                            <Text style={{ fontSize: 22, fontWeight: 'bold', color: 'white', flex: 1, textShadowColor: 'rgba(0,0,0,0.1)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }}>{doctor.name}</Text>
-                            <Text style={{ fontSize: 24, fontWeight: 'bold', color: 'white', textShadowColor: 'rgba(0,0,0,0.1)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }}>${doctor.price}</Text>
-                          </View>
+                             <Text 
+                               style={{ 
+                                 fontSize: 20, 
+                                 fontWeight: 'bold', 
+                                 color: 'white', 
+                                 flex: 1, 
+                                 textShadowColor: 'rgba(0,0,0,0.1)', 
+                                 textShadowOffset: { width: 0, height: 1 }, 
+                                 textShadowRadius: 2,
+                                 marginRight: 10
+                               }}
+                               numberOfLines={1}
+                               ellipsizeMode="tail"
+                             >
+                               {doctor.name}
+                             </Text>
+                             <Text style={{ fontSize: 22, fontWeight: 'bold', color: 'white', textShadowColor: 'rgba(0,0,0,0.1)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 2 }}>${doctor.price}</Text>
+                           </View>
                           
-                          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                            <MaterialCommunityIcons name="brain" size={14} color="rgba(255,255,255,0.9)" />
-                            <Text style={{ fontSize: 16, color: 'rgba(255,255,255,0.9)', marginLeft: 6, fontWeight: '500' }}>{doctor.specialty}</Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 15 }}>
-                              <MaterialCommunityIcons name="clock-outline" size={14} color="rgba(255,255,255,0.9)" />
-                              <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.9)', marginLeft: 4 }}>{doctor.experience}</Text>
-                            </View>
-                          </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
+                             <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 15, marginBottom: 4 }}>
+                               <MaterialCommunityIcons name="brain" size={14} color="rgba(255,255,255,0.9)" />
+                               <Text 
+                                 style={{ fontSize: 14, color: 'rgba(255,255,255,0.9)', marginLeft: 6, fontWeight: '500' }}
+                                 numberOfLines={1}
+                                 ellipsizeMode="tail"
+                               >
+                                 {doctor.specialty}
+                               </Text>
+                             </View>
+                             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                               <MaterialCommunityIcons name="clock-outline" size={14} color="rgba(255,255,255,0.9)" />
+                               <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.9)', marginLeft: 4 }}>{doctor.experience}</Text>
+                             </View>
+                           </View>
                           
-                          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 15, paddingHorizontal: 10, paddingVertical: 6, alignSelf: 'flex-start' }}>
-                            <MaterialCommunityIcons name="clock-outline" size={14} color="white" />
-                            <Text style={{ fontSize: 13, color: 'white', marginLeft: 6, fontWeight: '500' }}>{doctor.status}</Text>
-                            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF6B6B', marginLeft: 8 }} />
-                          </View>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 15, paddingHorizontal: 10, paddingVertical: 6, alignSelf: 'flex-start', marginBottom: 8 }}>
+                             <MaterialCommunityIcons name="clock-outline" size={14} color="white" />
+                             <Text style={{ fontSize: 13, color: 'white', marginLeft: 6, fontWeight: '500' }}>{doctor.status}</Text>
+                             <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF6B6B', marginLeft: 8 }} />
+                           </View>
                         </View>
                       </View>
                       
                       {/* Action button */}
-                      <TouchableOpacity style={{ backgroundColor: 'white', borderRadius: 25, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 5 }}>
-                        <MaterialCommunityIcons name="video" size={20} color="#667eea" />
-                        <Text style={{ color: '#667eea', fontWeight: 'bold', marginLeft: 8, fontSize: 16 }}>Join Call</Text>
-                      </TouchableOpacity>
+                       <TouchableOpacity style={{ backgroundColor: 'white', borderRadius: 25, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 5 }}>
+                         <MaterialCommunityIcons name="video" size={18} color="#667eea" />
+                         <Text style={{ color: '#667eea', fontWeight: 'bold', marginLeft: 8, fontSize: 15 }}>Join Call</Text>
+                       </TouchableOpacity>
                     </View>
                   </LinearGradient>
-                </Animated.View>
-              ))}
+                  </Animated.View>
+                );
+              })}
             </ScrollView>
             
             {/* Pagination Dots */}

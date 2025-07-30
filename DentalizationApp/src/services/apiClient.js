@@ -33,7 +33,7 @@ class ApiClient {
         return config;
       },
       (error) => {
-        console.error('❌ API Request Error:', error);
+        console.error('❌ API Request Error occurred');
         return Promise.reject(error);
       }
     );
@@ -48,15 +48,9 @@ class ApiClient {
         if (error.response) {
           console.error(`❌ API Response Error: ${error.response.status} ${error.config?.url}`);
         } else if (error.request) {
-          console.error(`❌ API Request Failed: No response received`);
-          console.error('Error details:', error.message);
-          console.error('Request config:', {
-            baseURL: error.config?.baseURL,
-            url: error.config?.url,
-            method: error.config?.method,
-          });
+          console.error(`❌ API Request Failed: No response received for ${error.config?.url}`);
         } else {
-          console.error(`❌ API Error: ${error.message}`);
+          console.error(`❌ API Error occurred`);
         }
         return Promise.reject(error);
       }

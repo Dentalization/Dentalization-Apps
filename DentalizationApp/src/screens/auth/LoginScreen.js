@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,14 +8,16 @@ import {
   ScrollView,
   Alert,
   TouchableOpacity,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { useTheme } from '../../components/common/ThemeProvider';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
-import Card from '../../components/common/Card';
 import {
   loginUser, 
   loginWithBiometric, 
@@ -26,6 +28,8 @@ import {
 import biometricService from '../../services/biometricService';
 import { ROUTES } from '../../constants';
 import { getReadableError } from '../../utils/errorHandler';
+
+const { width, height } = Dimensions.get('window');
 
 const LoginScreen = ({ navigation }) => {
   const theme = useTheme();
@@ -39,9 +43,36 @@ const LoginScreen = ({ navigation }) => {
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [biometricType, setBiometricType] = useState(null);
+  const [customError, setCustomError] = useState(null);
+  const [showErrorActions, setShowErrorActions] = useState(false);
+  
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
   useEffect(() => {
     initializeBiometric();
+    
+    // Start entrance animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
     return () => {
       dispatch(clearError());
     };
@@ -97,23 +128,21 @@ const LoginScreen = ({ navigation }) => {
     } catch (error) {
       const errorMessage = getReadableError(error, 'Terjadi kesalahan saat proses masuk');
       
-      // Show different actions based on error type
+      // Show custom error message
+      setCustomError(errorMessage);
+      
+      // Show action buttons for specific error types
       if (errorMessage.includes('Email belum terdaftar') || errorMessage.includes('email atau kata sandi')) {
-        Alert.alert(
-          'Gagal Masuk', 
-          errorMessage,
-          [
-            { text: 'Coba Lagi', style: 'cancel' },
-            { 
-              text: 'Daftar Sekarang', 
-              onPress: () => navigation.navigate(ROUTES.ROLE_SELECTION),
-              style: 'default'
-            }
-          ]
-        );
+        setShowErrorActions(true);
       } else {
-        Alert.alert('Gagal Masuk', errorMessage);
+        setShowErrorActions(false);
       }
+      
+      // Auto hide error after 8 seconds
+      setTimeout(() => {
+        setCustomError(null);
+        setShowErrorActions(false);
+      }, 8000);
     }
   };
 
@@ -157,83 +186,144 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-      >
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+    <LinearGradient
+      colors={['#667eea', '#764ba2', '#f093fb']}
+      style={{ flex: 1 }}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
+      <SafeAreaView style={{ flex: 1 }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1 }}
         >
-          <View style={{
-            flex: 1,
-            justifyContent: 'center',
-            paddingHorizontal: 24,
-            paddingVertical: 32,
-          }}>
+          <ScrollView
+            contentContainerStyle={{ flexGrow: 1 }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Animated.View style={{
+              flex: 1,
+              justifyContent: 'center',
+              paddingHorizontal: 24,
+              paddingVertical: 32,
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
+            }}>
             {/* Header */}
-            <View style={{ alignItems: 'center', marginBottom: 48 }}>
+            <Animated.View style={{ 
+              alignItems: 'center', 
+              marginBottom: 48,
+              transform: [{ scale: scaleAnim }]
+            }}>
               <View style={{
-                width: 80,
-                height: 80,
-                borderRadius: 40,
-                backgroundColor: theme.colors.primary,
+                width: 100,
+                height: 100,
+                borderRadius: 50,
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
                 justifyContent: 'center',
                 alignItems: 'center',
-                marginBottom: 24,
+                marginBottom: 32,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.3,
+                shadowRadius: 16,
+                elevation: 8,
               }}>
-                <Icon name="local-hospital" size={40} color="#FFFFFF" />
+                <Icon name="local-hospital" size={50} color="#FFFFFF" />
               </View>
               <Text style={{
-                fontSize: 28,
+                fontSize: 32,
                 fontWeight: 'bold',
-                color: theme.colors.text,
-                marginBottom: 8,
+                color: '#FFFFFF',
+                marginBottom: 10,
+                letterSpacing: 0.3,
+                lineHeight: 38,
+                textShadowColor: 'rgba(0, 0, 0, 0.25)',
+                textShadowOffset: { width: 0, height: 1 },
+                textShadowRadius: 2,
               }}>
-                Selamat Datang Kembali
+                Halo, Selamat Datang!
               </Text>
               <Text style={{
-                fontSize: 16,
-                color: theme.colors.textSecondary,
+                fontSize: 18,
+                color: 'rgba(255, 255, 255, 0.9)',
                 textAlign: 'center',
+                fontWeight: '500',
+                letterSpacing: 0.3,
+                lineHeight: 24,
               }}>
-                Masuk untuk melanjutkan ke Dentalization
+                Masuk ke akun Anda untuk mengakses layanan kesehatan gigi terbaik
               </Text>
-            </View>
+            </Animated.View>
 
             {/* Login Form */}
-            <Card style={{ marginBottom: 24 }}>
+            <Animated.View style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              borderRadius: 24,
+              padding: 32,
+              marginBottom: 32,
+              backdropFilter: 'blur(20px)',
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.2)',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 20 },
+              shadowOpacity: 0.25,
+              shadowRadius: 25,
+              elevation: 15,
+              opacity: fadeAnim,
+            }}>
               <Input
-                placeholder="Alamat Email"
-                value={formData.email}
-                onChangeText={(value) => handleInputChange('email', value)}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                leftIcon="email"
-                editable={!isLoading}
-              />
+                  placeholder="Alamat Email"
+                  value={formData.email}
+                  onChangeText={(value) => handleInputChange('email', value)}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  leftIcon="email"
+                  style={{ 
+                    marginBottom: 20,
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    borderRadius: 16,
+                    borderWidth: 0,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 8,
+                    elevation: 4,
+                  }}
+                  placeholderTextColor="rgba(0, 0, 0, 0.6)"
+                />
               
               <Input
-                placeholder="Kata Sandi"
-                value={formData.password}
-                onChangeText={(value) => handleInputChange('password', value)}
-                secureTextEntry={!showPassword}
-                leftIcon="lock"
-                rightIcon={showPassword ? 'visibility-off' : 'visibility'}
-                onRightIconPress={() => setShowPassword(!showPassword)}
-                editable={!isLoading}
-                style={{ marginTop: 16 }}
-              />
+                  placeholder="Kata Sandi"
+                  value={formData.password}
+                  onChangeText={(value) => handleInputChange('password', value)}
+                  secureTextEntry={!showPassword}
+                  leftIcon="lock"
+                  rightIcon={showPassword ? 'visibility-off' : 'visibility'}
+                  onRightIconPress={() => setShowPassword(!showPassword)}
+                  style={{ 
+                    marginBottom: 24,
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    borderRadius: 16,
+                    borderWidth: 0,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 8,
+                    elevation: 4,
+                  }}
+                  placeholderTextColor="rgba(0, 0, 0, 0.6)"
+                />
 
               {/* Remember Me & Forgot Password */}
-              <View style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginTop: 16,
-              }}>
+                <View style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginTop: 24,
+                  marginBottom: 8,
+                }}>
                 <TouchableOpacity
                   onPress={() => setRememberMe(!rememberMe)}
                   style={{
@@ -242,15 +332,30 @@ const LoginScreen = ({ navigation }) => {
                   }}
                   disabled={isLoading}
                 >
-                  <Icon
-                    name={rememberMe ? 'check-box' : 'check-box-outline-blank'}
-                    size={20}
-                    color={rememberMe ? theme.colors.primary : theme.colors.textSecondary}
-                  />
+                  <View style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 6,
+                    borderWidth: 2,
+                    borderColor: 'rgba(255, 255, 255, 0.8)',
+                    backgroundColor: rememberMe ? 'rgba(255, 255, 255, 0.9)' : 'transparent',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginRight: 10,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 4,
+                    elevation: 2,
+                  }}>
+                    {rememberMe && (
+                      <Icon name="check" size={14} color="#667eea" />
+                    )}
+                  </View>
                   <Text style={{
-                    marginLeft: 8,
-                    fontSize: 14,
-                    color: theme.colors.text,
+                    fontSize: 16,
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    fontWeight: '500',
                   }}>
                     Ingat saya
                   </Text>
@@ -259,11 +364,16 @@ const LoginScreen = ({ navigation }) => {
                 <TouchableOpacity
                   onPress={() => navigation.navigate(ROUTES.FORGOT_PASSWORD)}
                   disabled={isLoading}
+                  style={{
+                    paddingVertical: 4,
+                    paddingHorizontal: 8,
+                  }}
                 >
                   <Text style={{
-                    fontSize: 14,
-                    color: theme.colors.primary,
-                    fontWeight: '500',
+                    fontSize: 16,
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    fontWeight: '600',
+                    textDecorationLine: 'underline',
                   }}>
                     Lupa Kata Sandi?
                   </Text>
@@ -272,11 +382,27 @@ const LoginScreen = ({ navigation }) => {
 
               {/* Login Button */}
               <Button
-                title="Masuk"
-                onPress={handleLogin}
-                loading={isLoading}
-                style={{ marginTop: 24 }}
-              />
+                  title="Masuk"
+                  onPress={handleLogin}
+                  loading={isLoading}
+                  style={{ 
+                    marginTop: 32,
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: 16,
+                    paddingVertical: 18,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 8 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 12,
+                    elevation: 8,
+                  }}
+                  textStyle={{
+                    color: '#667eea',
+                    fontSize: 18,
+                    fontWeight: '700',
+                    letterSpacing: 0.5,
+                  }}
+                />
 
               {/* Biometric Login - Disabled for Development */}
               {false && ( // biometricAvailable && biometricEnabled - always false in dev mode
@@ -291,57 +417,163 @@ const LoginScreen = ({ navigation }) => {
                 />
               )}
 
-              {/* Error Message */}
-              {error && (
-                <View style={{
+              {/* Custom Error Message */}
+              {customError && (
+                <Animated.View style={{
                   marginTop: 16,
-                  padding: 12,
-                  backgroundColor: '#FEF2F2',
-                  borderRadius: 8,
-                  borderLeftWidth: 4,
-                  borderLeftColor: '#EF4444',
+                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                  borderRadius: 16,
+                  padding: 20,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255, 107, 107, 0.3)',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 8 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 12,
+                  elevation: 8,
                 }}>
-                  <Text style={{
-                    color: '#EF4444',
-                    fontSize: 14,
-                    fontWeight: '500',
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    marginBottom: 12,
                   }}>
-                    {error}
-                  </Text>
-                </View>
+                    <Icon name="error-outline" size={24} color="#FF6B6B" />
+                    <Text style={{
+                      fontSize: 16,
+                      fontWeight: '700',
+                      color: '#FFFFFF',
+                      marginLeft: 8,
+                    }}>Gagal Masuk</Text>
+                  </View>
+                  <Text style={{
+                    fontSize: 14,
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    lineHeight: 20,
+                    marginBottom: showErrorActions ? 16 : 0,
+                  }}>{customError}</Text>
+                  
+                  {showErrorActions && (
+                    <View style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      gap: 12,
+                    }}>
+                      <TouchableOpacity 
+                        style={{
+                          flex: 1,
+                          backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                          borderRadius: 12,
+                          paddingVertical: 12,
+                          paddingHorizontal: 16,
+                          alignItems: 'center',
+                          borderWidth: 1,
+                          borderColor: 'rgba(255, 255, 255, 0.3)',
+                        }}
+                        onPress={() => {
+                          setCustomError(null);
+                          setShowErrorActions(false);
+                        }}
+                      >
+                        <Text style={{
+                          fontSize: 14,
+                          fontWeight: '600',
+                          color: 'rgba(255, 255, 255, 0.9)',
+                        }}>Coba Lagi</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={{
+                          flex: 1,
+                          backgroundColor: '#FFFFFF',
+                          borderRadius: 12,
+                          paddingVertical: 12,
+                          paddingHorizontal: 16,
+                          alignItems: 'center',
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 4 },
+                          shadowOpacity: 0.2,
+                          shadowRadius: 8,
+                          elevation: 4,
+                        }}
+                        onPress={() => {
+                          setCustomError(null);
+                          setShowErrorActions(false);
+                          navigation.navigate(ROUTES.ROLE_SELECTION);
+                        }}
+                      >
+                        <Text style={{
+                          fontSize: 14,
+                          fontWeight: '700',
+                          color: '#667eea',
+                        }}>Daftar Sekarang</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  
+                  <TouchableOpacity 
+                    style={{
+                      position: 'absolute',
+                      top: 12,
+                      right: 12,
+                      padding: 4,
+                    }}
+                    onPress={() => {
+                      setCustomError(null);
+                      setShowErrorActions(false);
+                    }}
+                  >
+                    <Icon name="close" size={20} color="rgba(255, 255, 255, 0.7)" />
+                  </TouchableOpacity>
+                </Animated.View>
               )}
-            </Card>
+
+
+            </Animated.View>
 
             {/* Sign Up Link */}
-            <View style={{
-              flexDirection: 'row',
-              justifyContent: 'center',
-              alignItems: 'center',
-            }}>
-              <Text style={{
-                fontSize: 16,
-                color: theme.colors.textSecondary,
+              <Animated.View style={{
+                flexDirection: 'row',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginTop: 32,
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: 16,
+                paddingVertical: 16,
+                paddingHorizontal: 24,
+                borderWidth: 1,
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                opacity: fadeAnim,
               }}>
-                Belum punya akun?{' '}
-              </Text>
-              <TouchableOpacity
-                onPress={() => navigation.navigate(ROUTES.ROLE_SELECTION)}
-                disabled={isLoading}
-              >
                 <Text style={{
                   fontSize: 16,
-                  color: theme.colors.primary,
-                  fontWeight: '600',
+                  color: 'rgba(255, 255, 255, 0.8)',
+                  fontWeight: '500',
                 }}>
-                  Daftar
+                  Belum punya akun?
                 </Text>
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate(ROUTES.ROLE_SELECTION)}
+                  style={{ 
+                    marginLeft: 12,
+                    paddingVertical: 4,
+                    paddingHorizontal: 8,
+                  }}
+                >
+                  <Text style={{
+                    fontSize: 16,
+                    color: '#FFFFFF',
+                    fontWeight: '700',
+                    textDecorationLine: 'underline',
+                  }}>
+                    Daftar Sekarang
+                  </Text>
+                </TouchableOpacity>
+              </Animated.View>
 
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+            </Animated.View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
 

@@ -537,13 +537,10 @@ const NotificationPatient = ({ navigation }) => {
         </LinearGradient>
       </View>
 
-      {/* Spacer for fixed header */}
-      <View style={{ height: 160 }} />
-
       {/* Notifications List with Date Grouping */}
       <ScrollView
         style={{ flex: 1, backgroundColor: '#F5F5F5' }}
-        contentContainerStyle={{ paddingVertical: 16, paddingTop: 0 }}
+        contentContainerStyle={{ paddingVertical: 16, paddingTop: 160 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -551,7 +548,7 @@ const NotificationPatient = ({ navigation }) => {
             onRefresh={onRefresh}
             colors={[Colors.primary]}
             tintColor={Colors.primary}
-            progressViewOffset={160}
+            progressViewOffset={220}
           />
         }
       >

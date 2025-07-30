@@ -267,11 +267,13 @@ const ChatScreen = ({ navigation, route }) => {
             </View>
           )}
           
-          {item.type === 'image' && (
+          {item.type === 'image' && item.imageUri && (
             <View style={{ overflow: 'hidden' }}>
               <TouchableOpacity onPress={() => {
-                setSelectedImage(item.imageUri);
-                setShowImageModal(true);
+                if (item.imageUri) {
+                  setSelectedImage(item.imageUri);
+                  setShowImageModal(true);
+                }
               }}>
                 <Image source={{ uri: item.imageUri }} style={{ width: 200, height: 200, borderRadius: 12, resizeMode: 'cover' }} />
               </TouchableOpacity>
@@ -495,7 +497,7 @@ const ChatScreen = ({ navigation, route }) => {
             style={{ flex: 1, width: '100%', justifyContent: 'center', alignItems: 'center' }}
             onPress={() => setShowImageModal(false)}
           >
-            <Image source={{ uri: selectedImage }} style={{ width: width * 0.9, height: height * 0.7, resizeMode: 'contain' }} />
+            {selectedImage && <Image source={{ uri: selectedImage }} style={{ width: width * 0.9, height: height * 0.7, resizeMode: 'contain' }} />}
             <TouchableOpacity 
               style={{ position: 'absolute', top: 50, right: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center' }}
               onPress={() => setShowImageModal(false)}

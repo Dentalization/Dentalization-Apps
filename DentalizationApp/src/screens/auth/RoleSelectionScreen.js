@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,13 +6,14 @@ import {
   SafeAreaView,
   TouchableOpacity,
   Alert,
+  Animated,
 } from 'react-native';
 import { useDispatch } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { useTheme } from '../../components/common/ThemeProvider';
 import Button from '../../components/common/Button';
-import Card from '../../components/common/Card';
 import { loginSuccess } from '../../store/slices/authSlice';
 import { USER_ROLES } from '../../constants/roles';
 import { ROUTES } from '../../constants';
@@ -24,6 +25,23 @@ const RoleSelectionScreen = ({ navigation, route }) => {
   
   const [selectedRole, setSelectedRole] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   const roles = [
     {
@@ -66,13 +84,15 @@ const RoleSelectionScreen = ({ navigation, route }) => {
       onPress={() => handleRoleSelect(role.id)}
       activeOpacity={0.7}
     >
-      <Card
+      <Animated.View
         style={[
           styles.roleCard,
-          selectedRole === role.id && {
-            borderColor: role.color,
-            borderWidth: 2,
-            backgroundColor: `${role.color}10`,
+          {
+            backgroundColor: selectedRole === role.id 
+              ? 'rgba(255, 255, 255, 0.25)' 
+              : 'rgba(255, 255, 255, 0.15)',
+            borderColor: selectedRole === role.id ? role.color : 'rgba(255, 255, 255, 0.3)',
+            borderWidth: selectedRole === role.id ? 2 : 1,
           },
         ]}
       >
@@ -82,10 +102,10 @@ const RoleSelectionScreen = ({ navigation, route }) => {
           </View>
           
           <View style={styles.roleInfo}>
-            <Text style={[styles.roleTitle, { color: theme.scheme.text }]}>
+            <Text style={styles.roleTitle}>
               {role.title}
             </Text>
-            <Text style={[styles.roleDescription, { color: theme.scheme.textSecondary }]}>
+            <Text style={styles.roleDescription}>
               {role.description}
             </Text>
           </View>
@@ -94,24 +114,38 @@ const RoleSelectionScreen = ({ navigation, route }) => {
             <Icon name="check-circle" size={24} color={role.color} />
           )}
         </View>
-      </Card>
+      </Animated.View>
     </TouchableOpacity>
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.scheme.background }]}>
-      <View style={styles.content}>
+    <LinearGradient
+      colors={['#667eea', '#764ba2', '#f093fb']}
+      style={styles.container}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
+      <SafeAreaView style={styles.safeArea}>
+        <Animated.View 
+          style={[
+            styles.content,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
         <View style={styles.header}>
           <Icon
             name="how-to-reg"
             size={60}
-            color={theme.colors.primary}
+            color="white"
             style={styles.logo}
           />
-          <Text style={[styles.title, { color: theme.scheme.text }]}>
+          <Text style={styles.title}>
             Pilih Peran Anda
           </Text>
-          <Text style={[styles.subtitle, { color: theme.scheme.textSecondary }]}>
+          <Text style={styles.subtitle}>
             Pilih bagaimana Anda akan menggunakan Dentalization
           </Text>
         </View>
@@ -127,19 +161,24 @@ const RoleSelectionScreen = ({ navigation, route }) => {
             loading={isLoading}
             disabled={!selectedRole}
             style={styles.continueButton}
+            textStyle={{ color: '#333333' }}
           />
           
-          <Text style={[styles.footerNote, { color: theme.scheme.textSecondary }]}>
+          <Text style={styles.footerNote}>
             Mohon di Pilih Peran dengan Bijak. Jika Anda Dokter Gigi, pastikan Anda memiliki lisensi yang valid.
           </Text>
         </View>
-      </View>
-    </SafeAreaView>
+        </Animated.View>
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  safeArea: {
     flex: 1,
   },
   content: {
@@ -155,14 +194,18 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
     marginBottom: 8,
     textAlign: 'center',
+    color: 'white',
+    letterSpacing: 1,
   },
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
+    color: 'rgba(255, 255, 255, 0.9)',
+    lineHeight: 24,
   },
   rolesContainer: {
     flex: 1,
@@ -171,6 +214,15 @@ const styles = StyleSheet.create({
   roleCard: {
     marginBottom: 16,
     padding: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
   roleHeader: {
     flexDirection: 'row',
@@ -191,10 +243,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 4,
+    color: 'white',
   },
   roleDescription: {
     fontSize: 14,
     lineHeight: 20,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
   footer: {
     alignItems: 'center',
@@ -202,10 +256,23 @@ const styles = StyleSheet.create({
   continueButton: {
     width: '100%',
     marginBottom: 16,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingVertical: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   footerNote: {
     fontSize: 12,
     textAlign: 'center',
+    color: 'rgba(255, 255, 255, 0.8)',
+    lineHeight: 18,
   },
 });
 
