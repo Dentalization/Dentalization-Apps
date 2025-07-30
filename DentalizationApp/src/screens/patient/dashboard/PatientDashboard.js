@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Image, TextInput, Dimensions, Animated, StatusBar, } from 'react-native';
 import { useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -15,6 +15,8 @@ const PatientDashboard = ({ navigation }) => {
   const [scaleAnim] = useState(new Animated.Value(0.95));
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollViewRef = React.useRef(null);
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     // Entrance animations
@@ -163,6 +165,18 @@ const PatientDashboard = ({ navigation }) => {
     // Add haptic feedback here if needed
   };
 
+  // Handle scroll for glassmorphism effect
+  const handleMainScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    {
+      useNativeDriver: false,
+      listener: (event) => {
+        const offsetY = event.nativeEvent.contentOffset.y;
+        setIsScrolled(offsetY > 50);
+      },
+    }
+  );
+
   // Handle scroll for infinite loop with better calculation
   const handleScroll = (event) => {
     const contentOffset = event.nativeEvent.contentOffset;
@@ -277,17 +291,59 @@ const PatientDashboard = ({ navigation }) => {
     }}>
       <StatusBar barStyle="light-content" backgroundColor="#667eea" />
       
-      {/* Enhanced Gradient Header with floating effect */}
+      {/* Enhanced Gradient Header with Glassmorphism */}
       <Animated.View
-        style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }],
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1000,
+          opacity: scrollY.interpolate({
+            inputRange: [0, 50, 100],
+            outputRange: [1, 0.95, 0.9],
+            extrapolate: 'clamp',
+          }),
+          transform: [{
+            translateY: scrollY.interpolate({
+              inputRange: [0, 100],
+              outputRange: [0, -10],
+              extrapolate: 'clamp',
+            }),
+          }],
         }}
       >
         <LinearGradient
-          colors={['#8B5CF6', '#667eea']}
-          style={{ paddingTop: 60, paddingHorizontal: 20, paddingBottom: 25, borderBottomLeftRadius: 30, borderBottomRightRadius: 30 }}
+          colors={isScrolled ? 
+            ['rgba(139, 92, 246, 0.75)', 'rgba(102, 126, 234, 0.75)'] : 
+            ['#8B5CF6', '#667eea']
+          }
+          style={{
+            paddingTop: 70,
+            paddingHorizontal: 20,
+            paddingBottom: 10,
+            borderBottomLeftRadius: isScrolled ? 0 : 30,
+            borderBottomRightRadius: isScrolled ? 0 : 30,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: isScrolled ? 8 : 4 },
+            shadowOpacity: isScrolled ? 0.3 : 0.1,
+            shadowRadius: isScrolled ? 16 : 8,
+            elevation: isScrolled ? 12 : 4,
+          }}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
+          {/* Glassmorphism overlay when scrolled */}
+          {isScrolled && (
+            <View style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(255, 255, 255, 0.25)',
+            }} />
+          )}
           {/* Profile Section */}
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 25 }}>
             <View style={{ width: 50, height: 50, borderRadius: 25, overflow: 'hidden', marginRight: 12, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' }}>
@@ -305,7 +361,7 @@ const PatientDashboard = ({ navigation }) => {
                 {user?.profile?.firstName || user?.name || 'Siren.uix'} 👋
               </Text>
             </View>
-            <TouchableOpacity style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' }}>
+            <TouchableOpacity onPress={() => navigation.navigate('NotificationPatient')} style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' }}>
               <Icon name="notifications-none" size={20} color="white" />
             </TouchableOpacity>
           </View>
@@ -364,6 +420,8 @@ const PatientDashboard = ({ navigation }) => {
           }} 
           showsVerticalScrollIndicator={false}
           bounces={true}
+          onScroll={handleMainScroll}
+          scrollEventThrottle={16}
         >
           
           {/* Profile Completion Banner */}

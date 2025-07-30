@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   TextInput,
   StatusBar,
   FlatList,
+  Animated,
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import { MaterialIcons, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
@@ -19,6 +20,8 @@ const DoctorDashboard = ({ navigation }) => {
   const { user } = useSelector(state => state.auth);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const [isScrolled, setIsScrolled] = useState(false);
   
   // Professional dental dashboard data
   const dashboardData = {
@@ -44,7 +47,7 @@ const DoctorDashboard = ({ navigation }) => {
     aiInsights: {
       latestDiagnosis: {
         patient: 'Emma Wilson',
-        condition: 'Early Stage Gingivitis',
+        condition: 'Gingivitis',
         confidence: '92%',
         recommendation: 'Recommend deep cleaning and improved oral hygiene',
         time: '1 hour ago'
@@ -77,6 +80,18 @@ const DoctorDashboard = ({ navigation }) => {
     }, 1000);
   };
 
+  // Handle scroll for glassmorphism effect
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    {
+      useNativeDriver: false,
+      listener: (event) => {
+        const offsetY = event.nativeEvent.contentOffset.y;
+        setIsScrolled(offsetY > 50);
+      },
+    }
+  );
+
   // Status badge component
   const StatusBadge = ({ status }) => {
     const getStatusColor = () => {
@@ -95,43 +110,239 @@ const DoctorDashboard = ({ navigation }) => {
     );
   };
 
-  // Stats card component
-  const StatsCard = ({ title, value, icon, color, subtitle }) => (
-    <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4, borderLeftWidth: 4, borderLeftColor: color }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#333333', marginBottom: 4 }}>{value}</Text>
-          <Text style={{ fontSize: 14, color: '#6E6E6E', marginBottom: 2 }}>{title}</Text>
-          {subtitle && <Text style={{ fontSize: 12, color: color, fontWeight: '500' }}>{subtitle}</Text>}
-        </View>
-        <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: `${color}15`, justifyContent: 'center', alignItems: 'center' }}>
-          <MaterialIcons name={icon} size={24} color={color} />
-        </View>
-      </View>
-    </View>
-  );
+  // Enhanced Stats card component with animations
+  const StatsCard = ({ title, value, icon, color, subtitle }) => {
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+    
+    const handlePressIn = () => {
+      Animated.spring(scaleAnim, {
+        toValue: 0.95,
+        useNativeDriver: true,
+      }).start();
+    };
+    
+    const handlePressOut = () => {
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+      }).start();
+    };
+    
+    return (
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+      >
+        <Animated.View style={[
+          {
+            backgroundColor: '#FFFFFF',
+            borderRadius: 20,
+            padding: 20,
+            marginBottom: 12,
+            shadowColor: color,
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.15,
+            shadowRadius: 16,
+            elevation: 8,
+            borderWidth: 1,
+            borderColor: `${color}10`,
+          },
+          { transform: [{ scale: scaleAnim }] }
+        ]}>
+          <LinearGradient
+            colors={[`${color}08`, `${color}03`]}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              borderRadius: 20,
+            }}
+          />
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 32, fontWeight: '800', color: '#1A1A1A', marginBottom: 6, letterSpacing: -0.5 }}>{value}</Text>
+              <Text style={{ fontSize: 15, color: '#666666', marginBottom: 4, fontWeight: '500' }}>{title}</Text>
+              {subtitle && <Text style={{ fontSize: 13, color: color, fontWeight: '600' }}>{subtitle}</Text>}
+            </View>
+            <View style={{
+              width: 56,
+              height: 56,
+              borderRadius: 28,
+              backgroundColor: `${color}15`,
+              justifyContent: 'center',
+              alignItems: 'center',
+              shadowColor: color,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 4,
+            }}>
+              <MaterialIcons name={icon} size={28} color={color} />
+            </View>
+          </View>
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  };
 
-  // Action shortcut button
-  const ActionButton = ({ title, icon, color, onPress }) => (
-    <TouchableOpacity onPress={onPress} style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3, marginBottom: 12 }}>
-      <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: `${color}15`, justifyContent: 'center', alignItems: 'center', marginBottom: 8 }}>
-        <MaterialIcons name={icon} size={24} color={color} />
-      </View>
-      <Text style={{ fontSize: 12, fontWeight: '600', color: '#333333', textAlign: 'center' }}>{title}</Text>
-    </TouchableOpacity>
-  );
+  // Enhanced Action shortcut button with micro-interactions
+  const ActionButton = ({ title, icon, color, onPress }) => {
+    const scaleAnim = useRef(new Animated.Value(1)).current;
+    const rotateAnim = useRef(new Animated.Value(0)).current;
+    
+    const handlePressIn = () => {
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 0.9,
+          useNativeDriver: true,
+        }),
+        Animated.timing(rotateAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        })
+      ]).start();
+    };
+    
+    const handlePressOut = () => {
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+        }),
+        Animated.timing(rotateAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        })
+      ]).start();
+    };
+    
+    const rotation = rotateAnim.interpolate({
+      inputRange: [0, 1],
+      outputRange: ['0deg', '5deg'],
+    });
+    
+    return (
+      <TouchableOpacity
+        onPress={onPress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={0.8}
+      >
+        <Animated.View style={[
+          {
+            backgroundColor: '#FFFFFF',
+            borderRadius: 20,
+            padding: 18,
+            alignItems: 'center',
+            shadowColor: color,
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.15,
+            shadowRadius: 12,
+            elevation: 6,
+            marginBottom: 12,
+            borderWidth: 1,
+            borderColor: `${color}08`,
+          },
+          { transform: [{ scale: scaleAnim }] }
+        ]}>
+          <LinearGradient
+            colors={[`${color}08`, `${color}03`]}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              borderRadius: 20,
+            }}
+          />
+          <Animated.View style={[
+            {
+              width: 52,
+              height: 52,
+              borderRadius: 26,
+              backgroundColor: `${color}15`,
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginBottom: 10,
+              shadowColor: color,
+              shadowOffset: { width: 0, height: 3 },
+              shadowOpacity: 0.2,
+              shadowRadius: 6,
+              elevation: 3,
+            },
+            { transform: [{ rotate: rotation }] }
+          ]}>
+            <MaterialIcons name={icon} size={26} color={color} />
+          </Animated.View>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: '#1A1A1A', textAlign: 'center', letterSpacing: 0.2 }}>{title}</Text>
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F2F1F8' }}>
+    <View style={{ flex: 1, backgroundColor: '#F8F9FF' }}>
       <StatusBar barStyle="light-content" backgroundColor="#483AA0" />
       
-      {/* Professional Header */}
-      <LinearGradient
-        colors={['#483AA0', '#6366F1']}
-        style={{ paddingTop: 50, paddingHorizontal: 20, paddingBottom: 30, borderBottomLeftRadius: 25, borderBottomRightRadius: 25 }}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+      {/* Professional Header with Glassmorphism */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1000,
+          opacity: scrollY.interpolate({
+            inputRange: [0, 50, 100],
+            outputRange: [1, 0.95, 0.9],
+            extrapolate: 'clamp',
+          }),
+          transform: [{
+            translateY: scrollY.interpolate({
+              inputRange: [0, 100],
+              outputRange: [0, -10],
+              extrapolate: 'clamp',
+            }),
+          }],
+        }}
       >
+        <LinearGradient
+          colors={isScrolled ? 
+            ['rgba(72, 58, 160, 0.65)', 'rgba(99, 102, 241, 0.65)'] : 
+            ['#483AA0', '#6366F1']
+          }
+          style={{
+            paddingTop: 70,
+            paddingHorizontal: 20,
+            paddingBottom: 10,
+            borderBottomLeftRadius: isScrolled ? 0 : 25,
+            borderBottomRightRadius: isScrolled ? 0 : 25,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: isScrolled ? 8 : 4 },
+            shadowOpacity: isScrolled ? 0.3 : 0.1,
+            shadowRadius: isScrolled ? 16 : 8,
+            elevation: isScrolled ? 12 : 4,
+          }}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          {/* Glassmorphism overlay when scrolled */}
+          {isScrolled && (
+            <View style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            }} />
+          )}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
             <View style={{ width: 55, height: 55, borderRadius: 27.5, overflow: 'hidden', marginRight: 15, borderWidth: 3, borderColor: 'rgba(255,255,255,0.3)' }}>
@@ -151,7 +362,7 @@ const DoctorDashboard = ({ navigation }) => {
               <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>{getCurrentDate()}</Text>
             </View>
           </View>
-          <TouchableOpacity style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' }}>
+          <TouchableOpacity onPress={() => navigation.navigate('NotificationDoctor')} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' }}>
             <MaterialIcons name="notifications-none" size={22} color="white" />
             <View style={{ position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF4757' }} />
           </TouchableOpacity>
@@ -171,56 +382,125 @@ const DoctorDashboard = ({ navigation }) => {
             <MaterialIcons name="tune" size={18} color="white" />
           </TouchableOpacity>
         </View>
-      </LinearGradient>
+        </LinearGradient>
+      </Animated.View>
 
       <SafeAreaView style={{ flex: 1 }}>
-        <ScrollView
-          style={{ flex: 1, backgroundColor: '#F2F1F8' }}
-          contentContainerStyle={{ padding: 16 }}
+        <Animated.ScrollView
+          style={{ flex: 1, backgroundColor: '#F8F9FF' }}
+          contentContainerStyle={{ padding: 20, paddingTop: 180, paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
               colors={['#483AA0']}
               tintColor={'#483AA0'}
+              progressViewOffset={isScrolled ? 140 : 160}
             />
           }>
 
-          {/* Today's Appointments */}
-          <View style={{ marginBottom: 24 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <Text style={{ fontSize: 18, fontWeight: '600', color: '#333333' }}>Today's Appointments</Text>
-              <TouchableOpacity>
-                <Text style={{ fontSize: 14, color: '#483AA0', fontWeight: '500' }}>View All</Text>
+          {/* Today's Appointments - Enhanced */}
+          <View style={{ marginBottom: 28 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+              <View>
+                <Text style={{ fontSize: 22, fontWeight: '800', color: '#1A1A1A', letterSpacing: -0.3 }}>Today's Appointments</Text>
+                <Text style={{ fontSize: 14, color: '#666666', marginTop: 2 }}>{dashboardData.todayAppointments.length} appointments scheduled</Text>
+              </View>
+              <TouchableOpacity style={{
+                backgroundColor: '#483AA0',
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                borderRadius: 20,
+                shadowColor: '#483AA0',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 4,
+              }}>
+                <Text style={{ fontSize: 14, color: 'white', fontWeight: '600' }}>View All</Text>
               </TouchableOpacity>
             </View>
-            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 }}>
+            <View style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 24,
+              padding: 20,
+              shadowColor: '#483AA0',
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.12,
+              shadowRadius: 20,
+              elevation: 8,
+              borderWidth: 1,
+              borderColor: '#F0F0F0',
+            }}>
               {dashboardData.todayAppointments.map((appointment, index) => (
-                <View key={appointment.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: index < dashboardData.todayAppointments.length - 1 ? 1 : 0, borderBottomColor: '#F2F1F8' }}>
-                  <View style={{ width: 40, height: 40, borderRadius: 20, overflow: 'hidden', marginRight: 12 }}>
-                    <Image source={{ uri: appointment.avatar }} style={{ width: 40, height: 40 }} />
+                <TouchableOpacity key={appointment.id} activeOpacity={0.7}>
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: 16,
+                    paddingHorizontal: 4,
+                    borderBottomWidth: index < dashboardData.todayAppointments.length - 1 ? 1 : 0,
+                    borderBottomColor: '#F8F8F8',
+                    borderRadius: 12,
+                    marginBottom: index < dashboardData.todayAppointments.length - 1 ? 8 : 0,
+                  }}>
+                    <View style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 24,
+                      overflow: 'hidden',
+                      marginRight: 16,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 4,
+                      elevation: 2,
+                    }}>
+                      <Image source={{ uri: appointment.avatar }} style={{ width: 48, height: 48 }} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 17, fontWeight: '700', color: '#1A1A1A', marginBottom: 4, letterSpacing: -0.2 }}>{appointment.patient}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <MaterialIcons name="access-time" size={14} color="#666666" style={{ marginRight: 4 }} />
+                        <Text style={{ fontSize: 14, color: '#666666', fontWeight: '500' }}>{appointment.time}</Text>
+                        <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#CCCCCC', marginHorizontal: 8 }} />
+                        <Text style={{ fontSize: 14, color: '#666666', fontWeight: '500' }}>{appointment.type}</Text>
+                      </View>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <StatusBadge status={appointment.status} />
+                      {appointment.status === 'Waiting' && (
+                        <TouchableOpacity style={{
+                          backgroundColor: '#483AA0',
+                          borderRadius: 12,
+                          paddingHorizontal: 16,
+                          paddingVertical: 8,
+                          marginTop: 10,
+                          shadowColor: '#483AA0',
+                          shadowOffset: { width: 0, height: 3 },
+                          shadowOpacity: 0.3,
+                          shadowRadius: 6,
+                          elevation: 3,
+                        }}>
+                          <Text style={{ fontSize: 13, fontWeight: '700', color: 'white' }}>Start</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 16, fontWeight: '600', color: '#333333', marginBottom: 2 }}>{appointment.patient}</Text>
-                    <Text style={{ fontSize: 14, color: '#6E6E6E' }}>{appointment.time} • {appointment.type}</Text>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <StatusBadge status={appointment.status} />
-                    {appointment.status === 'Waiting' && (
-                      <TouchableOpacity style={{ backgroundColor: '#483AA0', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, marginTop: 8 }}>
-                        <Text style={{ fontSize: 12, fontWeight: '600', color: 'white' }}>Start</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           </View>
 
-          {/* Stats Overview */}
-          <View style={{ marginBottom: 24 }}>
-            <Text style={{ fontSize: 18, fontWeight: '600', color: '#333333', marginBottom: 16 }}>Stats Overview</Text>
+          {/* Stats Overview - Enhanced */}
+          <View style={{ marginBottom: 28 }}>
+            <View style={{ marginBottom: 18 }}>
+              <Text style={{ fontSize: 22, fontWeight: '800', color: '#1A1A1A', letterSpacing: -0.3 }}>Performance Overview</Text>
+              <Text style={{ fontSize: 14, color: '#666666', marginTop: 2 }}>Your practice insights at a glance</Text>
+            </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 }}>
               <View style={{ width: '50%', paddingHorizontal: 6 }}>
                 <StatsCard title="Total Patients Today" value={dashboardData.stats.totalPatientsToday} icon="people" color="#483AA0" />
@@ -234,56 +514,192 @@ const DoctorDashboard = ({ navigation }) => {
             </View>
           </View>
 
-          {/* Notifications */}
-          <View style={{ marginBottom: 24 }}>
-            <Text style={{ fontSize: 18, fontWeight: '600', color: '#333333', marginBottom: 16 }}>Notifications</Text>
-            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 }}>
-              {dashboardData.notifications.map((notification, index) => (
-                <View key={notification.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: index < dashboardData.notifications.length - 1 ? 1 : 0, borderBottomColor: '#F2F1F8' }}>
-                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: notification.type === 'cancelled' ? '#FFE5E5' : '#E3F2FD', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-                    <MaterialIcons name={notification.icon} size={20} color={notification.type === 'cancelled' ? '#FF4757' : '#2196F3'} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 14, color: '#333333', marginBottom: 2 }}>{notification.message}</Text>
-                    <Text style={{ fontSize: 12, color: '#6E6E6E' }}>{notification.time}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          {/* Chat Summary */}
-          <View style={{ marginBottom: 24 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <Text style={{ fontSize: 18, fontWeight: '600', color: '#333333' }}>Recent Messages</Text>
-              <TouchableOpacity>
-                <Text style={{ fontSize: 14, color: '#483AA0', fontWeight: '500' }}>View All</Text>
+          {/* Notifications - Enhanced */}
+          <View style={{ marginBottom: 28 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+              <View>
+                <Text style={{ fontSize: 22, fontWeight: '800', color: '#1A1A1A', letterSpacing: -0.3 }}>Recent Notifications</Text>
+                <Text style={{ fontSize: 14, color: '#666666', marginTop: 2 }}>{dashboardData.notifications.length} new updates</Text>
+              </View>
+              <TouchableOpacity style={{
+                backgroundColor: '#F8F9FA',
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 16,
+                borderWidth: 1,
+                borderColor: '#E9ECEF',
+              }}>
+                <Text style={{ fontSize: 13, color: '#6C757D', fontWeight: '600' }}>Mark All Read</Text>
               </TouchableOpacity>
             </View>
-            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 }}>
-              {dashboardData.chatSummary.map((chat, index) => (
-                <View key={chat.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: index < dashboardData.chatSummary.length - 1 ? 1 : 0, borderBottomColor: '#F2F1F8' }}>
-                  <View style={{ width: 40, height: 40, borderRadius: 20, overflow: 'hidden', marginRight: 12 }}>
-                    <Image source={{ uri: chat.avatar }} style={{ width: 40, height: 40 }} />
+            <View style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 24,
+              padding: 20,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.08,
+              shadowRadius: 20,
+              elevation: 6,
+              borderWidth: 1,
+              borderColor: '#F0F0F0',
+            }}>
+              {dashboardData.notifications.map((notification, index) => (
+                <TouchableOpacity key={notification.id} activeOpacity={0.7}>
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: 16,
+                    paddingHorizontal: 4,
+                    borderBottomWidth: index < dashboardData.notifications.length - 1 ? 1 : 0,
+                    borderBottomColor: '#F8F8F8',
+                    borderRadius: 12,
+                    marginBottom: index < dashboardData.notifications.length - 1 ? 8 : 0,
+                  }}>
+                    <View style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 24,
+                      backgroundColor: notification.type === 'cancelled' ? '#FFF5F5' : '#F0F8FF',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginRight: 16,
+                      shadowColor: notification.type === 'cancelled' ? '#FF4757' : '#2196F3',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 4,
+                      elevation: 2,
+                      borderWidth: 1,
+                      borderColor: notification.type === 'cancelled' ? '#FFE5E5' : '#E3F2FD',
+                    }}>
+                      <MaterialIcons name={notification.icon} size={22} color={notification.type === 'cancelled' ? '#FF4757' : '#2196F3'} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 15, color: '#1A1A1A', marginBottom: 4, fontWeight: '600', lineHeight: 20 }}>{notification.message}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <MaterialIcons name="schedule" size={12} color="#999999" style={{ marginRight: 4 }} />
+                        <Text style={{ fontSize: 13, color: '#999999', fontWeight: '500' }}>{notification.time}</Text>
+                      </View>
+                    </View>
+                    <View style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: 4,
+                      backgroundColor: notification.type === 'cancelled' ? '#FF4757' : '#2196F3',
+                    }} />
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 16, fontWeight: '600', color: '#333333', marginBottom: 2 }}>{chat.patient}</Text>
-                    <Text style={{ fontSize: 14, color: '#6E6E6E', numberOfLines: 1 }}>{chat.message}</Text>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={{ fontSize: 12, color: '#6E6E6E', marginBottom: 4 }}>{chat.time}</Text>
-                    {chat.unread && (
-                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF4757' }} />
-                    )}
-                  </View>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           </View>
 
-          {/* Action Shortcuts */}
-          <View style={{ marginBottom: 24 }}>
-            <Text style={{ fontSize: 18, fontWeight: '600', color: '#333333', marginBottom: 16 }}>Quick Actions</Text>
+          {/* Chat Summary - Enhanced */}
+          <View style={{ marginBottom: 28 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+              <View>
+                <Text style={{ fontSize: 22, fontWeight: '800', color: '#1A1A1A', letterSpacing: -0.3 }}>Recent Messages</Text>
+                <Text style={{ fontSize: 14, color: '#666666', marginTop: 2 }}>{dashboardData.chatSummary.filter(chat => chat.unread).length} unread messages</Text>
+              </View>
+              <TouchableOpacity style={{
+                backgroundColor: '#483AA0',
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                borderRadius: 20,
+                shadowColor: '#483AA0',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.3,
+                shadowRadius: 8,
+                elevation: 4,
+              }}>
+                <Text style={{ fontSize: 14, color: 'white', fontWeight: '600' }}>View All</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: 24,
+              padding: 20,
+              shadowColor: '#483AA0',
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.08,
+              shadowRadius: 20,
+              elevation: 6,
+              borderWidth: 1,
+              borderColor: '#F0F0F0',
+            }}>
+              {dashboardData.chatSummary.map((chat, index) => (
+                <TouchableOpacity key={chat.id} activeOpacity={0.7}>
+                  <View style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: 16,
+                    paddingHorizontal: 4,
+                    borderBottomWidth: index < dashboardData.chatSummary.length - 1 ? 1 : 0,
+                    borderBottomColor: '#F8F8F8',
+                    borderRadius: 12,
+                    marginBottom: index < dashboardData.chatSummary.length - 1 ? 8 : 0,
+                    backgroundColor: chat.unread ? '#F8F9FF' : 'transparent',
+                  }}>
+                    <View style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 24,
+                      overflow: 'hidden',
+                      marginRight: 16,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 4,
+                      elevation: 2,
+                      borderWidth: chat.unread ? 2 : 1,
+                      borderColor: chat.unread ? '#483AA0' : '#F0F0F0',
+                    }}>
+                      <Image source={{ uri: chat.avatar }} style={{ width: chat.unread ? 44 : 46, height: chat.unread ? 44 : 46 }} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{
+                        fontSize: 17,
+                        fontWeight: chat.unread ? '700' : '600',
+                        color: '#1A1A1A',
+                        marginBottom: 4,
+                        letterSpacing: -0.2
+                      }}>{chat.patient}</Text>
+                      <Text style={{
+                        fontSize: 14,
+                        color: chat.unread ? '#483AA0' : '#666666',
+                        numberOfLines: 1,
+                        fontWeight: chat.unread ? '600' : '500'
+                      }}>{chat.message}</Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                        <MaterialIcons name="schedule" size={12} color="#999999" style={{ marginRight: 4 }} />
+                        <Text style={{ fontSize: 12, color: '#999999', fontWeight: '500' }}>{chat.time}</Text>
+                      </View>
+                      {chat.unread && (
+                        <View style={{
+                          backgroundColor: '#FF4757',
+                          borderRadius: 10,
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          minWidth: 20,
+                          alignItems: 'center',
+                        }}>
+                          <Text style={{ fontSize: 10, color: 'white', fontWeight: '700' }}>NEW</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Action Shortcuts - Enhanced */}
+          <View style={{ marginBottom: 28 }}>
+            <View style={{ marginBottom: 18 }}>
+              <Text style={{ fontSize: 22, fontWeight: '800', color: '#1A1A1A', letterSpacing: -0.3 }}>Quick Actions</Text>
+              <Text style={{ fontSize: 14, color: '#666666', marginTop: 2 }}>Streamline your workflow</Text>
+            </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -6 }}>
               <View style={{ width: '25%', paddingHorizontal: 6 }}>
                 <ActionButton title="Schedule" icon="schedule" color="#483AA0" onPress={() => navigation.navigate('DoctorSchedule')} />
@@ -300,30 +716,245 @@ const DoctorDashboard = ({ navigation }) => {
             </View>
           </View>
 
-          {/* AI Insights */}
-          <View style={{ marginBottom: 24 }}>
-            <Text style={{ fontSize: 18, fontWeight: '600', color: '#333333', marginBottom: 16 }}>Latest AI Diagnosis</Text>
-            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-                <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#E8F5E8', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-                  <MaterialIcons name="psychology" size={24} color="#4CAF50" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '600', color: '#333333', marginBottom: 2 }}>{dashboardData.aiInsights.latestDiagnosis.patient}</Text>
-                  <Text style={{ fontSize: 12, color: '#6E6E6E' }}>{dashboardData.aiInsights.latestDiagnosis.time}</Text>
-                </View>
-                <View style={{ backgroundColor: '#4CAF50', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 6 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#FFFFFF' }}>{dashboardData.aiInsights.latestDiagnosis.confidence}</Text>
-                </View>
+          {/* AI Insights - Enhanced */}
+          <View style={{ marginBottom: 32 }}>
+            <View style={{ marginBottom: 20 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                <LinearGradient
+                  colors={['#667eea', '#764ba2']}
+                  style={{
+                    width: 4,
+                    height: 24,
+                    borderRadius: 2,
+                    marginRight: 12,
+                  }}
+                />
+                <Text style={{ fontSize: 24, fontWeight: '900', color: '#1A1A1A', letterSpacing: -0.5 }}>AI-Powered Insights</Text>
               </View>
-              <View style={{ backgroundColor: '#F8F9FA', borderRadius: 12, padding: 16 }}>
-                <Text style={{ fontSize: 16, fontWeight: '600', color: '#483AA0', marginBottom: 8 }}>{dashboardData.aiInsights.latestDiagnosis.condition}</Text>
-                <Text style={{ fontSize: 14, color: '#6E6E6E', lineHeight: 20 }}>{dashboardData.aiInsights.latestDiagnosis.recommendation}</Text>
-              </View>
+              <Text style={{ fontSize: 15, color: '#666666', marginLeft: 16, fontWeight: '500' }}>Latest diagnostic analysis powered by machine learning</Text>
             </View>
+            <TouchableOpacity
+              activeOpacity={0.95}
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: 28,
+                padding: 28,
+                shadowColor: '#667eea',
+                shadowOffset: { width: 0, height: 12 },
+                shadowOpacity: 0.15,
+                shadowRadius: 24,
+                elevation: 12,
+                borderWidth: 1,
+                borderColor: '#F0F4FF',
+                transform: [{ scale: 1 }],
+              }}
+            >
+              <LinearGradient
+                colors={['#667eea', '#764ba2', '#f093fb']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  borderRadius: 28,
+                  opacity: 0.08,
+                }}
+              />
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}>
+                <LinearGradient
+                  colors={['#667eea', '#764ba2']}
+                  style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: 32,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    marginRight: 18,
+                    shadowColor: '#667eea',
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: 0.4,
+                    shadowRadius: 12,
+                    elevation: 8,
+                  }}
+                >
+                  <MaterialIcons name="psychology" size={32} color="white" />
+                  <View style={{
+                    position: 'absolute',
+                    top: -2,
+                    right: -2,
+                    width: 20,
+                    height: 20,
+                    borderRadius: 10,
+                    backgroundColor: '#4CAF50',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    borderWidth: 2,
+                    borderColor: 'white',
+                  }}>
+                    <MaterialIcons name="auto-awesome" size={12} color="white" />
+                  </View>
+                </LinearGradient>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 22, fontWeight: '900', color: '#1A1A1A', marginBottom: 8, letterSpacing: -0.4 }}>AI Diagnostic Analysis</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{
+                      backgroundColor: '#667eea',
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                      borderRadius: 8,
+                      marginRight: 8,
+                    }}>
+                      <MaterialIcons name="schedule" size={12} color="white" />
+                    </View>
+                    <Text style={{ fontSize: 14, color: '#667eea', fontWeight: '600' }}>{dashboardData.aiInsights.latestDiagnosis.time}</Text>
+                  </View>
+                </View>
+              </View>
+              
+              <View style={{
+                backgroundColor: 'rgba(255,255,255,0.95)',
+                borderRadius: 20,
+                padding: 24,
+                marginBottom: 24,
+                borderWidth: 1,
+                borderColor: 'rgba(102, 126, 234, 0.1)',
+                shadowColor: '#667eea',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.08,
+                shadowRadius: 12,
+                elevation: 4,
+              }}>
+                <View style={{ marginBottom: 20 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <MaterialIcons name="person" size={18} color="#667eea" style={{ marginRight: 8 }} />
+                      <Text style={{ fontSize: 16, fontWeight: '600', color: '#667eea' }}>Patient</Text>
+                    </View>
+                    <Text style={{ fontSize: 17, color: '#1A1A1A', fontWeight: '800' }}>{dashboardData.aiInsights.latestDiagnosis.patient}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <MaterialIcons name="medical-services" size={18} color="#667eea" style={{ marginRight: 8 }} />
+                      <Text style={{ fontSize: 16, fontWeight: '600', color: '#667eea' }}>Condition</Text>
+                    </View>
+                    <LinearGradient
+                      colors={['#FF6B35', '#F7931E']}
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 16,
+                        shadowColor: '#FF6B35',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 4,
+                        elevation: 3,
+                      }}
+                    >
+                      <Text style={{ fontSize: 15, color: 'white', fontWeight: '700' }}>{dashboardData.aiInsights.latestDiagnosis.condition}</Text>
+                    </LinearGradient>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <MaterialIcons name="trending-up" size={18} color="#667eea" style={{ marginRight: 8 }} />
+                      <Text style={{ fontSize: 16, fontWeight: '600', color: '#667eea' }}>Confidence</Text>
+                    </View>
+                    <LinearGradient
+                      colors={['#4CAF50', '#45A049']}
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 16,
+                        shadowColor: '#4CAF50',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.3,
+                        shadowRadius: 4,
+                        elevation: 3,
+                      }}
+                    >
+                      <Text style={{ fontSize: 15, color: 'white', fontWeight: '700' }}>{dashboardData.aiInsights.latestDiagnosis.confidence}</Text>
+                    </LinearGradient>
+                  </View>
+                </View>
+                
+                <LinearGradient
+                  colors={['#667eea', '#764ba2']}
+                  style={{
+                    borderRadius: 16,
+                    padding: 20,
+                    shadowColor: '#667eea',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.2,
+                    shadowRadius: 8,
+                    elevation: 4,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                    <MaterialIcons name="lightbulb" size={20} color="white" style={{ marginRight: 8 }} />
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: 'white', letterSpacing: 0.5 }}>AI RECOMMENDATION</Text>
+                  </View>
+                  <Text style={{ fontSize: 16, color: 'white', lineHeight: 24, fontWeight: '500', opacity: 0.95 }}>{dashboardData.aiInsights.latestDiagnosis.recommendation}</Text>
+                </LinearGradient>
+              </View>
+              
+              <View style={{ flexDirection: 'row', gap: 16, marginTop: 8 }}>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={{
+                    flex: 1,
+                    borderRadius: 18,
+                    paddingVertical: 16,
+                    paddingHorizontal: 24,
+                    alignItems: 'center',
+                    shadowColor: '#667eea',
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: 0.3,
+                    shadowRadius: 12,
+                    elevation: 6,
+                  }}
+                >
+                  <LinearGradient
+                    colors={['#667eea', '#764ba2']}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      borderRadius: 18,
+                    }}
+                  />
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <MaterialIcons name="description" size={18} color="white" style={{ marginRight: 8 }} />
+                    <Text style={{ fontSize: 16, fontWeight: '700', color: 'white' }}>View Full Report</Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={{
+                    backgroundColor: 'rgba(255,255,255,0.95)',
+                    borderRadius: 18,
+                    paddingVertical: 16,
+                    paddingHorizontal: 20,
+                    alignItems: 'center',
+                    borderWidth: 2,
+                    borderColor: '#667eea',
+                    shadowColor: '#667eea',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.15,
+                    shadowRadius: 8,
+                    elevation: 4,
+                  }}
+                >
+                  <MaterialIcons name="share" size={22} color="#667eea" />
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
           </View>
 
-        </ScrollView>
+        </Animated.ScrollView>
       </SafeAreaView>
     </View>
   );
