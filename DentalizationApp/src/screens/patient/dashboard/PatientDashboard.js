@@ -410,6 +410,9 @@ const PatientDashboard = ({ navigation }) => {
         </LinearGradient>
       </Animated.View>
 
+      {/* Spacer for fixed header */}
+      <View style={{ height: isScrolled ? 140 : 160 }} />
+
       {/* Enhanced Scrollable Content */}
       <SafeAreaView style={{ flex: 1 }}>
         <Animated.ScrollView 

@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, StatusBar, Modal } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  RefreshControl,
+  StatusBar,
+  Modal,
+} from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../../../constants/colors';
 
 const NotificationPatient = ({ navigation }) => {
@@ -13,82 +21,90 @@ const NotificationPatient = ({ navigation }) => {
   const [notifications, setNotifications] = useState([
     {
       id: 1,
-      type: 'appointment',
-      title: 'Appointment Confirmed',
-      message: 'Your appointment with Dr. Smith is confirmed for tomorrow at 2:00 PM',
+      type: 'booking_confirmed',
+      title: 'Booking Confirmed! 😊',
+      message: 'Dr. Sarah Johnson has confirmed your appointment for tomorrow at 2:00 PM',
       time: '5 min ago',
+      date: 'Today',
       isNew: true,
-      icon: 'event',
-      color: Colors.primary
+      icon: 'event-available',
+      color: '#4CAF50'
     },
     {
       id: 2,
       type: 'reminder',
-      title: 'Appointment Reminder',
-      message: 'Don\'t forget your dental checkup tomorrow at 2:00 PM',
-      time: '30 min ago',
+      title: 'Appointment Reminder 📅',
+      message: 'Don\'t forget! Your dental checkup is scheduled for today at 3:00 PM',
+      time: '2 hours ago',
+      date: 'Today',
       isNew: true,
       icon: 'schedule',
-      color: Colors.info
+      color: '#2196F3'
     },
     {
       id: 3,
-      type: 'treatment',
-      title: 'Treatment Plan Updated',
-      message: 'Dr. Smith has updated your treatment plan. Please review the changes.',
-      time: '1 hour ago',
-      isNew: false,
+      type: 'prescription',
+      title: 'Digital Prescription Ready 💊',
+      message: 'Your prescription from Dr. Johnson is now available for download',
+      time: '4 hours ago',
+      date: 'Today',
+      isNew: true,
       icon: 'medical-services',
-      color: Colors.success
+      color: '#00BCD4'
     },
     {
       id: 4,
       type: 'message',
-      title: 'Message from Dr. Smith',
-      message: 'Please arrive 15 minutes early for your appointment tomorrow.',
-      time: '2 hours ago',
-      isNew: true,
-      icon: 'chat',
-      color: Colors.warning
+      title: 'Message from Dr. Johnson 💬',
+      message: 'Please remember to take your medication as prescribed and avoid hard foods',
+      time: '6 hours ago',
+      date: 'Today',
+      isNew: false,
+      icon: 'chat-bubble',
+      color: '#FF9800'
     },
     {
       id: 5,
-      type: 'payment',
-      title: 'Payment Reminder',
-      message: 'Your payment for the last treatment is due in 3 days.',
-      time: '3 hours ago',
+      type: 'new_slots',
+      title: 'New Schedule Slots Available! ⭐',
+      message: 'Dr. Johnson has new appointment slots available for next week',
+      time: '1 day ago',
+      date: 'Yesterday',
       isNew: false,
-      icon: 'payment',
-      color: Colors.error
+      icon: 'event-note',
+      color: '#9C27B0'
     },
     {
       id: 6,
-      type: 'appointment',
-      title: 'Appointment Rescheduled',
-      message: 'Your appointment has been moved to Friday at 3:00 PM',
-      time: '4 hours ago',
+      type: 'reminder',
+      title: 'Pre-Appointment Reminder 🦷',
+      message: 'Please brush your teeth before your appointment tomorrow at 10:00 AM',
+      time: '1 day ago',
+      date: 'Yesterday',
       isNew: false,
-      icon: 'update',
-      color: '#A08A48'
+      icon: 'notifications-active',
+      color: '#2196F3'
     },
     {
       id: 7,
-      type: 'health',
-      title: 'Health Tips',
-      message: 'Remember to brush your teeth twice daily and floss regularly',
-      time: '1 day ago',
+      type: 'booking_confirmed',
+      title: 'Follow-up Appointment Booked ✅',
+      message: 'Your follow-up appointment has been scheduled for next Friday at 11:00 AM',
+      time: '2 days ago',
+      date: 'This Week',
       isNew: false,
-      icon: 'health-and-safety',
-      color: Colors.secondary
+      icon: 'check-circle',
+      color: '#4CAF50'
     }
   ]);
 
   const filterOptions = [
     { key: 'all', label: 'All Notifications', count: notifications.length },
-    { key: 'appointment', label: 'Appointments', count: notifications.filter(n => n.type === 'appointment').length },
-    { key: 'message', label: 'Messages', count: notifications.filter(n => n.type === 'message').length },
+    { key: 'booking_confirmed', label: 'Bookings', count: notifications.filter(n => n.type === 'booking_confirmed').length },
     { key: 'reminder', label: 'Reminders', count: notifications.filter(n => n.type === 'reminder').length },
-    { key: 'treatment', label: 'Treatment', count: notifications.filter(n => n.type === 'treatment').length },
+    { key: 'prescription', label: 'Prescriptions', count: notifications.filter(n => n.type === 'prescription').length },
+    { key: 'message', label: 'Messages', count: notifications.filter(n => n.type === 'message').length },
+    { key: 'new_slots', label: 'New Slots', count: notifications.filter(n => n.type === 'new_slots').length },
   ];
 
   const filteredNotifications = selectedFilter === 'all' 
@@ -97,12 +113,24 @@ const NotificationPatient = ({ navigation }) => {
 
   const newNotificationsCount = notifications.filter(n => n.isNew).length;
 
+  // Group notifications by date
+  const groupedNotifications = filteredNotifications.reduce((groups, notification) => {
+    const date = notification.date;
+    if (!groups[date]) {
+      groups[date] = [];
+    }
+    groups[date].push(notification);
+    return groups;
+  }, {});
+
   const onRefresh = () => {
     setRefreshing(true);
     setTimeout(() => {
       setRefreshing(false);
     }, 1000);
   };
+
+
 
   const markAsRead = (id) => {
     setNotifications(prev => 
@@ -120,126 +148,136 @@ const NotificationPatient = ({ navigation }) => {
     );
   };
 
-
-
   const NotificationItem = ({ notification }) => (
     <TouchableOpacity 
       style={{
         backgroundColor: '#FFFFFF',
         marginHorizontal: 16,
         marginVertical: 8,
-        borderRadius: 24,
-        padding: 20,
+        borderRadius: 28,
+        padding: 22,
         shadowColor: notification.isNew ? notification.color : '#000',
-        shadowOffset: { width: 0, height: notification.isNew ? 8 : 4 },
-        shadowOpacity: notification.isNew ? 0.25 : 0.12,
-        shadowRadius: notification.isNew ? 16 : 8,
-        elevation: notification.isNew ? 8 : 4,
-        borderWidth: notification.isNew ? 1.5 : 0,
-        borderColor: notification.isNew ? `${notification.color}30` : 'transparent',
-        opacity: notification.isNew ? 1 : 0.85,
-        transform: [{ scale: notification.isNew ? 1.02 : 1 }]
+        shadowOffset: { width: 0, height: notification.isNew ? 12 : 6 },
+        shadowOpacity: notification.isNew ? 0.3 : 0.15,
+        shadowRadius: notification.isNew ? 20 : 12,
+        elevation: notification.isNew ? 10 : 6,
+        borderWidth: notification.isNew ? 2 : 0,
+        borderColor: notification.isNew ? `${notification.color}25` : 'transparent',
+        opacity: notification.isNew ? 1 : 0.88,
+        transform: [{ scale: notification.isNew ? 1.03 : 1 }]
       }}
       onPress={() => markAsRead(notification.id)}
-      activeOpacity={0.7}
+      activeOpacity={0.6}
     >
-      <View style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        borderRadius: 24,
-        backgroundColor: notification.isNew ? `${notification.color}08` : 'transparent'
-      }} />
+      <LinearGradient
+        colors={notification.isNew ? [`${notification.color}12`, `${notification.color}05`, 'transparent'] : ['transparent', 'transparent']}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          borderRadius: 28
+        }}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      />
       
       <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
         <View style={{
-          width: 56,
-          height: 56,
-          borderRadius: 28,
-          backgroundColor: `${notification.color}15`,
+          width: 60,
+          height: 60,
+          borderRadius: 30,
+          backgroundColor: `${notification.color}18`,
           justifyContent: 'center',
           alignItems: 'center',
-          marginRight: 16,
+          marginRight: 18,
           shadowColor: notification.color,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.2,
-          shadowRadius: 8,
-          elevation: 4,
-          borderWidth: 2,
-          borderColor: `${notification.color}25`
+          shadowOffset: { width: 0, height: 6 },
+          shadowOpacity: 0.25,
+          shadowRadius: 12,
+          elevation: 6,
+          borderWidth: 3,
+          borderColor: `${notification.color}30`
         }}>
-          <MaterialIcons name={notification.icon} size={28} color={notification.color} />
+          <MaterialIcons name={notification.icon} size={30} color={notification.color} />
         </View>
         
         <View style={{ flex: 1 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
             <Text style={{
-              fontSize: 17,
+              fontSize: 18,
               fontWeight: '700',
-              color: Colors.text,
+              color: '#1A1A1A',
               flex: 1,
-              lineHeight: 24
+              lineHeight: 26
             }}>
               {notification.title}
             </Text>
             {notification.isNew && (
               <View style={{
-                width: 12,
-                height: 12,
-                borderRadius: 6,
-                backgroundColor: Colors.error,
-                marginLeft: 8,
-                shadowColor: Colors.error,
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.4,
-                shadowRadius: 4,
-                elevation: 3
+                width: 14,
+                height: 14,
+                borderRadius: 7,
+                backgroundColor: '#FF5252',
+                marginLeft: 10,
+                shadowColor: '#FF5252',
+                shadowOffset: { width: 0, height: 3 },
+                shadowOpacity: 0.5,
+                shadowRadius: 6,
+                elevation: 4
               }} />
             )}
           </View>
           
           <Text style={{
             fontSize: 15,
-            color: Colors.secondaryText,
-            lineHeight: 22,
-            marginBottom: 12,
+            color: '#555555',
+            lineHeight: 23,
+            marginBottom: 14,
             fontWeight: '400'
           }}>
             {notification.message}
           </Text>
           
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={{
-              fontSize: 13,
-              color: notification.color,
-              fontWeight: '600',
-              backgroundColor: `${notification.color}10`,
-              paddingHorizontal: 10,
-              paddingVertical: 4,
-              borderRadius: 12
+            <View style={{
+              backgroundColor: `${notification.color}15`,
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 16,
+              borderWidth: 1,
+              borderColor: `${notification.color}25`
             }}>
-              {notification.time}
-            </Text>
+              <Text style={{
+                fontSize: 13,
+                color: notification.color,
+                fontWeight: '700'
+              }}>
+                {notification.time}
+              </Text>
+            </View>
             
             {notification.isNew && (
               <View style={{
-                backgroundColor: `${notification.color}15`,
-                paddingHorizontal: 8,
-                paddingVertical: 3,
-                borderRadius: 10,
-                borderWidth: 1,
-                borderColor: `${notification.color}30`
+                backgroundColor: '#FF5252',
+                paddingHorizontal: 10,
+                paddingVertical: 5,
+                borderRadius: 14,
+                shadowColor: '#FF5252',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
+                elevation: 3
               }}>
                 <Text style={{
                   fontSize: 11,
-                  color: notification.color,
-                  fontWeight: '700',
+                  color: '#FFFFFF',
+                  fontWeight: '800',
                   textTransform: 'uppercase',
-                  letterSpacing: 0.5
+                  letterSpacing: 0.8
                 }}>
-                  NEW
+                  ✨ NEW
                 </Text>
               </View>
             )}
@@ -259,52 +297,55 @@ const NotificationPatient = ({ navigation }) => {
       <TouchableOpacity 
         style={{
           flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.6)',
+          backgroundColor: 'rgba(0,0,0,0.65)',
           justifyContent: 'center',
           alignItems: 'center'
         }}
         onPress={() => setFilterVisible(false)}
       >
-        <View
+        <LinearGradient
+          colors={['#FFFFFF', '#F0F8FF', '#E8F4FD']}
           style={{
-            borderRadius: 28,
-            padding: 28,
-            width: '88%',
-            maxHeight: '70%',
-            backgroundColor: '#FFFFFF',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 15 },
-            shadowOpacity: 0.25,
-            shadowRadius: 25,
-            elevation: 15
+            borderRadius: 32,
+            padding: 30,
+            width: '90%',
+            maxHeight: '75%',
+            shadowColor: '#2196F3',
+            shadowOffset: { width: 0, height: 20 },
+            shadowOpacity: 0.3,
+            shadowRadius: 30,
+            elevation: 20
           }}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
         >
           <View style={{
             alignItems: 'center',
-            marginBottom: 24
+            marginBottom: 28
           }}>
             <View style={{
-              width: 50,
-              height: 5,
-              backgroundColor: '#E0E0E0',
+              width: 60,
+              height: 6,
+              backgroundColor: '#E3F2FD',
               borderRadius: 3,
-              marginBottom: 16
+              marginBottom: 20
             }} />
             <Text style={{
-              fontSize: 22,
+              fontSize: 24,
               fontWeight: '800',
-              color: Colors.text,
+              color: '#1A1A1A',
               textAlign: 'center'
             }}>
-            Filter Notifications
+              🔍 Filter Notifications
             </Text>
             <Text style={{
-              fontSize: 14,
-              color: Colors.secondaryText,
+              fontSize: 15,
+              color: '#666666',
               textAlign: 'center',
-              marginTop: 6
+              marginTop: 8,
+              fontWeight: '500'
             }}>
-              Choose what you want to see
+              Choose what you'd like to see ✨
             </Text>
           </View>
           
@@ -315,48 +356,49 @@ const NotificationPatient = ({ navigation }) => {
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                paddingVertical: 16,
-                paddingHorizontal: 20,
-                borderRadius: 18,
-                backgroundColor: selectedFilter === option.key ? `${Colors.primary}12` : '#F8F9FA',
-                marginBottom: 12,
-                borderWidth: selectedFilter === option.key ? 2 : 1,
-                borderColor: selectedFilter === option.key ? Colors.primary : '#E8E8E8',
-                shadowColor: selectedFilter === option.key ? Colors.primary : '#000',
-                shadowOffset: { width: 0, height: selectedFilter === option.key ? 4 : 2 },
-                shadowOpacity: selectedFilter === option.key ? 0.15 : 0.05,
-                shadowRadius: selectedFilter === option.key ? 8 : 4,
-                elevation: selectedFilter === option.key ? 4 : 2
+                paddingVertical: 18,
+                paddingHorizontal: 22,
+                borderRadius: 20,
+                backgroundColor: selectedFilter === option.key ? '#E3F2FD' : '#FFFFFF',
+                marginBottom: 14,
+                borderWidth: selectedFilter === option.key ? 2.5 : 1.5,
+                borderColor: selectedFilter === option.key ? '#2196F3' : '#E8E8E8',
+                shadowColor: selectedFilter === option.key ? '#2196F3' : '#000',
+                shadowOffset: { width: 0, height: selectedFilter === option.key ? 6 : 3 },
+                shadowOpacity: selectedFilter === option.key ? 0.2 : 0.08,
+                shadowRadius: selectedFilter === option.key ? 12 : 6,
+                elevation: selectedFilter === option.key ? 6 : 3,
+                transform: [{ scale: selectedFilter === option.key ? 1.02 : 1 }]
               }}
               onPress={() => {
                 setSelectedFilter(option.key);
                 setFilterVisible(false);
               }}
-              activeOpacity={0.7}
+              activeOpacity={0.6}
             >
               <Text style={{
-                fontSize: 17,
-                color: selectedFilter === option.key ? Colors.primary : Colors.text,
-                fontWeight: selectedFilter === option.key ? '700' : '500'
+                fontSize: 18,
+                color: selectedFilter === option.key ? '#2196F3' : '#333333',
+                fontWeight: selectedFilter === option.key ? '700' : '600'
               }}>
                 {option.label}
               </Text>
               <View style={{
-                backgroundColor: selectedFilter === option.key ? Colors.primary : '#6C757D',
-                borderRadius: 16,
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                minWidth: 32,
-                shadowColor: selectedFilter === option.key ? Colors.primary : '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.2,
-                shadowRadius: 4,
-                elevation: 2
+                backgroundColor: selectedFilter === option.key ? '#2196F3' : '#9E9E9E',
+                borderRadius: 18,
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                minWidth: 36,
+                shadowColor: selectedFilter === option.key ? '#2196F3' : '#000',
+                shadowOffset: { width: 0, height: 3 },
+                shadowOpacity: 0.25,
+                shadowRadius: 6,
+                elevation: 3
               }}>
                 <Text style={{
-                  fontSize: 13,
-                  color: Colors.white,
-                  fontWeight: '700',
+                  fontSize: 14,
+                  color: '#FFFFFF',
+                  fontWeight: '800',
                   textAlign: 'center'
                 }}>
                   {option.count}
@@ -364,14 +406,14 @@ const NotificationPatient = ({ navigation }) => {
               </View>
             </TouchableOpacity>
           ))}
-        </View>
+        </LinearGradient>
       </TouchableOpacity>
     </Modal>
   );
 
   return (
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
+      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
       
       {/* Header */}
       <View
@@ -384,7 +426,7 @@ const NotificationPatient = ({ navigation }) => {
         }}
       >
         <LinearGradient
-          colors={['#8B5CF6', '#667eea']}
+          colors={[Colors.primary, Colors.secondary]}
           style={{
             paddingTop: 70,
             paddingHorizontal: 20,
@@ -486,18 +528,22 @@ const NotificationPatient = ({ navigation }) => {
               fontSize: 12,
               color: 'white',
               fontWeight: '500'
-            }}>
-              Filtered: {filterOptions.find(f => f.key === selectedFilter)?.label}
-            </Text>
-          </View>
-        )}
+            }}
+           >
+             Filtered: {filterOptions.find(f => f.key === selectedFilter)?.label}
+           </Text>
+         </View>
+       )}
         </LinearGradient>
       </View>
 
-      {/* Notifications List */}
+      {/* Spacer for fixed header */}
+      <View style={{ height: 160 }} />
+
+      {/* Notifications List with Date Grouping */}
       <ScrollView
         style={{ flex: 1, backgroundColor: '#F5F5F5' }}
-        contentContainerStyle={{ paddingVertical: 16, paddingTop: 150 }}
+        contentContainerStyle={{ paddingVertical: 16, paddingTop: 0 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -509,92 +555,85 @@ const NotificationPatient = ({ navigation }) => {
           />
         }
       >
-        {filteredNotifications.length > 0 ? (
-          filteredNotifications.map((notification) => (
-            <NotificationItem key={notification.id} notification={notification} />
+        {Object.keys(groupedNotifications).length > 0 ? (
+          Object.keys(groupedNotifications).map((date) => (
+            <View key={date}>
+              {/* Date Header */}
+              <View style={{
+                marginHorizontal: 20,
+                marginVertical: 12,
+                paddingBottom: 8
+              }}>
+                <Text style={{
+                  fontSize: 16,
+                  fontWeight: '600',
+                  color: '#666666',
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.5
+                }}>
+                  {date}
+                </Text>
+              </View>
+              
+              {/* Notifications for this date */}
+              {groupedNotifications[date].map((notification) => (
+                <NotificationItem key={notification.id} notification={notification} />
+              ))}
+            </View>
           ))
         ) : (
           <View style={{
             flex: 1,
             justifyContent: 'center',
             alignItems: 'center',
-            paddingVertical: 80,
+            paddingVertical: 100,
             paddingHorizontal: 40
           }}>
-            <View
+            <LinearGradient
+              colors={['#E3F2FD', '#F0F8FF', '#FFFFFF']}
               style={{
-                width: 120,
-                height: 120,
-                borderRadius: 60,
+                width: 140,
+                height: 140,
+                borderRadius: 70,
                 justifyContent: 'center',
                 alignItems: 'center',
-                marginBottom: 24,
-                backgroundColor: `${Colors.primary}15`,
-                shadowColor: Colors.primary,
-                shadowOffset: { width: 0, height: 8 },
-                shadowOpacity: 0.15,
-                shadowRadius: 16,
-                elevation: 8
+                marginBottom: 28,
+                shadowColor: '#2196F3',
+                shadowOffset: { width: 0, height: 12 },
+                shadowOpacity: 0.2,
+                shadowRadius: 20,
+                elevation: 10,
+                borderWidth: 3,
+                borderColor: '#E3F2FD'
               }}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
             >
-              <MaterialIcons name="notifications-none" size={56} color={Colors.primary} />
-            </View>
+              <MaterialCommunityIcons name="bell-sleep" size={64} color="#2196F3" />
+            </LinearGradient>
             <Text style={{
-              fontSize: 22,
-              fontWeight: '700',
-              color: Colors.text,
-              marginBottom: 12,
+              fontSize: 24,
+              fontWeight: '800',
+              color: '#1A1A1A',
+              marginBottom: 14,
               textAlign: 'center'
             }}>
-              All Caught Up! 🎉
+              All Caught Up! 🎉✨
             </Text>
             <Text style={{
-              fontSize: 16,
-              color: Colors.secondaryText,
+              fontSize: 17,
+              color: '#666666',
               textAlign: 'center',
-              lineHeight: 24,
-              fontWeight: '400'
+              lineHeight: 26,
+              fontWeight: '500'
             }}>
-              You're doing great! New notifications will appear here when they arrive.
+              You have no new notifications.{"\n"}We'll let you know when something important happens! 💙
             </Text>
           </View>
         )}
       </ScrollView>
 
       <FilterModal />
-      
-      {/* Archived Button - Fixed Position */}
-      <TouchableOpacity
-        style={{
-          position: 'absolute',
-          bottom: 30,
-          right: 20,
-          backgroundColor: 'rgba(255, 255, 255, 0.25)',
-          backdropFilter: 'blur(20px)',
-          borderRadius: 25,
-          padding: 15,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.25,
-          shadowRadius: 15,
-          elevation: 8,
-          borderWidth: 1,
-          borderColor: 'rgba(255, 255, 255, 0.3)',
-          flexDirection: 'row',
-          alignItems: 'center'
-        }}
-        onPress={() => navigation.navigate('ArchivedNotifications')}
-      >
-        <MaterialIcons name="archive" size={20} color="#8B5CF6" />
-        <Text style={{
-          color: '#8B5CF6',
-          fontWeight: '600',
-          fontSize: 12,
-          marginLeft: 8
-        }}>
-          Archived
-        </Text>
-      </TouchableOpacity>
     </View>
   );
 };
