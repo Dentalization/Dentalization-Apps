@@ -320,7 +320,7 @@ const DoctorDashboard = ({ navigation }) => {
           style={{
             paddingTop: 70,
             paddingHorizontal: 20,
-            paddingBottom: 10,
+            paddingBottom: 23,
             borderBottomLeftRadius: isScrolled ? 0 : 25,
             borderBottomRightRadius: isScrolled ? 0 : 25,
             shadowColor: '#000',
