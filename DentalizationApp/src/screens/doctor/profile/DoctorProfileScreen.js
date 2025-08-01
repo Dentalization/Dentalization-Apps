@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { logoutUser } from '../../../store/slices/authSlice';
 import { useNavigation } from '@react-navigation/native';
 
@@ -23,6 +23,7 @@ const { width } = Dimensions.get('window');
 const DoctorProfileScreen = () => {
   const dispatch = useDispatch();
   const navigation = useNavigation();
+  const { user } = useSelector(state => state.auth);
 
   const handleLogout = () => {
     Alert.alert(
@@ -365,14 +366,16 @@ const DoctorProfileScreen = () => {
               color: '#FFFFFF',
               marginBottom: 4,
             }}>
-              Dr. Sarah Johnson
+              {user?.profile?.firstName && user?.profile?.lastName 
+                ? `${user.profile.firstName} ${user.profile.lastName}` 
+                : 'Doctor Profile'}
             </Text>
             <Text style={{
               fontSize: 16,
               color: '#E8E8FF',
               marginBottom: 8,
             }}>
-              Dental Specialist
+              {user?.profile?.specialization || 'Dental Specialist'}
             </Text>
             <View style={{
               flexDirection: 'row',
@@ -421,7 +424,7 @@ const DoctorProfileScreen = () => {
             }}>
               <StatCard number="156" label="Patients Treated" color="#483AA0" />
               <StatCard number="4.9" label="Rating" color="#FF6B35" />
-              <StatCard number="8" label="Years Experience" color="#4CAF50" />
+              <StatCard number={user?.profile?.experience || "0"} label="Years Experience" color="#4CAF50" />
             </View>
           </Animated.View>
 
@@ -440,7 +443,7 @@ const DoctorProfileScreen = () => {
             icon="person-outline"
             title="Personal Information"
             subtitle="Update your personal details and contact info"
-            onPress={() => console.log('Personal Info')}
+            onPress={() => navigation.navigate('DoctorProfileSetup')}
           />
 
           <ProfileCard

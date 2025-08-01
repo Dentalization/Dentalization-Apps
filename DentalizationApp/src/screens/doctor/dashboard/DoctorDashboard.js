@@ -362,10 +362,16 @@ const DoctorDashboard = ({ navigation }) => {
               <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>{getCurrentDate()}</Text>
             </View>
           </View>
-          <TouchableOpacity onPress={() => navigation.navigate('NotificationDoctor')} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' }}>
-            <MaterialIcons name="notifications-none" size={22} color="white" />
-            <View style={{ position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF4757' }} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity onPress={() => navigation.navigate('MessageScreenDoc')} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+              <MaterialIcons name="chat-bubble-outline" size={22} color="white" />
+              <View style={{ position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF4757' }} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('NotificationDoctor')} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' }}>
+              <MaterialIcons name="notifications-none" size={22} color="white" />
+              <View style={{ position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF4757' }} />
+            </TouchableOpacity>
+          </View>
         </View>
         
         {/* Search Bar */}

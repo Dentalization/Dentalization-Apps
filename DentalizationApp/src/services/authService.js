@@ -337,9 +337,7 @@ class AuthService {
       };
     } catch (error) {
       // Log error for debugging without exposing sensitive details
-      if (__DEV__) {
-        console.log('Login attempt failed:', error.response?.status || 'Network error');
-      }
+      console.error('Login error occurred:', error.response?.status || 'Network error');
       
       let errorMessage = 'Gagal masuk';
       

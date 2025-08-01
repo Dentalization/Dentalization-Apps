@@ -53,6 +53,15 @@ export const API_ENDPOINTS = {
     REVIEWS: '/api/doctors/reviews',
   },
   
+  // Profile endpoints
+  PROFILE: {
+    DOCTOR: '/api/profile/doctor',
+    PATIENT: '/api/profile/patient',
+    UPLOAD_PHOTO: '/api/profile/upload-photo',
+    UPLOAD_DOCUMENT: '/api/profile/upload-document',
+    UPDATE: '/api/profile/update',
+  },
+  
   // Patient endpoints
   PATIENTS: {
     BASE: '/api/patients',
