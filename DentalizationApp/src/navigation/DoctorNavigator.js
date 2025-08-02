@@ -12,6 +12,7 @@ import ScheduleScreen from '../screens/doctor/appointments/ScheduleScreen';
 import DiagnosisScreen from '../screens/doctor/diagnosis/DiagnosisScreen';
 import DoctorProfileScreen from '../screens/doctor/profile/DoctorProfileScreen';
 import DoctorProfileSetupScreen from '../screens/doctor/profile/DoctorProfileSetupScreen';
+import AiDiagnosisHistoryDoctor from '../screens/doctor/profile/AiDiagnosisHistoryDoctor.js';
 
 // Shared screens
 import ChatScreen from '../screens/shared/ChatScreen';
@@ -128,6 +129,7 @@ const DoctorNavigator = () => {
       <Stack.Screen name="MessageScreenDoc" component={MessageScreenDoc} />
       <Stack.Screen name="ChatDoc" component={ChatScreenDoc} />
       <Stack.Screen name="DoctorProfileSetup" component={DoctorProfileSetupScreen} />
+      <Stack.Screen name="AiDiagnosisHistoryDoctor" component={AiDiagnosisHistoryDoctor} />
     </Stack.Navigator>
   );
 };

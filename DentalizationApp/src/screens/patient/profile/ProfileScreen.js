@@ -368,9 +368,13 @@ const ProfileScreen = ({ navigation }) => {
       console.log('🔍 Photo upload response:', photoResponse);
       
       if (photoResponse.success) {
-        // Handle nested response structure from API
-        const responseData = photoResponse.data?.data || photoResponse.data;
+        // Handle response structure from API - backend returns {data: {url: "..."}}
+        const responseData = photoResponse.data;
         console.log('🔍 Parsed response data:', responseData);
+        console.log('🔍 Response data type:', typeof responseData);
+        console.log('🔍 Response data keys:', responseData ? Object.keys(responseData) : 'null');
+        console.log('🔍 Response data URL field:', responseData?.url);
+        console.log('🔍 Response data URL type:', typeof responseData?.url);
         
         // Convert relative URL to full URL and validate
         const baseURL = __DEV__ 

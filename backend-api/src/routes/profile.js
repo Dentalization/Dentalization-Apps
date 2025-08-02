@@ -12,7 +12,20 @@ const prisma = new PrismaClient();
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../../uploads');
+    let subDir = '';
+    
+    // Determine subdirectory based on file type
+    if (file.fieldname === 'photo') {
+      subDir = 'profilepicture';
+    } else if (file.fieldname === 'document') {
+      subDir = 'document';
+    } else if (file.fieldname === 'certification') {
+      subDir = 'certifications';
+    } else {
+      subDir = 'misc'; // fallback for other file types
+    }
+    
+    const uploadDir = path.join(__dirname, '../../uploads', subDir);
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
@@ -375,7 +388,7 @@ router.post('/doctor',
 );
 
 // POST /api/profile/upload-photo - Upload profile photo
-router.post('/upload-photo', authenticate, upload.single('photo'), (req, res) => {
+router.post('/upload-photo', authenticate, upload.single('photo'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -384,7 +397,20 @@ router.post('/upload-photo', authenticate, upload.single('photo'), (req, res) =>
       });
     }
 
-    const photoUrl = `/uploads/${req.file.filename}`;
+    const photoUrl = `/uploads/profilepicture/${req.file.filename}`;
+
+    // Update the doctor's profile with the new photo URL
+    if (req.user.role === 'DOCTOR') {
+      await prisma.doctorProfile.update({
+        where: { userId: req.user.id },
+        data: { profilePicture: photoUrl }
+      });
+    } else if (req.user.role === 'PATIENT') {
+      await prisma.patientProfile.update({
+        where: { userId: req.user.id },
+        data: { profilePicture: photoUrl }
+      });
+    }
 
     res.json({
       success: true,
@@ -415,7 +441,7 @@ router.post('/upload-document', authenticate, upload.single('document'), (req, r
     }
 
     const { documentType } = req.body;
-    const documentUrl = `/uploads/${req.file.filename}`;
+    const documentUrl = `/uploads/document/${req.file.filename}`;
 
     res.json({
       success: true,
@@ -442,6 +468,9 @@ router.put('/', authenticate, async (req, res) => {
     const { role } = req.user;
     const updates = req.body;
 
+    console.log('🔍 Profile update request for role:', role);
+    console.log('🔍 Profile update data:', updates);
+
     let profile;
     if (role === 'PATIENT') {
       profile = await prisma.patientProfile.update({
@@ -460,16 +489,19 @@ router.put('/', authenticate, async (req, res) => {
       });
     }
 
+    console.log('✅ Profile updated successfully:', profile.id);
+    
     res.json({
       success: true,
       message: 'Profile updated successfully',
-      data: { profile },
+      data: profile,
     });
   } catch (error) {
     console.error('Profile update error:', error);
     res.status(500).json({
       success: false,
-      message: 'Server error',
+      message: 'Failed to update profile',
+      error: error.message,
     });
   }
 });

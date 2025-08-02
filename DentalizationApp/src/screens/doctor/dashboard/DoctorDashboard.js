@@ -15,6 +15,7 @@ import {
 import { useSelector } from 'react-redux';
 import { MaterialIcons, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { API_CONFIG } from '../../../constants/api';
 
 const DoctorDashboard = ({ navigation }) => {
   const { user } = useSelector(state => state.auth);
@@ -348,8 +349,9 @@ const DoctorDashboard = ({ navigation }) => {
             <View style={{ width: 55, height: 55, borderRadius: 27.5, overflow: 'hidden', marginRight: 15, borderWidth: 3, borderColor: 'rgba(255,255,255,0.3)' }}>
               <Image
                 source={{
-                  uri: user?.profile?.profilePicture ||
-                  'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=110&h=110&fit=crop&crop=face'
+                  uri: user?.profile?.profilePicture 
+                    ? `${API_CONFIG.BASE_URL}${user.profile.profilePicture}`
+                    : 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=110&h=110&fit=crop&crop=face'
                 }}
                 style={{ width: 49, height: 49 }}
               />

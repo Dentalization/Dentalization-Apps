@@ -17,6 +17,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useDispatch, useSelector } from 'react-redux';
 import { logoutUser } from '../../../store/slices/authSlice';
 import { useNavigation } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
+import profileService from '../../../services/profileService';
+import { API_CONFIG } from '../../../constants/api';
 
 const { width } = Dimensions.get('window');
 
@@ -24,6 +27,8 @@ const DoctorProfileScreen = () => {
   const dispatch = useDispatch();
   const navigation = useNavigation();
   const { user } = useSelector(state => state.auth);
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleLogout = () => {
     Alert.alert(
@@ -48,6 +53,99 @@ const DoctorProfileScreen = () => {
         },
       ],
     );
+  };
+
+  const handleProfilePhotoPress = () => {
+    Alert.alert('Select Photo', 'Choose how you would like to upload your photo', [
+      { text: 'Camera', onPress: () => openCamera() },
+      { text: 'Photo Library', onPress: () => openImageLibrary() },
+      { text: 'Cancel', style: 'cancel' }
+    ]);
+  };
+
+  const openCamera = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Camera access is required to take photos. Please enable camera permission in your device settings.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: 'Images',
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.9,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await uploadProfilePhoto(result.assets[0]);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to open camera. Please try again.');
+      console.error('Camera error:', error);
+    }
+  };
+
+  const openImageLibrary = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Photo library access is required to select photos. Please enable photo library permission in your device settings.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: 'Images',
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.9,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await uploadProfilePhoto(result.assets[0]);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to open photo library. Please try again.');
+      console.error('Image library error:', error);
+    }
+  };
+
+  const uploadProfilePhoto = async (photo) => {
+    setIsUploading(true);
+    try {
+      console.log('📸 Starting profile photo upload...');
+      const photoResponse = await profileService.uploadProfilePhoto(
+        photo.uri,
+        user.id
+      );
+      
+      if (!photoResponse.success) {
+        console.log('❌ Profile photo upload failed:', photoResponse.message);
+        Alert.alert('Error', photoResponse.message || 'Failed to upload profile photo');
+        return;
+      }
+      
+      const profilePictureUrl = photoResponse.data?.url;
+      console.log('📸 Profile photo uploaded successfully:', profilePictureUrl);
+      
+      // Update profile with new photo URL
+      const updateResponse = await profileService.updateProfile({
+        profilePicture: profilePictureUrl
+      });
+      
+      if (updateResponse.success) {
+        setProfilePhoto(photo);
+        Alert.alert('Success', 'Profile photo updated successfully!');
+      } else {
+        Alert.alert('Error', 'Failed to update profile with new photo');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      Alert.alert('Error', 'Failed to upload profile photo. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
   };
   const [scaleAnim] = useState(new Animated.Value(1));
   const scrollY = useState(new Animated.Value(0))[0];
@@ -341,21 +439,46 @@ const DoctorProfileScreen = () => {
               shadowRadius: 8,
               elevation: 8,
             }}>
-              <MaterialIcons name="person" size={50} color="#483AA0" />
-              <TouchableOpacity style={{
-                position: 'absolute',
-                bottom: 0,
-                right: 0,
-                backgroundColor: '#4CAF50',
-                borderRadius: 12,
-                width: 24,
-                height: 24,
-                justifyContent: 'center',
-                alignItems: 'center',
-                borderWidth: 2,
-                borderColor: '#FFFFFF',
-              }}>
-                <MaterialIcons name="camera-alt" size={12} color="#FFFFFF" />
+              {profilePhoto || user?.profile?.profilePicture ? (
+                <Image 
+                  source={{ 
+                    uri: profilePhoto?.uri || 
+                      (user?.profile?.profilePicture 
+                        ? `${API_CONFIG.BASE_URL}${user.profile.profilePicture}`
+                        : null)
+                  }} 
+                  style={{
+                    width: 100,
+                    height: 100,
+                    borderRadius: 50,
+                  }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <MaterialIcons name="person" size={50} color="#483AA0" />
+              )}
+              <TouchableOpacity 
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  right: 0,
+                  backgroundColor: isUploading ? '#9E9E9E' : '#4CAF50',
+                  borderRadius: 12,
+                  width: 24,
+                  height: 24,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  borderWidth: 2,
+                  borderColor: '#FFFFFF',
+                }}
+                onPress={handleProfilePhotoPress}
+                disabled={isUploading}
+              >
+                <MaterialIcons 
+                  name={isUploading ? "hourglass-empty" : "camera-alt"} 
+                  size={12} 
+                  color="#FFFFFF" 
+                />
               </TouchableOpacity>
             </View>
             
@@ -458,6 +581,13 @@ const DoctorProfileScreen = () => {
             title="Availability & Schedule"
             subtitle="Set your working hours and availability"
             onPress={() => console.log('Schedule')}
+          />
+
+          <ProfileCard
+            icon="history"
+            title="AI Diagnosis History"
+            subtitle="View AI diagnosis history and reports"
+            onPress={() => navigation.navigate('AiDiagnosisHistoryDoctor')}
           />
 
           <ProfileCard

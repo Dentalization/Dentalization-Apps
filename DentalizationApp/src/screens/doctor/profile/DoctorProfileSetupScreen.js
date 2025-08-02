@@ -5,7 +5,6 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 import { LinearGradient } from 'expo-linear-gradient';
-import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useTheme } from '../../../components/common/ThemeProvider';
 import Button from '../../../components/common/Button';
@@ -33,7 +32,7 @@ const DoctorProfileSetupScreen = ({ navigation }) => {
     medicalLicense: '', licenseNumber: '', licenseExpiry: '', dentalSchool: '', graduationYear: '',
     specializations: [], yearsOfExperience: '', clinicName: '', clinicAddress: '', clinicPhone: '', clinicEmail: '',
     workingDays: [], workingHours: { start: '', end: '' }, consultationFee: '', appointmentDuration: '',
-    profilePhoto: null, licenseDocument: null, diplomaCertificate: null, specialistCertificates: [],
+    licenseDocument: null, diplomaCertificate: null, specialistCertificates: [],
     dentalServices: [], treatmentTypes: [], biography: '', languagesSpoken: [],
     acceptedInsurance: [], paymentMethods: [], website: '',
     socialMedia: { instagram: '', facebook: '', linkedin: '' }
@@ -184,68 +183,11 @@ const DoctorProfileSetupScreen = ({ navigation }) => {
   };
 
   const handleImagePicker = (type) => {
-    // For profile photo, use image picker
-    if (type === 'profilePhoto') {
-      Alert.alert('Select Photo', 'Choose how you would like to upload your photo', [
-        { text: 'Camera', onPress: () => openCamera(type) },
-        { text: 'Photo Library', onPress: () => openImageLibrary(type) },
-        { text: 'Cancel', style: 'cancel' }
-      ]);
-    } else {
-      // For documents (licenseDocument, diplomaCertificate), use document picker for PDF only
-      openDocumentPicker(type);
-    }
+    // For documents (licenseDocument, diplomaCertificate), use document picker for PDF only
+    openDocumentPicker(type);
   };
 
-  const openCamera = async (type) => {
-    try {
-      // Request camera permissions
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Camera access is required to take photos. Please enable camera permission in your device settings.');
-        return;
-      }
 
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: 'Images',
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.9,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setProfileData(prev => ({ ...prev, [type]: result.assets[0] }));
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to open camera. Please try again.');
-      console.error('Camera error:', error);
-    }
-  };
-
-  const openImageLibrary = async (type) => {
-    try {
-      // Request media library permissions
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Photo library access is required to select photos. Please enable photo library permission in your device settings.');
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: 'Images',
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.9,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        setProfileData(prev => ({ ...prev, [type]: result.assets[0] }));
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to open photo library. Please try again.');
-      console.error('Image library error:', error);
-    }
-  };
 
   const openDocumentPicker = async (type) => {
     try {
@@ -282,33 +224,7 @@ const DoctorProfileSetupScreen = ({ navigation }) => {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      // Debug: Check if profile photo exists
-      console.log('🔍 Profile photo check:', {
-        hasProfilePhoto: !!profileData.profilePhoto,
-        profilePhotoUri: profileData.profilePhoto?.uri,
-        profilePhotoData: profileData.profilePhoto
-      });
-      
-      // First, upload profile photo if exists
-      let profilePictureUrl = null;
-      if (profileData.profilePhoto && profileData.profilePhoto.uri) {
-        console.log('📸 Starting profile photo upload...');
-        const photoResponse = await profileService.uploadProfilePhoto(
-          profileData.profilePhoto.uri,
-          user.id
-        );
-        
-        if (!photoResponse.success) {
-          console.log('❌ Profile photo upload failed:', photoResponse.message);
-          Alert.alert('Error', photoResponse.message || 'Failed to upload profile photo');
-          setIsSubmitting(false);
-          return;
-        }
-        profilePictureUrl = photoResponse.data?.url;
-        console.log('📸 Profile photo uploaded successfully:', profilePictureUrl);
-      } else {
-        console.log('⚠️ No profile photo to upload');
-      }
+
       
       // Debug: Check if documents exist
       console.log('🔍 Documents check:', {
@@ -418,14 +334,10 @@ const DoctorProfileSetupScreen = ({ navigation }) => {
       profileDataForSubmit.specialization = profileDataForSubmit.specializations && profileDataForSubmit.specializations.length > 0 ? profileDataForSubmit.specializations[0] : null;
       profileDataForSubmit.subspecialties = profileDataForSubmit.specializations && profileDataForSubmit.specializations.length > 1 ? profileDataForSubmit.specializations.slice(1) : [];
       
-      // Add uploaded profile picture URL if exists
-      if (profilePictureUrl) {
-        profileDataForSubmit.profilePicture = profilePictureUrl;
-        console.log('📸 Added profilePicture URL to submission:', profilePictureUrl);
-      }
+
       
       // Remove file objects and keep only necessary data
-      const fieldsToRemove = ['profilePhoto', 'licenseDocument', 'diplomaCertificate', 'specialistCertificates', 'website', 'dentalServices', 'biography', 'specializations', 'workingDays', 'treatmentTypes', 'languagesSpoken', 'socialMedia'];
+      const fieldsToRemove = ['licenseDocument', 'diplomaCertificate', 'specialistCertificates', 'website', 'dentalServices', 'biography', 'specializations', 'workingDays', 'treatmentTypes', 'languagesSpoken', 'socialMedia'];
       fieldsToRemove.forEach(field => {
         if (profileDataForSubmit[field]) {
           delete profileDataForSubmit[field];
@@ -592,7 +504,6 @@ const DoctorProfileSetupScreen = ({ navigation }) => {
               <Text style={{ fontSize: 12, color: '#FFFFFF', marginTop: 1 }}>Tell us about your medical background</Text>
             </View>
           </View>
-          {renderImagePicker('Professional Profile Photo', profileData.profilePhoto, () => handleImagePicker('profilePhoto'), true)}
           {renderInput('Medical License Number *', profileData.licenseNumber, (value) => handleInputChange('licenseNumber', value), 'Enter your medical license number')}
           {renderInput('License Expiry Date', profileData.licenseExpiry, (value) => handleInputChange('licenseExpiry', value), 'MM/YYYY (e.g., 12/2030)', { keyboardType: 'numeric', maxLength: 7 })}
           {renderInput('Dental School/University *', profileData.dentalSchool, (value) => handleInputChange('dentalSchool', value), 'Enter your dental school')}
