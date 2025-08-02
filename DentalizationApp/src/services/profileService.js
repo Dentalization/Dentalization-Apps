@@ -5,8 +5,8 @@ import { AUTH_STORAGE_KEYS } from '../constants/auth';
 class ProfileService {
   constructor() {
     this.baseURL = __DEV__ 
-      ? 'http://127.0.0.1:3001/api' 
-      : 'https://api.dentalization.com/api';
+      ? 'http://127.0.0.1:3001' 
+      : 'https://api.dentalization.com';
   }
 
   async getAuthHeaders() {
@@ -56,6 +56,12 @@ class ProfileService {
       console.log('🔄 ProfileService: Sending doctor profile data to:', `${this.baseURL}${API_ENDPOINTS.PROFILE.DOCTOR}`);
       console.log('🔄 ProfileService: Request headers:', headers);
       console.log('🔄 ProfileService: Profile data keys:', Object.keys(profileData));
+      console.log('🔍 ProfileService: Checking critical fields:');
+      console.log('  - profilePicture:', profileData.profilePicture);
+      console.log('  - verificationDocs:', profileData.verificationDocs);
+      console.log('  - verificationDocs type:', typeof profileData.verificationDocs);
+      console.log('  - verificationDocs length:', profileData.verificationDocs?.length || 0);
+      console.log('📤 ProfileService: Full request body:', JSON.stringify(profileData, null, 2));
       
       const response = await fetch(`${this.baseURL}${API_ENDPOINTS.PROFILE.DOCTOR}`, {
         method: 'POST',
@@ -97,7 +103,7 @@ class ProfileService {
       delete headers['Content-Type']; // Let FormData set the boundary
 
       const formData = new FormData();
-      formData.append('profilePhoto', {
+      formData.append('photo', {
         uri: imageUri,
         type: 'image/jpeg',
         name: `profile_${userId}_${Date.now()}.jpg`,

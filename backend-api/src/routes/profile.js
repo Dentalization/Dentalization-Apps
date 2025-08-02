@@ -181,6 +181,15 @@ router.post('/patient',
         },
       });
 
+      // Debug: Log saved profile data
+      console.log('✅ Backend saved profile with profilePicture:', profile.profilePicture);
+      console.log('✅ Backend saved profile with verificationDocs:', profile.verificationDocs);
+      console.log('✅ Backend saved profile verificationDocs length:', profile.verificationDocs?.length || 0);
+      console.log('💳 Payment methods in result:', profile.paymentMethods);
+      console.log('💳 Payment methods length in result:', profile.paymentMethods?.length || 0);
+      console.log('🏥 Accepted insurance in result:', profile.acceptedInsurance);
+      console.log('🏥 Accepted insurance length in result:', profile.acceptedInsurance?.length || 0);
+
       res.json({
         success: true,
         message: 'Patient profile created successfully',
@@ -240,6 +249,25 @@ router.post('/doctor',
         profilePicture,
         bio,
       } = req.body;
+
+      // Debug: Log received data for profilePicture and verificationDocs
+      console.log('🔍 Backend received profilePicture:', profilePicture);
+      console.log('🔍 Backend received verificationDocs:', verificationDocs);
+      console.log('🔍 Backend received verificationDocs type:', typeof verificationDocs);
+      console.log('🔍 Backend received verificationDocs length:', verificationDocs?.length || 0);
+      
+      console.log('📋 Received profile data:', {
+        profilePicture,
+        verificationDocs,
+        verificationDocsType: typeof verificationDocs,
+        verificationDocsLength: verificationDocs?.length || 0,
+        paymentMethods,
+        paymentMethodsType: typeof paymentMethods,
+        paymentMethodsLength: paymentMethods?.length || 0,
+        acceptedInsurance,
+        acceptedInsuranceType: typeof acceptedInsurance,
+        acceptedInsuranceLength: acceptedInsurance?.length || 0
+      });
 
       // Check if user has DOCTOR role
       if (req.user.role !== 'DOCTOR') {
