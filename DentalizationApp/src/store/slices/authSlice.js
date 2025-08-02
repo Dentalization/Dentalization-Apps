@@ -179,11 +179,26 @@ export const checkAuthStatus = createAsyncThunk(
 
               // Clean up profilePicture URL - remove invalid URLs
               if (freshUserData.profile.profilePicture) {
-                if (freshUserData.profile.profilePicture.includes('undefined') || 
-                    freshUserData.profile.profilePicture === 'null' ||
-                    freshUserData.profile.profilePicture === 'undefined') {
+                if (freshUserData.profile.profilePicture === 'null' ||
+                    freshUserData.profile.profilePicture === 'undefined' ||
+                    freshUserData.profile.profilePicture.trim() === '' ||
+                    freshUserData.profile.profilePicture.includes('null/') ||
+                    freshUserData.profile.profilePicture.includes('undefined/')) {
                   freshUserData.profile.profilePicture = null;
                 }
+              }
+              
+              // Ensure clinicWebsite and services are properly handled
+              if (freshUserData.profile.clinicWebsite === 'null' || freshUserData.profile.clinicWebsite === 'undefined') {
+                freshUserData.profile.clinicWebsite = null;
+              }
+              
+              if (freshUserData.profile.services === 'null' || freshUserData.profile.services === 'undefined') {
+                freshUserData.profile.services = [];
+              }
+              
+              if (freshUserData.profile.verificationDocs === 'null' || freshUserData.profile.verificationDocs === 'undefined') {
+                freshUserData.profile.verificationDocs = [];
               }
 
               console.log('🔍 checkAuthStatus - Parsed user data:', JSON.stringify(freshUserData, null, 2));
@@ -434,11 +449,26 @@ const authSlice = createSlice({
 
             // Clean up profilePicture URL - remove invalid URLs
             if (userData.profile.profilePicture) {
-              if (userData.profile.profilePicture.includes('undefined') || 
-                  userData.profile.profilePicture === 'null' ||
-                  userData.profile.profilePicture === 'undefined') {
+              if (userData.profile.profilePicture === 'null' ||
+                  userData.profile.profilePicture === 'undefined' ||
+                  userData.profile.profilePicture.trim() === '' ||
+                  userData.profile.profilePicture.includes('null/') ||
+                  userData.profile.profilePicture.includes('undefined/')) {
                 userData.profile.profilePicture = null;
               }
+            }
+            
+            // Ensure clinicWebsite and services are properly handled
+            if (userData.profile.clinicWebsite === 'null' || userData.profile.clinicWebsite === 'undefined') {
+              userData.profile.clinicWebsite = null;
+            }
+            
+            if (userData.profile.services === 'null' || userData.profile.services === 'undefined') {
+              userData.profile.services = [];
+            }
+            
+            if (userData.profile.verificationDocs === 'null' || userData.profile.verificationDocs === 'undefined') {
+              userData.profile.verificationDocs = [];
             }
 
             console.log('🔍 Redux - Parsed user data in extraReducers:', JSON.stringify(userData, null, 2));

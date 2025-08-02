@@ -1469,7 +1469,7 @@ const RegisterDoctorScreen = ({ navigation }) => {
                 />
                 
                 <Button
-                  title="Daftar"
+                  title="Daftar sebagai Dokter"
                   onPress={handleRegister}
                   loading={isLoading}
                   disabled={isLoading}
@@ -1483,6 +1483,14 @@ const RegisterDoctorScreen = ({ navigation }) => {
                     shadowOpacity: 0.2,
                     shadowRadius: 8,
                     elevation: 5,
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                  }}
+                  textStyle={{
+                    color: theme.colors.primary,
+                    fontSize: 16,
+                    fontWeight: 'bold',
+                    textAlign: 'center'
                   }}
                 />
 

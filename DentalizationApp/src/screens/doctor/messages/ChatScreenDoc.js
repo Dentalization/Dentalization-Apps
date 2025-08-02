@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, SafeAreaView, FlatList, TouchableOpacity, Image, TextInput, StatusBar, Alert, Modal, Dimensions, KeyboardAvoidingView, Platform, } from 'react-native';
+import { View, Text, SafeAreaView, FlatList, TouchableOpacity, Image, TextInput, StatusBar, Alert, Modal, Dimensions, KeyboardAvoidingView, Platform, ScrollView, } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -7,73 +7,66 @@ import * as ImagePicker from 'expo-image-picker';
 
 const { width, height } = Dimensions.get('window');
 
-const ChatScreen = ({ navigation, route }) => {
-  console.log('ChatScreen route params:', route.params);
+const ChatScreenDoc = ({ navigation, route }) => {
+  console.log('ChatScreenDoc route params:', route.params);
   
-  const { doctorId, doctorName, specialty, avatar, isOnline, verified } = route.params || {};
+  const { patientId, patientName, age, avatar, isOnline, condition } = route.params || {};
   
   // Fallback values in case params are missing
   const safeParams = {
-    doctorId: doctorId || 1,
-    doctorName: doctorName || 'Dr. Unknown',
-    specialty: specialty || 'General Dentist',
-    avatar: avatar || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&h=150&fit=crop&crop=face',
+    patientId: patientId || 1,
+    patientName: patientName || 'Unknown Patient',
+    age: age || 'N/A',
+    avatar: avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
     isOnline: isOnline || false,
-    verified: verified || false
+    condition: condition || 'General Consultation'
   };
   
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([
     {
       id: '1',
-      text: 'Hello! Thank you for booking an appointment with me. How can I help you today?',
-      sender: 'doctor',
+      text: 'Hello Dr. Mitchell! I have some concerns about my dental health after my last cleaning.',
+      sender: 'patient',
       timestamp: new Date(Date.now() - 3600000),
       type: 'text',
     },
     {
       id: '2',
-      text: 'Hi Dr. Mitchell! I have some concerns about my dental health after my last cleaning.',
-      sender: 'patient',
+      text: 'Hello! Thank you for reaching out. I understand your concern. Could you please describe the specific issues you\'re experiencing?',
+      sender: 'doctor',
       timestamp: new Date(Date.now() - 3500000),
       type: 'text',
     },
     {
       id: '3',
-      text: 'I understand your concern. Could you please describe the specific issues you\'re experiencing?',
-      sender: 'doctor',
+      text: 'My gums have been bleeding when I brush my teeth, and I notice some sensitivity.',
+      sender: 'patient',
       timestamp: new Date(Date.now() - 3400000),
       type: 'text',
     },
     {
       id: '4',
-      text: 'My gums have been bleeding when I brush my teeth, and I notice some sensitivity.',
-      sender: 'patient',
-      timestamp: new Date(Date.now() - 3300000),
-      type: 'text',
-    },
-    {
-      id: '5',
       text: 'Thank you for sharing that information. Could you please take a clear photo of your gums so I can assess the situation better?',
       sender: 'doctor',
-      timestamp: new Date(Date.now() - 3200000),
+      timestamp: new Date(Date.now() - 3300000),
       type: 'request',
       requestType: 'photo',
     },
     {
-      id: '6',
+      id: '5',
       text: '',
       sender: 'patient',
-      timestamp: new Date(Date.now() - 3100000),
+      timestamp: new Date(Date.now() - 3200000),
       type: 'image',
       imageUri: 'https://images.unsplash.com/photo-1609840114035-3c981b782dfe?w=400&h=300&fit=crop',
       caption: 'Here\'s the photo of my gums as requested',
     },
     {
-      id: '7',
+      id: '6',
       text: 'Thank you for the photo. I can see some mild inflammation. Here\'s your treatment summary:',
       sender: 'doctor',
-      timestamp: new Date(Date.now() - 3000000),
+      timestamp: new Date(Date.now() - 3100000),
       type: 'summary',
       summary: {
         title: 'Gum Inflammation Assessment',
@@ -93,10 +86,10 @@ const ChatScreen = ({ navigation, route }) => {
       }
     },
     {
-      id: '8',
+      id: '7',
       text: 'Your next appointment is scheduled for next Tuesday at 2:00 PM. Please bring the X-rays from your previous dentist.',
       sender: 'doctor',
-      timestamp: new Date(Date.now() - 2900000),
+      timestamp: new Date(Date.now() - 3000000),
       type: 'appointment',
       appointment: {
         date: 'Tuesday, July 15, 2025',
@@ -115,7 +108,7 @@ const ChatScreen = ({ navigation, route }) => {
   const flatListRef = useRef(null);
 
   useEffect(() => {
-    // Simulate doctor typing
+    // Simulate patient typing
     const typingTimeout = setTimeout(() => {
       setIsTyping(true);
       setTimeout(() => {
@@ -131,7 +124,7 @@ const ChatScreen = ({ navigation, route }) => {
       const newMessage = {
         id: Date.now().toString(),
         text: message.trim(),
-        sender: 'patient',
+        sender: 'doctor',
         timestamp: new Date(),
         type: 'text',
       };
@@ -159,7 +152,7 @@ const ChatScreen = ({ navigation, route }) => {
         const newMessage = {
           id: Date.now().toString(),
           text: '',
-          sender: 'patient',
+          sender: 'doctor',
           timestamp: new Date(),
           type: 'image',
           imageUri: result.assets[0].uri,
@@ -190,7 +183,7 @@ const ChatScreen = ({ navigation, route }) => {
         const newMessage = {
           id: Date.now().toString(),
           text: '',
-          sender: 'patient',
+          sender: 'doctor',
           timestamp: new Date(),
           type: 'image',
           imageUri: result.assets[0].uri,
@@ -220,6 +213,62 @@ const ChatScreen = ({ navigation, route }) => {
     );
   };
 
+  const sendTreatmentSummary = () => {
+    const summaryMessage = {
+      id: Date.now().toString(),
+      text: 'Here is your treatment summary based on our consultation:',
+      sender: 'doctor',
+      timestamp: new Date(),
+      type: 'summary',
+      summary: {
+        title: 'Treatment Summary',
+        diagnosis: 'To be determined',
+        recommendations: [
+          'Follow prescribed medication',
+          'Maintain good oral hygiene',
+          'Schedule follow-up appointment'
+        ],
+        prescriptions: [
+          {
+            medication: 'Prescribed Medication',
+            dosage: 'As directed',
+            instructions: 'Follow instructions carefully'
+          }
+        ]
+      }
+    };
+    
+    setMessages(prev => [...prev, summaryMessage]);
+    
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  };
+
+  const scheduleAppointment = () => {
+    const appointmentMessage = {
+      id: Date.now().toString(),
+      text: 'I have scheduled your next appointment:',
+      sender: 'doctor',
+      timestamp: new Date(),
+      type: 'appointment',
+      appointment: {
+        date: 'To be confirmed',
+        time: 'To be confirmed',
+        duration: '30-45 minutes',
+        type: 'Follow-up Consultation',
+        location: 'Dentalization Clinic',
+        preparations: ['Bring previous records', 'Arrive 15 minutes early']
+      }
+    };
+    
+    setMessages(prev => [...prev, appointmentMessage]);
+    
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  };
+
   const formatTime = (date) => {
     return new Intl.DateTimeFormat('en-US', {
       hour: 'numeric',
@@ -229,24 +278,24 @@ const ChatScreen = ({ navigation, route }) => {
   };
 
   const renderMessage = ({ item, index }) => {
-    const isPatient = item.sender === 'patient';
-    const showAvatar = !isPatient && (index === 0 || messages[index - 1]?.sender !== item.sender);
+    const isDoctor = item.sender === 'doctor';
+    const showAvatar = !isDoctor && (index === 0 || messages[index - 1]?.sender !== item.sender);
     
     return (
-      <View style={[{ marginVertical: 2, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'flex-end' }, isPatient && { flexDirection: 'row-reverse' }]}>
-        {!isPatient && showAvatar && (
+      <View style={[{ marginVertical: 2, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'flex-end' }, isDoctor && { flexDirection: 'row-reverse' }]}>
+        {!isDoctor && showAvatar && (
           <Image source={{ uri: safeParams.avatar }} style={{ width: 32, height: 32, borderRadius: 16, marginRight: 10, alignSelf: 'flex-end' }} />
         )}
         
         <View style={[
           { maxWidth: '75%', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 20, marginHorizontal: 4 },
-          isPatient ? { backgroundColor: '#8B5CF6', borderBottomRightRadius: 4 } : { backgroundColor: '#FFFFFF', borderBottomLeftRadius: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 1 },
-          !isPatient && !showAvatar && { marginLeft: 42 }
+          isDoctor ? { backgroundColor: '#8B5CF6', borderBottomRightRadius: 4 } : { backgroundColor: '#FFFFFF', borderBottomLeftRadius: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 1 },
+          !isDoctor && !showAvatar && { marginLeft: 42 }
         ]}>
           {item.type === 'text' && (
             <Text style={[
               { fontSize: 16, lineHeight: 20 },
-              isPatient ? { color: 'white' } : { color: '#1F2937' }
+              isDoctor ? { color: 'white' } : { color: '#1F2937' }
             ]}>
               {item.text}
             </Text>
@@ -259,12 +308,6 @@ const ChatScreen = ({ navigation, route }) => {
                 <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#92400E', marginLeft: 8 }}>Photo Request</Text>
               </View>
               <Text style={{ fontSize: 14, color: '#92400E', marginBottom: 12 }}>{item.text}</Text>
-              <View style={{ alignItems: 'flex-start' }}>
-                <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#8B5CF6', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 }} onPress={showImageOptions}>
-                  <MaterialCommunityIcons name="camera-plus" size={16} color="white" />
-                  <Text style={{ color: 'white', fontWeight: '600', marginLeft: 6 }}>Share Photo</Text>
-                </TouchableOpacity>
-              </View>
             </View>
           )}
           
@@ -279,7 +322,7 @@ const ChatScreen = ({ navigation, route }) => {
                 <Image source={{ uri: item.imageUri }} style={{ width: 200, height: 200, borderRadius: 12, resizeMode: 'cover' }} />
               </TouchableOpacity>
               {item.caption && (
-                <Text style={{ fontSize: 14, color: isPatient ? 'rgba(255,255,255,0.9)' : '#6B7280', marginTop: 8 }}>{item.caption}</Text>
+                <Text style={{ fontSize: 14, color: isDoctor ? 'rgba(255,255,255,0.9)' : '#6B7280', marginTop: 8 }}>{item.caption}</Text>
               )}
             </View>
           )}
@@ -349,18 +392,13 @@ const ChatScreen = ({ navigation, route }) => {
                     ))}
                   </View>
                 )}
-                
-                <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#8B5CF6', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, marginTop: 12, justifyContent: 'center' }}>
-                  <MaterialCommunityIcons name="calendar-plus" size={16} color="white" />
-                  <Text style={{ color: 'white', fontWeight: '600', marginLeft: 6 }}>Add to Calendar</Text>
-                </TouchableOpacity>
               </View>
             </View>
           )}
           
           <Text style={[
-            { fontSize: 11, marginTop: 4, alignSelf: isPatient ? 'flex-end' : 'flex-start' },
-            isPatient ? { color: 'rgba(139,92,246,0.7)' } : { color: '#9CA3AF' }
+            { fontSize: 11, marginTop: 4, alignSelf: isDoctor ? 'flex-end' : 'flex-start' },
+            isDoctor ? { color: 'rgba(139,92,246,0.7)' } : { color: '#9CA3AF' }
           ]}>
             {formatTime(item.timestamp)}
           </Text>
@@ -409,18 +447,13 @@ const ChatScreen = ({ navigation, route }) => {
               <View style={{ position: 'relative', marginRight: 12 }}>
                 <Image source={{ uri: safeParams.avatar }} style={{ width: 40, height: 40, borderRadius: 20, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' }} />
                 {safeParams.isOnline && <View style={{ position: 'absolute', bottom: 0, right: 0, width: 12, height: 12, borderRadius: 6, backgroundColor: '#10B981', borderWidth: 2, borderColor: 'white' }} />}
-                {safeParams.verified && (
-                  <View style={{ position: 'absolute', top: -2, right: -2, width: 16, height: 16, borderRadius: 8, backgroundColor: '#3B82F6', alignItems: 'center', justifyContent: 'center' }}>
-                    <Icon name="verified" size={12} color="white" />
-                  </View>
-                )}
               </View>
               
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'white' }}>{safeParams.doctorName}</Text>
-                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)' }}>{safeParams.specialty}</Text>
+                <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'white' }}>{safeParams.patientName}</Text>
+                <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)' }}>Age: {safeParams.age} • {safeParams.condition}</Text>
                 <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>
-                  {safeParams.isOnline ? 'Online now' : 'Usually responds within 1 hour'}
+                  {safeParams.isOnline ? 'Online now' : 'Last seen recently'}
                 </Text>
               </View>
             </View>
@@ -458,6 +491,27 @@ const ChatScreen = ({ navigation, route }) => {
         ListFooterComponent={isTyping ? renderTypingIndicator : null}
         onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
       />
+
+      {/* Quick Actions */}
+      <View style={{ backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingHorizontal: 16, paddingVertical: 8 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <TouchableOpacity 
+            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, marginRight: 8 }}
+            onPress={sendTreatmentSummary}
+          >
+            <MaterialCommunityIcons name="file-document" size={16} color="#8B5CF6" />
+            <Text style={{ fontSize: 12, color: '#8B5CF6', marginLeft: 4, fontWeight: '600' }}>Send Summary</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, marginRight: 8 }}
+            onPress={scheduleAppointment}
+          >
+            <MaterialCommunityIcons name="calendar-plus" size={16} color="#8B5CF6" />
+            <Text style={{ fontSize: 12, color: '#8B5CF6', marginLeft: 4, fontWeight: '600' }}>Schedule</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </View>
 
       {/* Input */}
       <View style={{ backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingHorizontal: 16, paddingVertical: 12 }}>
@@ -512,4 +566,4 @@ const ChatScreen = ({ navigation, route }) => {
   );
 };
 
-export default ChatScreen;
+export default ChatScreenDoc;

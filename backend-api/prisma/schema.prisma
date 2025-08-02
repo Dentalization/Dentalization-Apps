@@ -73,6 +73,9 @@ model User {
   
   // Appointment relationships (doctor side)
   doctorAppointments Appointment[] @relation("DoctorAppointments")
+  
+  // AI Diagnosis relationships
+  aiDiagnoses AiDiagnosis[]
 
   @@map("users")
 }
@@ -113,6 +116,7 @@ model PatientProfile {
   // Relationships
   dentalPhotos     DentalPhoto[]
   medicalRecords   MedicalRecord[]
+  aiDiagnoses      AiDiagnosis[]
 
   @@map("patient_profiles")
 }
@@ -267,4 +271,26 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@map("notifications")
+}
+
+model AiDiagnosis {
+  id               String          @id @default(cuid())
+  userId           String
+  user             User            @relation(fields: [userId], references: [id])
+  
+  patientId        String?
+  patient          PatientProfile? @relation(fields: [patientId], references: [id])
+  
+  imageUrl         String?
+  detectionResult  String          // JSON string for detection results
+  reasoningResult  String          // JSON string for AI reasoning
+  reportUrl        String?
+  requestId        String?
+  aiServerResponse String?         // JSON string for full AI server response
+  
+  diagnosisDate    DateTime        @default(now())
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@map("ai_diagnoses")
 }

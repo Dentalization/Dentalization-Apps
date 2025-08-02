@@ -15,6 +15,7 @@ import {
 import { useSelector } from 'react-redux';
 import { MaterialIcons, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { API_CONFIG } from '../../../constants/api';
 
 const DoctorDashboard = ({ navigation }) => {
   const { user } = useSelector(state => state.auth);
@@ -348,8 +349,9 @@ const DoctorDashboard = ({ navigation }) => {
             <View style={{ width: 55, height: 55, borderRadius: 27.5, overflow: 'hidden', marginRight: 15, borderWidth: 3, borderColor: 'rgba(255,255,255,0.3)' }}>
               <Image
                 source={{
-                  uri: user?.profile?.profilePicture ||
-                  'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=110&h=110&fit=crop&crop=face'
+                  uri: user?.profile?.profilePicture 
+                    ? `${API_CONFIG.BASE_URL}${user.profile.profilePicture}`
+                    : 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=110&h=110&fit=crop&crop=face'
                 }}
                 style={{ width: 49, height: 49 }}
               />
@@ -362,10 +364,16 @@ const DoctorDashboard = ({ navigation }) => {
               <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>{getCurrentDate()}</Text>
             </View>
           </View>
-          <TouchableOpacity onPress={() => navigation.navigate('NotificationDoctor')} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' }}>
-            <MaterialIcons name="notifications-none" size={22} color="white" />
-            <View style={{ position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF4757' }} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity onPress={() => navigation.navigate('MessageScreenDoc')} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
+              <MaterialIcons name="chat-bubble-outline" size={22} color="white" />
+              <View style={{ position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF4757' }} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => navigation.navigate('NotificationDoctor')} style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center' }}>
+              <MaterialIcons name="notifications-none" size={22} color="white" />
+              <View style={{ position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: '#FF4757' }} />
+            </TouchableOpacity>
+          </View>
         </View>
         
         {/* Search Bar */}

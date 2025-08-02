@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   RefreshControl,
   StatusBar,
   Modal,
+  Animated,
 } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,8 +17,8 @@ const NotificationPatient = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [filterVisible, setFilterVisible] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState('all');
-
-
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const [isScrolled, setIsScrolled] = useState(false);
   const [notifications, setNotifications] = useState([
     {
       id: 1,
@@ -130,7 +131,17 @@ const NotificationPatient = ({ navigation }) => {
     }, 1000);
   };
 
-
+  // Handle scroll for glassmorphism effect
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    {
+      useNativeDriver: false,
+      listener: (event) => {
+        const offsetY = event.nativeEvent.contentOffset.y;
+        setIsScrolled(offsetY > 50);
+      },
+    }
+  );
 
   const markAsRead = (id) => {
     setNotifications(prev => 
@@ -415,33 +426,61 @@ const NotificationPatient = ({ navigation }) => {
     <View style={{ flex: 1, backgroundColor: 'transparent' }}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
       
-      {/* Header */}
-      <View
+      {/* Header with Glassmorphism Effect */}
+      <Animated.View
         style={{
           position: 'absolute',
           top: 0,
           left: 0,
           right: 0,
           zIndex: 1000,
+          opacity: scrollY.interpolate({
+            inputRange: [0, 50, 100],
+            outputRange: [1, 0.95, 0.9],
+            extrapolate: 'clamp',
+          }),
+          transform: [{
+            translateY: scrollY.interpolate({
+              inputRange: [0, 100],
+              outputRange: [0, -10],
+              extrapolate: 'clamp',
+            }),
+          }],
         }}
       >
         <LinearGradient
-          colors={[Colors.primary, Colors.secondary]}
+          colors={isScrolled ? 
+            ['rgba(33, 150, 243, 0.45)', 'rgba(156, 39, 176, 0.45)'] :
+            [Colors.primary, Colors.secondary]
+          }
           style={{
-            paddingTop: 70,
+            paddingTop: 50,
             paddingHorizontal: 20,
-            paddingBottom: 10,
-            borderBottomLeftRadius: 25,
-            borderBottomRightRadius: 25,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.1,
-            shadowRadius: 8,
-            elevation: 4,
+            paddingBottom: 30,
+            borderBottomLeftRadius: isScrolled ? 0 : 25,
+            borderBottomRightRadius: isScrolled ? 0 : 25,
+            shadowColor: isScrolled ? '#2196F3' : '#000',
+            shadowOffset: { width: 0, height: isScrolled ? 8 : 4 },
+            shadowOpacity: isScrolled ? 0.3 : 0.1,
+            shadowRadius: isScrolled ? 16 : 8,
+            elevation: isScrolled ? 12 : 4,
           }}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
+          {/* Glassmorphism overlay */}
+          {isScrolled && (
+            <View style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(255, 255, 255, 0.35)',
+              borderBottomLeftRadius: 0,
+              borderBottomRightRadius: 0,
+            }} />
+          )}
         <View style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -535,20 +574,25 @@ const NotificationPatient = ({ navigation }) => {
          </View>
        )}
         </LinearGradient>
-      </View>
+      </Animated.View>
+
+      {/* Spacer for fixed header */}
+      <View style={{ height: isScrolled ? 140 : 160 }} />
 
       {/* Notifications List with Date Grouping */}
-      <ScrollView
-        style={{ flex: 1, backgroundColor: '#F5F5F5' }}
-        contentContainerStyle={{ paddingVertical: 16, paddingTop: 160 }}
+      <Animated.ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingVertical: 16, paddingTop: 0 }}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            colors={[Colors.primary]}
-            tintColor={Colors.primary}
-            progressViewOffset={220}
+            colors={['#2196F3']}
+            tintColor={'#2196F3'}
+            progressViewOffset={isScrolled ? 140 : 160}
           />
         }
       >
@@ -628,7 +672,7 @@ const NotificationPatient = ({ navigation }) => {
             </Text>
           </View>
         )}
-      </ScrollView>
+      </Animated.ScrollView>
 
       <FilterModal />
     </View>

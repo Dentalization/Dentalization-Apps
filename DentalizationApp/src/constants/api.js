@@ -1,8 +1,8 @@
 // API Configuration
 export const API_CONFIG = {
-  // Using localhost now that server is running
+  // Using network IP for iOS simulator/device access
   BASE_URL: __DEV__ 
-    ? 'http://localhost:3001' 
+    ? 'http://10.237.12.129:3001' 
     : 'https://api.dentalization.com',
   TIMEOUT: 45000,  // Increased timeout for slow connections
   RETRY_ATTEMPTS: 3,
@@ -51,6 +51,15 @@ export const API_ENDPOINTS = {
     APPOINTMENTS: '/api/doctors/appointments',
     DIAGNOSES: '/api/doctors/diagnoses',
     REVIEWS: '/api/doctors/reviews',
+  },
+  
+  // Profile endpoints
+  PROFILE: {
+    DOCTOR: '/api/profile/doctor',
+    PATIENT: '/api/profile/patient',
+    UPLOAD_PHOTO: '/api/profile/upload-photo',
+    UPLOAD_DOCUMENT: '/api/profile/upload-document',
+    UPDATE: '/api/profile/update',
   },
   
   // Patient endpoints

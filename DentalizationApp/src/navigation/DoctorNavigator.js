@@ -11,11 +11,15 @@ import PatientsScreen from '../screens/doctor/patients/PatientsScreen';
 import ScheduleScreen from '../screens/doctor/appointments/ScheduleScreen';
 import DiagnosisScreen from '../screens/doctor/diagnosis/DiagnosisScreen';
 import DoctorProfileScreen from '../screens/doctor/profile/DoctorProfileScreen';
+import DoctorProfileSetupScreen from '../screens/doctor/profile/DoctorProfileSetupScreen';
+import AiDiagnosisHistoryDoctor from '../screens/doctor/profile/AiDiagnosisHistoryDoctor.js';
 
 // Shared screens
 import ChatScreen from '../screens/shared/ChatScreen';
 import SettingsScreen from '../screens/shared/SettingsScreen';
 import NotificationDoctor from '../screens/doctor/notification/NotificationDoctor';
+import MessageScreenDoc from '../screens/doctor/messages/MessageScreenDoc';
+import ChatScreenDoc from '../screens/doctor/messages/ChatScreenDoc';
 
 import { Colors, ROUTES } from '../constants';
 
@@ -122,6 +126,10 @@ const DoctorNavigator = () => {
       <Stack.Screen name={ROUTES.SETTINGS} component={SettingsScreen} />
       <Stack.Screen name={ROUTES.NOTIFICATIONS} component={NotificationDoctor} />
       <Stack.Screen name="NotificationDoctor" component={NotificationDoctor} />
+      <Stack.Screen name="MessageScreenDoc" component={MessageScreenDoc} />
+      <Stack.Screen name="ChatDoc" component={ChatScreenDoc} />
+      <Stack.Screen name="DoctorProfileSetup" component={DoctorProfileSetupScreen} />
+      <Stack.Screen name="AiDiagnosisHistoryDoctor" component={AiDiagnosisHistoryDoctor} />
     </Stack.Navigator>
   );
 };

@@ -61,6 +61,7 @@ app.use('/api/profile', require('./routes/profile'));
 app.use('/api/patients', require('./routes/patients'));
 app.use('/api/doctors', require('./routes/doctors'));
 app.use('/api/shared', require('./routes/shared'));
+app.use('/api/ai-diagnosis', require('./routes/aiDiagnosis'));
 // app.use('/api/admin', require('./routes/admin'));
 
 // 404 handler

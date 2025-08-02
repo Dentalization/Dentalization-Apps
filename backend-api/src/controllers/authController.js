@@ -94,11 +94,22 @@ class AuthController {
           }
         } else if (role === 'DOCTOR') {
           console.log('Creating doctor profile with additionalData:', additionalData);
-          // Extract phoneNumber from additionalData and nested doctor data
-          const { phoneNumber, additionalData: nestedData, ...restData } = additionalData || {};
-          const doctorData = nestedData || {};
-          const { licenseNumber, specialization, ...otherData } = doctorData;
-          console.log('Extracted licenseNumber:', licenseNumber, 'phoneNumber:', phoneNumber);
+          // Extract data from request body directly
+          const {
+            licenseNumber,
+            phone,
+            specialization,
+            experience,
+            education,
+            clinicName,
+            clinicAddress,
+            workingHours,
+            consultationFee,
+            bio,
+            services
+          } = req.body;
+          
+          console.log('Extracted licenseNumber:', licenseNumber, 'phone:', phone);
           
           if (!licenseNumber) {
             throw new Error('License number is required for doctor registration');
@@ -111,8 +122,15 @@ class AuthController {
               lastName,
               licenseNumber,
               specialization,
-              phone: phoneNumber,
-              ...otherData,
+              phone,
+              experience: experience ? parseInt(experience) : null,
+              education,
+              clinicName,
+              clinicAddress,
+              workingHours,
+              consultationFee: consultationFee ? parseInt(consultationFee) : null,
+              bio,
+              services: services || [],
             },
           });
         }
