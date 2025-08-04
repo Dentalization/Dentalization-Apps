@@ -463,7 +463,7 @@ router.post('/upload-document', authenticate, upload.single('document'), (req, r
 });
 
 // PUT /api/profile - Update profile (general)
-router.put('/', authenticate, async (req, res) => {
+router.put('/', authenticate, require('../middleware/validation').validateProfileUpdate, async (req, res) => {
   try {
     const { role } = req.user;
     const updates = req.body;

@@ -8,7 +8,7 @@ import PatientNavigator from './PatientNavigator';
 import DoctorNavigator from './DoctorNavigator';
 import LoadingScreen from '../screens/shared/LoadingScreen';
 
-import { checkAuthStatus, setBiometricAvailable } from '../store/slices/authSlice';
+import { checkAuthStatus, setBiometricAvailable, setShowLoginPrompt } from '../store/slices/authSlice';
 import biometricService from '../services/biometricService';
 import { USER_ROLES } from '../constants/roles';
 
@@ -16,7 +16,7 @@ const Stack = createStackNavigator();
 
 const RootNavigator = () => {
   const dispatch = useDispatch();
-  const { user, isAuthenticated, isLoading, isInitializing } = useSelector(state => state.auth);
+  const { user, isAuthenticated, isLoading, isInitializing, showLoginPrompt } = useSelector(state => state.auth);
 
   useEffect(() => {
     initializeApp();
@@ -26,6 +26,9 @@ const RootNavigator = () => {
     try {
       // Check auth status
       await dispatch(checkAuthStatus()).unwrap();
+      
+      // Reset login prompt when auth check is successful
+      dispatch(setShowLoginPrompt(false));
       
       // Biometrics disabled in development mode
       dispatch(setBiometricAvailable(false));
@@ -41,7 +44,7 @@ const RootNavigator = () => {
 
   // This component should start with a capital letter as per React convention
   const MainNavigator = () => {
-    if (!isAuthenticated || !user) {
+    if (!isAuthenticated || !user || showLoginPrompt) {
       return <AuthNavigator />;
     }
 

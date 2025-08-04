@@ -15,7 +15,7 @@ import {
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useDispatch, useSelector } from 'react-redux';
-import { logoutUser } from '../../../store/slices/authSlice';
+import { logoutUser, updateUser } from '../../../store/slices/authSlice';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import profileService from '../../../services/profileService';
@@ -72,7 +72,7 @@ const DoctorProfileScreen = () => {
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: 'Images',
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.9,
@@ -96,7 +96,7 @@ const DoctorProfileScreen = () => {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: 'Images',
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.9,
@@ -108,6 +108,29 @@ const DoctorProfileScreen = () => {
     } catch (error) {
       Alert.alert('Error', 'Failed to open photo library. Please try again.');
       console.error('Image library error:', error);
+    }
+  };
+
+  const testUpdatePaymentMethods = async () => {
+    try {
+      console.log('🧪 Testing payment methods update...');
+      const updateData = {
+        paymentMethods: ['Cash', 'Credit Card', 'Debit Card', 'Bank Transfer'],
+        acceptedInsurance: ['BPJS Kesehatan', 'Allianz', 'AXA Mandiri']
+      };
+      
+      const response = await profileService.updateProfile(updateData);
+      
+      if (response.success) {
+        Alert.alert('Success', 'Payment methods updated successfully!');
+        console.log('✅ Payment methods updated:', response.data);
+      } else {
+        Alert.alert('Error', response.message || 'Failed to update payment methods');
+        console.log('❌ Payment methods update failed:', response.message);
+      }
+    } catch (error) {
+      console.error('Payment methods update error:', error);
+      Alert.alert('Error', 'Failed to update payment methods');
     }
   };
 
@@ -126,19 +149,44 @@ const DoctorProfileScreen = () => {
         return;
       }
       
-      const profilePictureUrl = photoResponse.data?.url;
-      console.log('📸 Profile photo uploaded successfully:', profilePictureUrl);
+      console.log('📸 Full photo response data:', photoResponse.data);
+      console.log('📸 Photo response structure:', JSON.stringify(photoResponse, null, 2));
+      
+      // The response structure shows nested data: photoResponse.data.data.url
+      const profilePictureUrl = photoResponse.data?.data?.url;
+      console.log('📸 Direct access test:', {
+        'photoResponse.data': photoResponse.data,
+        'photoResponse.data.data': photoResponse.data?.data,
+        'photoResponse.data.data.url': photoResponse.data?.data?.url
+      });
+      console.log('📸 Extracted profilePictureUrl:', profilePictureUrl);
+      console.log('📸 Type of profilePictureUrl:', typeof profilePictureUrl);
       
       // Update profile with new photo URL
-      const updateResponse = await profileService.updateProfile({
-        profilePicture: profilePictureUrl
-      });
-      
-      if (updateResponse.success) {
-        setProfilePhoto(photo);
-        Alert.alert('Success', 'Profile photo updated successfully!');
+      if (profilePictureUrl) {
+        const updateResponse = await profileService.updateProfile({
+          profilePicture: profilePictureUrl
+        });
+        
+        if (updateResponse.success) {
+          setProfilePhoto(photo);
+          
+          // Update Redux store with new profile picture
+          dispatch(updateUser({
+            profile: {
+              ...user.profile,
+              profilePicture: profilePictureUrl
+            }
+          }));
+          console.log('✅ Profile picture updated in Redux store');
+          
+          Alert.alert('Success', 'Profile photo updated successfully!');
+        } else {
+          Alert.alert('Error', 'Failed to update profile with new photo');
+        }
       } else {
-        Alert.alert('Error', 'Failed to update profile with new photo');
+        console.log('❌ Profile picture URL is undefined');
+        Alert.alert('Error', 'Failed to get profile photo URL from upload response');
       }
     } catch (error) {
       console.error('Upload error:', error);
@@ -619,6 +667,13 @@ const DoctorProfileScreen = () => {
             title="Help & Support"
             subtitle="Get help and contact support team"
             onPress={() => console.log('Help')}
+          />
+
+          <ProfileCard
+            icon="payment"
+            title="Test Payment Methods"
+            subtitle="Test payment methods update functionality"
+            onPress={testUpdatePaymentMethods}
           />
 
           <ProfileCard

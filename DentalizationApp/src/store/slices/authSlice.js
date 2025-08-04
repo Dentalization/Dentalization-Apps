@@ -247,7 +247,7 @@ export const checkAuthStatus = createAsyncThunk(
       // No token or user data
       console.log('🔍 checkAuthStatus - No valid token or user data found');
       await authService.clearStoredData();
-      return rejectWithValue('No authentication data found');
+      return rejectWithValue('Authentication required');
     } catch (error) {
       console.error('🔍 checkAuthStatus - Error:', error);
       // Handle different error types
@@ -271,8 +271,7 @@ export const checkAuthStatus = createAsyncThunk(
         };
       }
       
-      return rejectWithValue(error.message || 'Authentication check failed');
-      return rejectWithValue(error.message || 'Auth check failed');
+      return rejectWithValue('Authentication required');
     }
   }
 );
@@ -308,6 +307,7 @@ const initialState = {
   error: null,
   biometricAvailable: false,
   biometricEnabled: false,
+  showLoginPrompt: false,
 };
 
 const authSlice = createSlice({
@@ -333,6 +333,9 @@ const authSlice = createSlice({
       if (state.user) {
         state.user.profileComplete = action.payload;
       }
+    },
+    setShowLoginPrompt: (state, action) => {
+      state.showLoginPrompt = action.payload;
     },
   },
   extraReducers: (builder) => {
@@ -485,12 +488,16 @@ const authSlice = createSlice({
         console.log('🔍 Redux - CheckAuth profile complete:', userData?.profile?.profileComplete);
         console.log('🔍 Redux - State profile complete set to:', state.profileComplete);
       })
-      .addCase(checkAuthStatus.rejected, (state) => {
+      .addCase(checkAuthStatus.rejected, (state, action) => {
         state.isInitializing = false;
         state.isAuthenticated = false;
         state.user = null;
         state.token = null;
         state.refreshToken = null;
+        // Show login prompt when authentication fails
+        if (action.payload === 'Authentication required' || action.payload === 'Authentication expired') {
+          state.showLoginPrompt = true;
+        }
       })
       
     // Logout user
@@ -540,6 +547,7 @@ export const {
   setBiometricEnabled,
   setInitializing,
   setProfileComplete,
+  setShowLoginPrompt,
 } = authSlice.actions;
 
 export default authSlice.reducer;

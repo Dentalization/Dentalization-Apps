@@ -21,7 +21,7 @@ const DoctorProfileSetupScreen = ({ navigation }) => {
   const { user } = useSelector(state => state.auth);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 6;
+  const totalSteps = 5;
   
   // Animation values
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -405,7 +405,7 @@ const DoctorProfileSetupScreen = ({ navigation }) => {
   };
 
   const renderStepIndicator = () => {
-    const stepTitles = ['Personal Info', 'Specializations', 'Practice Details', 'Schedule', 'Services', 'Documents'];
+    const stepTitles = ['Personal Info', 'Specializations', 'Practice Details', 'Schedule', 'Services'];
     
     return (
       <View style={{ paddingVertical: 24, paddingHorizontal: 20, backgroundColor: 'rgba(255, 255, 255, 0.15)', backdropFilter: 'blur(20px)', borderBottomWidth: 1, borderBottomColor: 'rgba(255, 255, 255, 0.2)' }}>
@@ -419,7 +419,7 @@ const DoctorProfileSetupScreen = ({ navigation }) => {
         
         {/* Step Circles */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          {[1, 2, 3, 4, 5, 6].map((step) => (
+          {[1, 2, 3, 4, 5].map((step) => (
             <View key={step} style={{ alignItems: 'center', flex: 1 }}>
               <Animated.View style={{ width: step === currentStep ? 36 : 28, height: step === currentStep ? 36 : 28, borderRadius: step === currentStep ? 18 : 14, backgroundColor: step <= currentStep ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.3)', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: step <= currentStep ? 'rgba(255, 255, 255, 1)' : 'rgba(255, 255, 255, 0.4)', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }}>
                 {step < currentStep ? (
@@ -666,28 +666,7 @@ const DoctorProfileSetupScreen = ({ navigation }) => {
     </View>
   );
 
-  const renderDocuments = () => (
-    <View>
-      {renderGlassCard(
-        <View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            <LinearGradient colors={['#667eea', '#764ba2']} style={{ width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 12 }}>
-              <MaterialCommunityIcons name="file-document" size={20} color="#FFFFFF" />
-            </LinearGradient>
-            <View>
-              <Text style={{ fontSize: 16, fontWeight: '700', color: '#2D3748' }}>Professional Documents</Text>
-              <Text style={{ fontSize: 12, color: '#FFFFFF', marginTop: 1 }}>Upload your certificates and licenses</Text>
-            </View>
-          </View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-around', flexWrap: 'wrap' }}>
-            {renderImagePicker('Medical License', profileData.licenseDocument, () => handleImagePicker('licenseDocument'), true)}
-            {renderImagePicker('Diploma Certificate', profileData.diplomaCertificate, () => handleImagePicker('diplomaCertificate'), true)}
-          </View>
-          <Text style={{ fontSize: 13, color: '#FFFFFF', textAlign: 'center', marginTop: 8 }}>Additional specialist certificates can be uploaded after profile completion</Text>
-        </View>
-      )}
-    </View>
-  );
+
 
   const renderCurrentStep = () => {
     switch (currentStep) {
@@ -696,7 +675,6 @@ const DoctorProfileSetupScreen = ({ navigation }) => {
       case 3: return renderPracticeDetails();
       case 4: return renderSchedule();
       case 5: return renderServices();
-      case 6: return renderDocuments();
       default: return renderProfessionalInfo();
     }
   };

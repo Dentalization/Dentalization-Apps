@@ -1,8 +1,8 @@
 // API Configuration
 export const API_CONFIG = {
-  // Using network IP for iOS simulator/device access
+  // Using localhost for development access
   BASE_URL: __DEV__ 
-    ? 'http://10.237.12.129:3001' 
+    ? 'http://localhost:3001' 
     : 'https://api.dentalization.com',
   TIMEOUT: 45000,  // Increased timeout for slow connections
   RETRY_ATTEMPTS: 3,

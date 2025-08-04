@@ -25,9 +25,16 @@ const KEYCHAIN_SERVICE = 'DentalizationApp';
 class AuthService {
   constructor() {
     this.setupAxiosInterceptors();
+    this.setupAxiosDefaults();
     // Rate limiting tracking
     this.lastApiCall = {};
     this.rateLimitBackoff = 1000; // Start with 1 second backoff
+  }
+
+  setupAxiosDefaults() {
+    // Set default timeout for all requests
+    axios.defaults.timeout = 15000; // 15 seconds
+    axios.defaults.headers.common['Content-Type'] = 'application/json';
   }
 
   // Add rate limiting protection
@@ -124,7 +131,7 @@ class AuthService {
             console.warn(`🔑 [AUTH] Token expired/invalid for ${error.config?.url || 'unknown'}`);
           } else if (error.response?.status === 429) {
             console.warn(`⚠️ [RATE_LIMIT] Too many requests for ${error.config?.url || 'unknown'} - backing off`);
-          } else {
+          } else if (!error.message?.includes('timeout') && !error.code?.includes('ECONNABORTED')) {
             console.error(`❌ [API] ${error.config?.method?.toUpperCase() || 'REQ'} ${error.config?.url || 'unknown'} - ${error.response?.status || 'NETWORK_ERROR'}`);
           }
         }
@@ -137,14 +144,17 @@ class AuthService {
         }
 
         // Handle network errors specifically
-        if (error.code === 'NETWORK_ERROR' || error.message === 'Network Error' || !error.response) {
-          console.error('🔍 Network Error Details:', {
-            message: error.message,
-            code: error.code,
-            config: error.config,
-            isNetworkError: true,
-            baseURL: error.config?.baseURL
-          });
+        if (error.code === 'NETWORK_ERROR' || error.code === 'ECONNABORTED' || error.message === 'Network Error' || error.message.includes('timeout') || !error.response) {
+          // Suppress excessive timeout logging for better UX
+          if (API_CONFIG.DEBUG_MODE && !error.message.includes('timeout')) {
+            console.error('🔍 Network Error Details:', {
+              message: error.message,
+              code: error.code,
+              config: error.config,
+              isNetworkError: true,
+              baseURL: error.config?.baseURL
+            });
+          }
           
           // Try fallback URLs for development
           if (__DEV__ && !error.config?._retryFallback) {
@@ -832,6 +842,11 @@ class AuthService {
     return this.clearAllData();
   }
 
+  // Another alias for clearAllData (for compatibility)
+  async clearAuthData() {
+    return this.clearAllData();
+  }
+
   // Check if user is authenticated
   async isAuthenticated() {
     try {
@@ -846,25 +861,43 @@ class AuthService {
   }
 
   // Check if token is likely expired (basic check without network call)
-  async isTokenLikelyExpired() {
+  // Can be called with a specific token or will use the stored token
+  isTokenLikelyExpired(providedToken = null) {
     try {
-      const token = await this.getAccessToken();
-      if (!token) return true;
+      const checkToken = async () => {
+        const token = providedToken || await this.getAccessToken();
+        if (!token) return true;
 
-      // Simple JWT expiry check (if the token is in JWT format)
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        const now = Math.floor(Date.now() / 1000);
-        if (payload.exp && payload.exp < now) {
-          console.log('🔍 Token has expired based on JWT payload');
-          return true;
+        // Simple JWT expiry check (if the token is in JWT format)
+        try {
+          const base64Url = token.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          }).join(''));
+          
+          const payload = JSON.parse(jsonPayload);
+          const now = Math.floor(Date.now() / 1000);
+          
+          if (payload.exp && payload.exp < now) {
+            console.log('🔍 Token has expired based on JWT payload');
+            return true;
+          }
+        } catch (jwtError) {
+          // Not a JWT or couldn't parse - assume token is valid for now
+          console.log('🔍 Could not parse token as JWT, assuming valid', jwtError);
         }
-      } catch (jwtError) {
-        // Not a JWT or couldn't parse - assume token is valid for now
-        console.log('🔍 Could not parse token as JWT, assuming valid');
-      }
 
-      return false;
+        return false;
+      };
+      
+      // If a token is provided directly, we can return the result immediately
+      if (providedToken) {
+        return checkToken();
+      }
+      
+      // Otherwise, we need to await the async operation
+      return checkToken();
     } catch (error) {
       console.error('Error checking token expiry:', error);
       return true; // Assume expired if we can't check

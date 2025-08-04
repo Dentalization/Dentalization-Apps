@@ -44,6 +44,38 @@ const validateRegistration = [
     .isLength({ min: 2, max: 50 })
     .withMessage('Last name must be between 2 and 50 characters'),
   
+  // Doctor-specific fields (conditional validation)
+  body('licenseNumber')
+    .if(body('role').equals('DOCTOR'))
+    .notEmpty()
+    .withMessage('License number is required for doctor registration'),
+  
+  body('specialization')
+    .if(body('role').equals('DOCTOR'))
+    .optional()
+    .trim()
+    .isLength({ max: 100 })
+    .withMessage('Specialization must be less than 100 characters'),
+  
+  body('phone')
+    .if(body('role').equals('DOCTOR'))
+    .optional()
+    .trim()
+    .isLength({ max: 20 })
+    .withMessage('Phone number must be less than 20 characters'),
+  
+  body('experience')
+    .if(body('role').equals('DOCTOR'))
+    .optional()
+    .isInt({ min: 0, max: 50 })
+    .withMessage('Experience must be a number between 0 and 50'),
+  
+  body('consultationFee')
+    .if(body('role').equals('DOCTOR'))
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Consultation fee must be a positive number'),
+  
   handleValidationErrors,
 ];
 
@@ -99,6 +131,37 @@ const validateProfileUpdate = [
     .optional()
     .isISO8601()
     .withMessage('Please provide a valid date of birth'),
+  
+  // Doctor-specific fields
+  body('paymentMethods')
+    .optional()
+    .isArray()
+    .withMessage('Payment methods must be an array'),
+  
+  body('acceptedInsurance')
+    .optional()
+    .isArray()
+    .withMessage('Accepted insurance must be an array'),
+  
+  body('services')
+    .optional()
+    .isArray()
+    .withMessage('Services must be an array'),
+  
+  body('subspecialties')
+    .optional()
+    .isArray()
+    .withMessage('Subspecialties must be an array'),
+  
+  body('consultationFee')
+    .optional()
+    .isNumeric()
+    .withMessage('Consultation fee must be a number'),
+  
+  body('experience')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Experience must be a positive integer'),
   
   handleValidationErrors,
 ];
