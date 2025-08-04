@@ -1,35 +1,41 @@
-// Utility script to clear all authentication data
-// Run this in the Expo console or add it to a debug screen
-
+console.log('📋 Copy and paste this code in the Expo console (press "j" to open debugger):');
+console.log('=' .repeat(70));
+console.log(`
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AUTH_STORAGE_KEYS } from './src/constants/auth';
 
-export const clearAllAuthData = async () => {
+const clearAllAuthData = async () => {
   try {
     console.log('🧹 Clearing all authentication data...');
     
-    // Clear all auth-related storage
-    await AsyncStorage.multiRemove([
-      AUTH_STORAGE_KEYS.ACCESS_TOKEN,
-      AUTH_STORAGE_KEYS.REFRESH_TOKEN,
-      AUTH_STORAGE_KEYS.USER_DATA,
-      AUTH_STORAGE_KEYS.BIOMETRIC_ENABLED,
-    ]);
+    const keysToRemove = [
+      'access_token',
+      'refresh_token', 
+      'user_data',
+      'biometric_enabled'
+    ];
     
-    console.log('✅ All authentication data cleared successfully');
-    console.log('📱 Please restart the app or reload to see changes');
+    await AsyncStorage.multiRemove(keysToRemove);
+    
+    // Verify clearing
+    const remainingData = await AsyncStorage.multiGet(keysToRemove);
+    console.log('🔍 Remaining data:', remainingData);
+    
+    console.log('✅ Authentication data cleared successfully');
+    console.log('📱 Please reload the app');
     
     return true;
   } catch (error) {
-    console.error('❌ Error clearing authentication data:', error);
+    console.error('❌ Error clearing auth data:', error);
     return false;
   }
 };
 
-// For immediate execution in console
-if (typeof window !== 'undefined' && window.__DEV__) {
-  window.clearAuthData = clearAllAuthData;
-  console.log('🔧 Debug function available: window.clearAuthData()');
-}
-
-export default clearAllAuthData;
+// Execute
+clearAllAuthData();
+`);
+console.log('=' .repeat(70));
+console.log('\n🔧 Instructions:');
+console.log('1. Press "j" in the Expo terminal to open debugger');
+console.log('2. Copy and paste the code above in the console');
+console.log('3. Press Enter to execute');
+console.log('4. Reload the app to see changes');

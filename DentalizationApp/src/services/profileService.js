@@ -196,7 +196,7 @@ class ProfileService {
     try {
       const headers = await this.getAuthHeaders();
       
-      const response = await fetch(`${this.baseURL}/profile`, {
+      const response = await fetch(`${this.baseURL}/api/profile`, {
         method: 'GET',
         headers,
       });
@@ -226,7 +226,7 @@ class ProfileService {
     try {
       const headers = await this.getAuthHeaders();
       
-      const response = await fetch(`${this.baseURL}/profile`, {
+      const response = await fetch(`${this.baseURL}/api/profile`, {
         method: 'PUT',
         headers,
         body: JSON.stringify(profileData),
