@@ -112,6 +112,7 @@ const DoctorProfileScreen = () => {
   };
 
   const testUpdatePaymentMethods = async () => {
+    console.log('🔥 TEST PAYMENT METHODS BUTTON PRESSED!');
     try {
       console.log('🧪 Testing payment methods update...');
       const updateData = {
@@ -119,11 +120,14 @@ const DoctorProfileScreen = () => {
         acceptedInsurance: ['BPJS Kesehatan', 'Allianz', 'AXA Mandiri']
       };
       
+      console.log('📤 Sending update data:', updateData);
       const response = await profileService.updateProfile(updateData);
+      console.log('📥 Received response:', response);
       
       if (response.success) {
         Alert.alert('Success', 'Payment methods updated successfully!');
         console.log('✅ Payment methods updated:', response.data);
+        console.log('💳 Updated paymentMethods:', response.data?.paymentMethods);
       } else {
         Alert.alert('Error', response.message || 'Failed to update payment methods');
         console.log('❌ Payment methods update failed:', response.message);

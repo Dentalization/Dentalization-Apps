@@ -470,6 +470,8 @@ router.put('/', authenticate, require('../middleware/validation').validateProfil
 
     console.log('🔍 Profile update request for role:', role);
     console.log('🔍 Profile update data:', updates);
+    console.log('💳 PaymentMethods in request:', updates.paymentMethods);
+    console.log('🏥 AcceptedInsurance in request:', updates.acceptedInsurance);
 
     let profile;
     if (role === 'PATIENT') {
