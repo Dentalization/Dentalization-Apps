@@ -368,37 +368,71 @@ const DiagnosisScreen = () => {
     <SafeAreaView style={{ flex: 1, backgroundColor: '#F2F1F8' }}>
       <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 24 }}>
-          {/* Header */}
-          <View style={{ alignItems: 'center', marginBottom: 32 }}>
-            <LinearGradient
-              colors={['#483AA0', '#6B5CE7']}
-              style={{ width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}
-            >
-              <MaterialIcons name="psychology" size={40} color="#FFFFFF" />
-            </LinearGradient>
-            <View style={{ alignItems: 'center' }}>
-              <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#333333', textAlign: 'center' }}>AI Diagnosis</Text>
+          {/* Beautiful Header */}
+          <View style={{ alignItems: 'center', marginBottom: 40, paddingHorizontal: 20 }}>
+            {/* Background Decoration */}
+            <View style={{ position: 'absolute', top: -20, left: 0, right: 0, height: 200, opacity: 0.05 }}>
+              <LinearGradient
+                colors={['#483AA0', '#6B5CE7', 'transparent']}
+                style={{ flex: 1, borderRadius: 100 }}
+              />
+            </View>
+            
+            {/* Main Icon Container */}
+            <View style={{ position: 'relative', marginBottom: 24 }}>
+              {/* Outer Glow Ring */}
+              <View style={{ position: 'absolute', top: -15, left: -15, width: 110, height: 110, borderRadius: 55, backgroundColor: 'rgba(107, 92, 231, 0.1)', opacity: 0.8 }} />
+              <View style={{ position: 'absolute', top: -8, left: -8, width: 96, height: 96, borderRadius: 48, backgroundColor: 'rgba(107, 92, 231, 0.15)' }} />
+              
+              {/* Main Icon */}
+              <LinearGradient
+                colors={['#483AA0', '#6B5CE7', '#8B7ED8']}
+                style={{ width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', shadowColor: '#483AA0', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 12 }}
+              >
+                <MaterialIcons name="psychology" size={40} color="#FFFFFF" />
+                {/* Sparkle Effect */}
+                <View style={{ position: 'absolute', top: 8, right: 8, width: 12, height: 12, borderRadius: 6, backgroundColor: 'rgba(255,255,255,0.4)' }} />
+                <View style={{ position: 'absolute', bottom: 12, left: 12, width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.3)' }} />
+              </LinearGradient>
+              
+              {/* Floating Particles */}
+              <View style={{ position: 'absolute', top: -5, right: -10, width: 4, height: 4, borderRadius: 2, backgroundColor: '#6B5CE7', opacity: 0.6 }} />
+              <View style={{ position: 'absolute', bottom: -8, left: -12, width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#483AA0', opacity: 0.4 }} />
+            </View>
+            
+            {/* Title Section */}
+            <View style={{ alignItems: 'center', marginBottom: 16 }}>
+              <Text style={{ fontSize: 28, fontWeight: '800', color: '#1A1A1A', textAlign: 'center', letterSpacing: -0.5, marginBottom: 4 }}>AI Diagnosis</Text>
+              <View style={{ width: 40, height: 3, backgroundColor: '#6B5CE7', borderRadius: 2, marginBottom: 12 }} />
+              
+              {/* Enhanced Status Indicator */}
               <View style={[
-                { flexDirection: 'row', alignItems: 'center', marginTop: 8, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
-                aiServerStatus === 'online' ? { backgroundColor: '#E8F5E8' } : 
-                aiServerStatus === 'offline' ? { backgroundColor: '#FFEBEE' } : { backgroundColor: '#FFF3E0' }
+                { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
+                aiServerStatus === 'online' ? { backgroundColor: '#E8F5E8', borderColor: '#C8E6C9' } : 
+                aiServerStatus === 'offline' ? { backgroundColor: '#FFEBEE', borderColor: '#FFCDD2' } : { backgroundColor: '#FFF3E0', borderColor: '#FFE0B2' }
               ]}>
+                {/* Animated Status Dot */}
                 <View style={[
-                  { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
+                  { width: 10, height: 10, borderRadius: 5, marginRight: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2 },
                   aiServerStatus === 'online' ? { backgroundColor: '#4CAF50' } : 
                   aiServerStatus === 'offline' ? { backgroundColor: '#F44336' } : { backgroundColor: '#FF9800' }
                 ]} />
                 <Text style={[
-                  { fontSize: 12, fontWeight: '600' },
+                  { fontSize: 13, fontWeight: '700', letterSpacing: 0.3 },
                   aiServerStatus === 'online' ? { color: '#2E7D32' } : 
                   aiServerStatus === 'offline' ? { color: '#C62828' } : { color: '#E65100' }
                 ]}>
-                  {aiServerStatus === 'online' ? 'AI Online' : 
-                   aiServerStatus === 'offline' ? 'AI Offline' : 'Checking...'}
+                  {aiServerStatus === 'online' ? '🟢 AI Online & Ready' : 
+                   aiServerStatus === 'offline' ? '🔴 AI Offline' : '🟡 Connecting...'}
                 </Text>
               </View>
             </View>
-            <Text style={{ fontSize: 16, color: '#666666', textAlign: 'center', marginTop: 8 }}>Analisis kondisi gigi dengan teknologi AI</Text>
+            
+            {/* Description */}
+            <View style={{ backgroundColor: 'rgba(255,255,255,0.8)', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(107, 92, 231, 0.1)' }}>
+              <Text style={{ fontSize: 16, color: '#555555', textAlign: 'center', lineHeight: 22, fontWeight: '500' }}>Analisis kondisi gigi dengan teknologi AI</Text>
+              <Text style={{ fontSize: 14, color: '#888888', textAlign: 'center', marginTop: 4, fontStyle: 'italic' }}>Powered by Advanced Machine Learning</Text>
+            </View>
           </View>
 
           {/* Image Selection Area */}

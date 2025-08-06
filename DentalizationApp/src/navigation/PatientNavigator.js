@@ -17,6 +17,7 @@ import ProfileScreen from '../screens/patient/profile/ProfileScreen';
 import PatientProfileSetupScreen from '../screens/patient/profile/PatientProfileSetupScreen';
 import MessagesScreen from '../screens/patient/messages/MessagesScreen';
 import ChatScreen from '../screens/patient/messages/ChatScreen';
+import ConsultationDetailView from '../screens/patient/consultations/ConsultationDetailView';
 
 // Shared screens
 import SettingsScreen from '../screens/shared/SettingsScreen';
@@ -156,6 +157,11 @@ const PatientNavigator = () => {
       <Stack.Screen 
         name="AppointmentBooking" 
         component={AppointmentBookingScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen 
+        name="ConsultationDetailView" 
+        component={ConsultationDetailView}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>
