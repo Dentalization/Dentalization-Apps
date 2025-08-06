@@ -514,7 +514,7 @@ const ChatScreenDoc = ({ navigation, route }) => {
       </View>
 
       {/* Input */}
-      <View style={{ backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingHorizontal: 16, paddingVertical: 12 }}>
+      <View style={{ backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingHorizontal: 16, paddingVertical: 12, marginBottom: Platform.OS === 'ios' ? 30 : 10 }}>
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', backgroundColor: '#F3F4F6', borderRadius: 24, paddingHorizontal: 12, paddingVertical: 8, minHeight: 44 }}>
           <TouchableOpacity style={{ padding: 8, marginRight: 8 }} onPress={showImageOptions}>
             <MaterialCommunityIcons name="camera-plus" size={24} color="#8B5CF6" />

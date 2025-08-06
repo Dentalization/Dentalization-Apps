@@ -8,7 +8,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import DoctorDashboard from '../screens/doctor/dashboard/DoctorDashboard';
 import PatientsScreen from '../screens/doctor/patients/PatientsScreen';
+import ViewDetailsPatient from '../screens/doctor/patients/ViewDetailsPatient';
 import ScheduleScreen from '../screens/doctor/appointments/ScheduleScreen';
+import ConsultationCompleteForm from '../screens/doctor/appointments/ConsultationCompleteForm';
+import VideoCallConsultation from '../screens/doctor/appointments/VideoCallConsultation';
 import DiagnosisScreen from '../screens/doctor/diagnosis/DiagnosisScreen';
 import DoctorProfileScreen from '../screens/doctor/profile/DoctorProfileScreen';
 import DoctorProfileSetupScreen from '../screens/doctor/profile/DoctorProfileSetupScreen';
@@ -129,6 +132,9 @@ const DoctorNavigator = () => {
       <Stack.Screen name="MessageScreenDoc" component={MessageScreenDoc} />
       <Stack.Screen name="ChatDoc" component={ChatScreenDoc} />
       <Stack.Screen name="DoctorProfileSetup" component={DoctorProfileSetupScreen} />
+      <Stack.Screen name="ViewDetailsPatient" component={ViewDetailsPatient} />
+      <Stack.Screen name="VideoCallConsultation" component={VideoCallConsultation} />
+      <Stack.Screen name="ConsultationCompleteForm" component={ConsultationCompleteForm} />
       <Stack.Screen name="AiDiagnosisHistoryDoctor" component={AiDiagnosisHistoryDoctor} />
     </Stack.Navigator>
   );
