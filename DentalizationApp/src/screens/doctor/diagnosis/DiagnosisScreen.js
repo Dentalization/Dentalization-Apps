@@ -202,7 +202,7 @@ const DiagnosisScreen = () => {
         
         // Save diagnosis to history
         try {
-          await aiDiagnosisHistoryService.saveDiagnosisResult({
+          await aiDiagnosisHistoryService.saveDiagnosis({
             imageUrl: selectedImage.uri,
             detectionResult: result.data.detection_result,
             reasoningResult: result.data.reasoning_result,

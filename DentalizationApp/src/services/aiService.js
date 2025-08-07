@@ -2,7 +2,7 @@ import { API_CONFIG } from '../constants/api';
 
 class AIService {
   constructor() {
-    this.baseURL = 'https://development-srv.tail2fe625.ts.net'; // Replace with actual deployed server URL
+    this.baseURL = 'https://development-srv.burro-platy.ts.net:10000'; // Replace with actual deployed server URL
     this.timeout = 60000; // 60 seconds timeout for AI processing
   }
 

@@ -1,9 +1,23 @@
 import { API_CONFIG } from '../constants/api';
+import { AUTH_STORAGE_KEYS } from '../constants/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import authService from './authService';
 
 class AiDiagnosisHistoryService {
   async getAuthHeaders() {
-    const token = await AsyncStorage.getItem('token');
+    let token = await AsyncStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+    
+    // If no token, try to refresh
+    if (!token) {
+      const refreshToken = await AsyncStorage.getItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
+      if (refreshToken) {
+        const refreshResult = await authService.refreshAccessToken(refreshToken);
+        if (refreshResult.success) {
+          token = refreshResult.data.token;
+        }
+      }
+    }
+    
     return {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
@@ -14,6 +28,12 @@ class AiDiagnosisHistoryService {
   async saveDiagnosis(diagnosisData) {
     try {
       const headers = await this.getAuthHeaders();
+      
+      // Check if we have a valid token
+      if (!headers.Authorization || headers.Authorization === 'Bearer null') {
+        throw new Error('Authentication required. Please login again.');
+      }
+      
       const response = await fetch(`${API_CONFIG.BASE_URL}/api/ai-diagnosis`, {
         method: 'POST',
         headers,
@@ -23,6 +43,10 @@ class AiDiagnosisHistoryService {
       const data = await response.json();
       
       if (!response.ok) {
+        // Handle authentication errors specifically
+        if (response.status === 401) {
+          throw new Error('Authentication expired. Please login again.');
+        }
         throw new Error(data.message || 'Failed to save diagnosis');
       }
 
@@ -37,6 +61,11 @@ class AiDiagnosisHistoryService {
   async getDiagnosisHistory(patientId, page = 1, limit = 10) {
     try {
       const headers = await this.getAuthHeaders();
+      
+      if (!headers.Authorization || headers.Authorization === 'Bearer null') {
+        throw new Error('Authentication required. Please login again.');
+      }
+      
       const response = await fetch(
         `${API_CONFIG.BASE_URL}/api/ai-diagnosis/history/${patientId}?page=${page}&limit=${limit}`,
         {
@@ -48,6 +77,9 @@ class AiDiagnosisHistoryService {
       const data = await response.json();
       
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication expired. Please login again.');
+        }
         throw new Error(data.message || 'Failed to get diagnosis history');
       }
 
@@ -62,6 +94,11 @@ class AiDiagnosisHistoryService {
   async getMyDiagnosisHistory(page = 1, limit = 10) {
     try {
       const headers = await this.getAuthHeaders();
+      
+      if (!headers.Authorization || headers.Authorization === 'Bearer null') {
+        throw new Error('Authentication required. Please login again.');
+      }
+      
       const response = await fetch(
         `${API_CONFIG.BASE_URL}/api/ai-diagnosis/my-history?page=${page}&limit=${limit}`,
         {
@@ -73,6 +110,9 @@ class AiDiagnosisHistoryService {
       const data = await response.json();
       
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Authentication expired. Please login again.');
+        }
         throw new Error(data.message || 'Failed to get diagnosis history');
       }
 

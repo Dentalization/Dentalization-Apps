@@ -575,7 +575,7 @@ const NotificationDoctor = ({ navigation }) => {
       {/* Notifications List */}
       <ScrollView
         style={{ flex: 1, backgroundColor: '#F5F5F5' }}
-        contentContainerStyle={{ paddingVertical: 16, paddingTop: 140 }}
+        contentContainerStyle={{ paddingVertical: 16, paddingTop: 0 }}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
