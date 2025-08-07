@@ -12,13 +12,13 @@ router.get('/history/:patientId', authenticate, aiDiagnosisController.getDiagnos
 // Get AI diagnosis history for current user (patient)
 router.get('/my-history', authenticate, aiDiagnosisController.getMyDiagnosisHistory);
 
+// Get diagnosis statistics
+router.get('/stats', authenticate, aiDiagnosisController.getDiagnosisStats);
+
 // Get specific AI diagnosis by ID
 router.get('/:diagnosisId', authenticate, aiDiagnosisController.getDiagnosisById);
 
 // Delete AI diagnosis
 router.delete('/:diagnosisId', authenticate, aiDiagnosisController.deleteDiagnosis);
-
-// Get diagnosis statistics
-router.get('/stats', authenticate, aiDiagnosisController.getDiagnosisStats);
 
 module.exports = router;

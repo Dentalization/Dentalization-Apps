@@ -423,7 +423,7 @@ const NotificationPatient = ({ navigation }) => {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+    <View style={{ flex: 1, backgroundColor: '#F8FBFF' }}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
       
       {/* Header with Glassmorphism Effect */}

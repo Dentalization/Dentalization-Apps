@@ -11,25 +11,28 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  StatusBar
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useSelector } from 'react-redux';
+import { useNavigation } from '@react-navigation/native';
 import aiDiagnosisHistoryService from '../../../services/aiDiagnosisHistoryService';
 
-const AiDiagnosisHistoryDoctor = ({ route, navigation }) => {
-  const { patientId } = route.params || {};
+const AiDiagnosisHistoryDoctor = () => {
+  const navigation = useNavigation();
+  const { user } = useSelector((state) => state.auth);
   const [diagnoses, setDiagnoses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(1);
   const [selectedDiagnosis, setSelectedDiagnosis] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [stats, setStats] = useState(null);
 
-  const user = useSelector(state => state.auth.user);
   const isDoctor = user?.role === 'DOCTOR';
 
   // Load diagnosis history
@@ -41,12 +44,8 @@ const AiDiagnosisHistoryDoctor = ({ route, navigation }) => {
         setLoadingMore(true);
       }
 
-      let response;
-      if (isDoctor && patientId) {
-        response = await aiDiagnosisHistoryService.getDiagnosisHistory(patientId, pageNum, 10);
-      } else {
-        response = await aiDiagnosisHistoryService.getMyDiagnosisHistory(pageNum, 10);
-      }
+      // For doctor, always use getMyDiagnosisHistory to get their own diagnoses
+      const response = await aiDiagnosisHistoryService.getMyDiagnosisHistory(pageNum, 10);
 
       if (response.success) {
         const newDiagnoses = response.data.diagnoses;
@@ -68,19 +67,23 @@ const AiDiagnosisHistoryDoctor = ({ route, navigation }) => {
       setLoadingMore(false);
       setRefreshing(false);
     }
-  }, [isDoctor, patientId]);
+  }, [isDoctor]);
 
   // Load statistics
   const loadStats = useCallback(async () => {
     try {
-      const response = await aiDiagnosisHistoryService.getDiagnosisStats(patientId);
+      const response = await aiDiagnosisHistoryService.getDiagnosisStats();
+      
       if (response.success) {
         setStats(response.data);
+      } else {
+        setStats({ totalDiagnoses: 0, recentDiagnoses: 0 });
       }
     } catch (error) {
       console.error('Load stats error:', error);
+      setStats({ totalDiagnoses: 0, recentDiagnoses: 0 });
     }
-  }, [patientId]);
+  }, []);
 
   useEffect(() => {
     loadDiagnoses(1, true);
@@ -185,7 +188,7 @@ const AiDiagnosisHistoryDoctor = ({ route, navigation }) => {
           {detections.slice(0, 2).map((detection, index) => (
             <View key={index} style={styles.detectionItem}>
               <Text style={styles.detectionLabel}>
-                • {detection.label || detection.class}
+                • {detection.condition_name || detection.class_name || detection.label || detection.class}
               </Text>
               <Text style={styles.detectionConfidence}>
                 {((detection.confidence || detection.score) * 100).toFixed(1)}%
@@ -263,7 +266,7 @@ const AiDiagnosisHistoryDoctor = ({ route, navigation }) => {
                 return (
                   <View key={index} style={styles.detectionCard}>
                     <View style={styles.detectionHeader}>
-                      <Text style={styles.detectionTitle}>{detection.label || detection.class}</Text>
+                      <Text style={styles.detectionTitle}>{detection.condition_name || detection.class_name || detection.label || detection.class}</Text>
                       <View style={[styles.confidenceBadge, { backgroundColor: severityColor }]}>
                         <Text style={styles.confidenceText}>{confidence.toFixed(1)}%</Text>
                       </View>
@@ -327,25 +330,124 @@ const AiDiagnosisHistoryDoctor = ({ route, navigation }) => {
   };
 
   const renderHeader = () => (
-    <View style={styles.header}>
-      <Text style={styles.title}>
-        {isDoctor && patientId ? 'Riwayat Diagnosis AI Pasien' : 'Riwayat Diagnosis AI Saya'}
-      </Text>
-      
-      {stats && (
-        <View style={styles.statsContainer}>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{stats.totalDiagnoses}</Text>
-            <Text style={styles.statLabel}>Total Diagnosis</Text>
-          </View>
-          <View style={styles.statItem}>
-            <Text style={styles.statNumber}>{stats.recentDiagnoses}</Text>
-            <Text style={styles.statLabel}>30 Hari Terakhir</Text>
-          </View>
+    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000 }}>
+      <LinearGradient
+        colors={['#667eea', '#764ba2']}
+        style={{
+          paddingTop: 70,
+          paddingHorizontal: 20,
+          paddingBottom: 25,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.15,
+          shadowRadius: 8,
+          elevation: 6
+        }}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <TouchableOpacity 
+            style={{
+              padding: 8,
+              borderRadius: 20,
+              backgroundColor: 'rgba(255, 255, 255, 0.2)'
+            }}
+            onPress={() => navigation.goBack()}
+          >
+            <MaterialIcons name="arrow-back" size={24} color="#FFF" />
+          </TouchableOpacity>
+          <Text style={{
+            fontSize: 20,
+            fontWeight: 'bold',
+            color: '#FFF',
+            textAlign: 'center',
+            flex: 1
+          }}>
+            Riwayat Diagnosis AI
+          </Text>
+          <View style={{ width: 40 }} />
         </View>
-      )}
+      </LinearGradient>
     </View>
   );
+
+  const renderStatsContainer = () => {
+    if (!stats) return null;
+    
+    return (
+      <View style={{
+          flexDirection: 'row',
+          paddingHorizontal: 20,
+          gap: 12,
+          marginBottom: 20,
+          marginTop: 0
+        }}>
+        <LinearGradient
+          colors={['#4facfe', '#00f2fe']}
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            padding: 20,
+            borderRadius: 16,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            elevation: 6
+          }}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <MaterialIcons name="assessment" size={24} color="#FFF" />
+          <Text style={{
+            fontSize: 28,
+            fontWeight: 'bold',
+            color: '#FFF',
+            marginTop: 8
+          }}>{stats.totalDiagnoses}</Text>
+          <Text style={{
+            fontSize: 12,
+            color: '#FFF',
+            marginTop: 4,
+            textAlign: 'center',
+            opacity: 0.9
+          }}>Total Diagnosis</Text>
+        </LinearGradient>
+        <LinearGradient
+          colors={['#43e97b', '#38f9d7']}
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            padding: 20,
+            borderRadius: 16,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            elevation: 6
+          }}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <MaterialIcons name="schedule" size={24} color="#FFF" />
+          <Text style={{
+            fontSize: 28,
+            fontWeight: 'bold',
+            color: '#FFF',
+            marginTop: 8
+          }}>{stats.recentDiagnoses}</Text>
+          <Text style={{
+            fontSize: 12,
+            color: '#FFF',
+            marginTop: 4,
+            textAlign: 'center',
+            opacity: 0.9
+          }}>30 Hari Terakhir</Text>
+        </LinearGradient>
+      </View>
+    );
+  };
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
@@ -379,32 +481,67 @@ const AiDiagnosisHistoryDoctor = ({ route, navigation }) => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <FlatList
-        data={diagnoses}
-        renderItem={renderDiagnosisItem}
-        keyExtractor={(item) => item.id}
-        ListHeaderComponent={renderHeader}
-        ListEmptyComponent={renderEmpty}
-        ListFooterComponent={renderFooter}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.1}
-        contentContainerStyle={styles.listContainer}
-      />
-      
-      {renderDetailModal()}
-    </SafeAreaView>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#667eea" />
+      <SafeAreaView style={styles.safeArea}>
+        {renderHeader()}
+        <FlatList
+          data={diagnoses}
+          renderItem={renderDiagnosisItem}
+          keyExtractor={(item) => item.id.toString()}
+          ListHeaderComponent={renderStatsContainer}
+          contentContainerStyle={{
+              paddingTop: 80,
+              paddingHorizontal: 20,
+              paddingBottom: 120
+            }}
+          showsVerticalScrollIndicator={true}
+          bounces={true}
+          scrollEventThrottle={16}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          initialNumToRender={5}
+          getItemLayout={(data, index) => ({
+            length: 200,
+            offset: 200 * index,
+            index,
+          })}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#667eea']}
+              tintColor="#667eea"
+              progressBackgroundColor="#FFF"
+            />
+          }
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.3}
+          ListEmptyComponent={renderEmpty}
+          ListFooterComponent={loading && diagnoses.length > 0 ? (
+            <View style={styles.loadingFooter}>
+              <ActivityIndicator size="small" color="#667eea" />
+              <Text style={{ marginLeft: 8, color: '#667eea' }}>Memuat lebih banyak...</Text>
+            </View>
+          ) : null}
+        />
+        
+        {renderDetailModal()}
+      </SafeAreaView>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5'
+    backgroundColor: '#f8fafc'
   },
+  safeArea: {
+    flex: 1
+  },
+
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -415,59 +552,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666'
   },
-  listContainer: {
-    padding: 16
-  },
-  header: {
-    marginBottom: 20
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 16
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center'
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#007AFF'
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4
-  },
+
+
   diagnosisCard: {
     backgroundColor: '#FFF',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 20,
+    marginHorizontal: 4,
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(102, 126, 234, 0.1)',
+    overflow: 'hidden'
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12
+    alignItems: 'flex-start',
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(102, 126, 234, 0.1)'
   },
   headerLeft: {
     flexDirection: 'row',
@@ -480,14 +589,20 @@ const styles = StyleSheet.create({
     marginRight: 12
   },
   diagnosisDate: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333'
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1a202c',
+    marginBottom: 4
   },
   doctorName: {
     fontSize: 14,
-    color: '#666',
-    marginTop: 2
+    color: '#667eea',
+    fontWeight: '600',
+    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start'
   },
   deleteButton: {
     padding: 8
@@ -496,26 +611,54 @@ const styles = StyleSheet.create({
     marginBottom: 12
   },
   detectionCount: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#007AFF',
-    marginBottom: 8
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFF',
+    marginBottom: 16,
+    backgroundColor: '#667eea',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 25,
+    alignSelf: 'flex-start',
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6
   },
   detectionItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4
+    marginBottom: 8,
+    backgroundColor: 'rgba(102, 126, 234, 0.05)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#667eea'
   },
   detectionLabel: {
-    fontSize: 14,
-    color: '#333',
-    flex: 1
+    fontSize: 15,
+    color: '#2d3748',
+    flex: 1,
+    fontWeight: '600'
   },
   detectionConfidence: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#666'
+    fontWeight: '700',
+    color: '#FFF',
+    backgroundColor: '#667eea',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    minWidth: 60,
+    textAlign: 'center',
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4
   },
   moreDetections: {
     fontSize: 12,
@@ -525,29 +668,37 @@ const styles = StyleSheet.create({
   },
   cardFooter: {
     flexDirection: 'row',
-    alignItems: 'center'
+    alignItems: 'center',
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(102, 126, 234, 0.1)'
   },
   viewDetail: {
-    fontSize: 12,
-    color: '#666',
-    marginLeft: 4
+    fontSize: 13,
+    color: '#667eea',
+    marginLeft: 6,
+    fontWeight: '600'
   },
   emptyContainer: {
     alignItems: 'center',
-    paddingVertical: 60
+    paddingVertical: 80,
+    paddingHorizontal: 32
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 16,
-    marginBottom: 8
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#2d3748',
+    marginTop: 20,
+    marginBottom: 12,
+    textAlign: 'center'
   },
   emptySubtitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 15,
+    color: '#718096',
     textAlign: 'center',
-    lineHeight: 20
+    lineHeight: 22,
+    opacity: 0.8
   },
   loadingFooter: {
     flexDirection: 'row',
