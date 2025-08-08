@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, SafeAreaView, ScrollView, Alert, TouchableOpacity, Image, Animated, Dimensions, TextInput, Platform } from 'react-native';
+import { View, Text, SafeAreaView, ScrollView, Alert, TouchableOpacity, Image, Animated, Dimensions, TextInput, Platform, StatusBar } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -25,8 +25,7 @@ const DoctorProfileSetupScreen = ({ navigation }) => {
   
   // Animation values
   const fadeAnim = useRef(new Animated.Value(1)).current;
-  const slideAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const scrollViewRef = useRef(null);
   
   const [profileData, setProfileData] = useState({
     medicalLicense: '', licenseNumber: '', licenseExpiry: '', dentalSchool: '', graduationYear: '',
@@ -45,19 +44,16 @@ const DoctorProfileSetupScreen = ({ navigation }) => {
   const insuranceTypes = ['BPJS Kesehatan', 'Prudential', 'Allianz', 'AXA Mandiri', 'Great Eastern', 'Cigna', 'Asuransi Sinar Mas', 'BNI Life', 'Sequis', 'FWD Insurance'];
   const paymentMethods = ['Cash', 'Credit Card', 'Debit Card', 'Bank Transfer', 'E-Wallet (GoPay)', 'E-Wallet (OVO)', 'E-Wallet (DANA)', 'QRIS', 'Installment'];
 
-  // Animate step transitions
+  // Animate step transitions and scroll to top
   useEffect(() => {
+    // Scroll to top when step changes
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ y: 0, animated: true });
+    }
+    
     Animated.sequence([
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: -30, duration: 200, useNativeDriver: true }),
-        Animated.timing(scaleAnim, { toValue: 0.95, duration: 200, useNativeDriver: true })
-      ]),
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
-        Animated.timing(scaleAnim, { toValue: 1, duration: 300, useNativeDriver: true })
-      ])
+      Animated.timing(fadeAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true })
     ]).start();
   }, [currentStep]);
 
@@ -404,15 +400,49 @@ const DoctorProfileSetupScreen = ({ navigation }) => {
     }
   };
 
+  const handleBackPress = () => {
+    if (currentStep > 1) {
+      handlePrevious();
+    } else {
+      Alert.alert(
+        'Exit Setup',
+        'Are you sure you want to exit profile setup? Your progress will be lost.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Exit', style: 'destructive', onPress: () => navigation.goBack() }
+        ]
+      );
+    }
+  };
+
   const renderStepIndicator = () => {
     const stepTitles = ['Personal Info', 'Specializations', 'Practice Details', 'Schedule', 'Services'];
     
     return (
-      <View style={{ paddingVertical: 24, paddingHorizontal: 20, backgroundColor: 'rgba(255, 255, 255, 0.15)', backdropFilter: 'blur(20px)', borderBottomWidth: 1, borderBottomColor: 'rgba(255, 255, 255, 0.2)' }}>
+      <View>
+        {/* Back Button */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
+          <TouchableOpacity 
+            onPress={handleBackPress}
+            style={{ 
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              borderRadius: 20,
+              width: 40,
+              height: 40,
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginRight: 16
+            }}
+          >
+            <Icon name="arrow-back" size={24} color="white" />
+          </TouchableOpacity>
+          <Text style={{ fontSize: 18, fontWeight: '600', color: 'white', flex: 1, textAlign: 'center', marginRight: 56 }}>Profile Setup</Text>
+        </View>
+        
         {/* Progress Bar */}
         <View style={{ marginBottom: 20 }}>
           <View style={{ height: 4, backgroundColor: 'rgba(255, 255, 255, 0.2)', borderRadius: 2, overflow: 'hidden' }}>
-            <LinearGradient colors={['#667eea', '#764ba2']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: '100%', borderRadius: 2, width: `${(currentStep / totalSteps) * 100}%` }} />
+            <View style={{ height: '100%', borderRadius: 2, width: `${(currentStep / totalSteps) * 100}%`, backgroundColor: 'rgba(255, 255, 255, 0.8)' }} />
           </View>
           <Text style={{ textAlign: 'center', marginTop: 8, fontSize: 13, fontWeight: '600', color: 'rgba(255, 255, 255, 0.9)' }}>Step {currentStep} of {totalSteps}</Text>
         </View>
@@ -442,7 +472,23 @@ const DoctorProfileSetupScreen = ({ navigation }) => {
   };
 
   const renderGlassCard = (children, style = {}) => (
-    <View style={{ backgroundColor: 'rgba(255, 255, 255, 0.25)', borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.3)', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5, ...style }}>
+    <View style={{ 
+      backgroundColor: 'rgba(255, 255, 255, 0.9)', 
+      borderRadius: 16, 
+      padding: 24,
+      marginBottom: 20,
+      marginHorizontal: 8,
+      borderWidth: 1, 
+      borderColor: 'rgba(255, 255, 255, 0.1)', 
+      shadowColor: '#000', 
+      shadowOffset: { width: 0, height: 4 }, 
+      shadowOpacity: 0.1, 
+      shadowRadius: 12, 
+      elevation: 5,
+      width: '110%',
+      alignSelf: 'center',
+      ...style 
+    }}>
       {children}
     </View>
   );
@@ -680,41 +726,55 @@ const DoctorProfileSetupScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={{ flex: 1 }}>
-      <LinearGradient colors={['#667eea', '#764ba2', '#f093fb']} style={{ flex: 1 }}>
-        <SafeAreaView style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: '#F8F9FF' }}>
+      <StatusBar barStyle="light-content" backgroundColor="#667eea" />
+      
+      {/* Fixed Header with Camera Wrapper */}
+      <Animated.View style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000 }}>
+        <LinearGradient colors={['#667eea', '#764ba2']} style={{ paddingTop: 70, paddingHorizontal: 20, paddingBottom: 23, borderBottomLeftRadius: 25, borderBottomRightRadius: 25, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4 }}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
           {renderStepIndicator()}
-          
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 20 }} showsVerticalScrollIndicator={false}>
-            <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }, { scale: scaleAnim }] }}>
-              {renderCurrentStep()}
-            </Animated.View>
-          </ScrollView>
+        </LinearGradient>
+      </Animated.View>
 
-          {/* Navigation Buttons */}
-          <View style={{ paddingHorizontal: 20, paddingVertical: 16, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderTopWidth: 1, borderTopColor: 'rgba(255, 255, 255, 0.2)' }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <ScrollView 
+          ref={scrollViewRef}
+          style={{ flex: 1, backgroundColor: '#F8F9FF' }} 
+          contentContainerStyle={{ paddingTop: 230, paddingHorizontal: 20, paddingBottom: 40 }} 
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Form Content */}
+          <Animated.View style={{ opacity: fadeAnim, backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: 16, padding: 16 }}>
+            {renderCurrentStep()}
+          </Animated.View>
+
+          {/* Navigation Buttons - Now inside ScrollView */}
+          <View style={{ marginTop: 24, paddingHorizontal: 0, paddingVertical: 16, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(0, 0, 0, 0.1)', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 4, marginBottom: 20 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12, paddingHorizontal: 20 }}>
               {currentStep > 1 && (
-                <TouchableOpacity onPress={handlePrevious} style={{ flex: 1, paddingVertical: 14, paddingHorizontal: 20, borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(255, 255, 255, 0.3)', backgroundColor: 'rgba(255, 255, 255, 0.1)', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }}>
+                <TouchableOpacity onPress={handlePrevious} style={{ flex: 1, paddingVertical: 14, paddingHorizontal: 20, borderRadius: 12, borderWidth: 1.5, borderColor: '#667eea', backgroundColor: 'transparent', alignItems: 'center' }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <MaterialCommunityIcons name="chevron-left" size={18} color="#FFFFFF" style={{ marginRight: 4 }} />
-                    <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }}>Previous</Text>
+                    <MaterialCommunityIcons name="chevron-left" size={18} color="#667eea" style={{ marginRight: 4 }} />
+                    <Text style={{ color: '#667eea', fontSize: 14, fontWeight: '600' }}>Previous</Text>
                   </View>
                 </TouchableOpacity>
               )}
               
-              <TouchableOpacity onPress={handleNext} disabled={isSubmitting} style={{ flex: currentStep === 1 ? 1 : 1, paddingVertical: 14, paddingHorizontal: 20, borderRadius: 12, backgroundColor: isSubmitting ? 'rgba(255, 255, 255, 0.3)' : 'rgba(255, 255, 255, 0.9)', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 5 }}>
+              <TouchableOpacity onPress={handleNext} disabled={isSubmitting} style={{ flex: currentStep === 1 ? 1 : 1, paddingVertical: 14, paddingHorizontal: 20, borderRadius: 12, backgroundColor: isSubmitting ? '#A0AEC0' : '#667eea', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 5 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={{ color: isSubmitting ? '#A0AEC0' : '#667eea', fontSize: 14, fontWeight: '700', marginRight: 4 }}>
+                  <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '700', marginRight: 4 }}>
                     {isSubmitting ? 'Submitting...' : currentStep === totalSteps ? 'Complete Profile' : 'Next Step'}
                   </Text>
-                  {!isSubmitting && <MaterialCommunityIcons name={currentStep === totalSteps ? 'check' : 'chevron-right'} size={18} color="#667eea" />}
+                  {!isSubmitting && <MaterialCommunityIcons name={currentStep === totalSteps ? 'check' : 'chevron-right'} size={18} color="#FFFFFF" />}
                 </View>
               </TouchableOpacity>
             </View>
           </View>
-        </SafeAreaView>
-      </LinearGradient>
+        </ScrollView>
+      </SafeAreaView>
     </View>
   );
 };

@@ -15,6 +15,7 @@ import VideoCallConsultation from '../screens/doctor/appointments/VideoCallConsu
 import DiagnosisScreen from '../screens/doctor/diagnosis/DiagnosisScreen';
 import DoctorProfileScreen from '../screens/doctor/profile/DoctorProfileScreen';
 import DoctorProfileSetupScreen from '../screens/doctor/profile/DoctorProfileSetupScreen';
+import ProfessionalDetails from '../screens/doctor/profile/ProfessionalDetails';
 import AiDiagnosisHistoryDoctor from '../screens/doctor/profile/AiDiagnosisHistoryDoctor.js';
 
 // Shared screens
@@ -132,6 +133,7 @@ const DoctorNavigator = () => {
       <Stack.Screen name="MessageScreenDoc" component={MessageScreenDoc} />
       <Stack.Screen name="ChatDoc" component={ChatScreenDoc} />
       <Stack.Screen name="DoctorProfileSetup" component={DoctorProfileSetupScreen} />
+      <Stack.Screen name="ProfessionalDetails" component={ProfessionalDetails} />
       <Stack.Screen name="ViewDetailsPatient" component={ViewDetailsPatient} />
       <Stack.Screen name="VideoCallConsultation" component={VideoCallConsultation} />
       <Stack.Screen name="ConsultationCompleteForm" component={ConsultationCompleteForm} />

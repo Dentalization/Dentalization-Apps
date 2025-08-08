@@ -18,7 +18,28 @@ const storage = multer.diskStorage({
     if (file.fieldname === 'photo') {
       subDir = 'profilepicture';
     } else if (file.fieldname === 'document') {
-      subDir = 'document';
+      // Use documentType from request body to determine subfolder
+      const documentType = req.body.documentType;
+      
+      switch (documentType) {
+        case 'education_degree':
+          subDir = 'document/Ijazah';
+          break;
+        case 'skdg':
+          subDir = 'document/SKDG';
+          break;
+        case 'str':
+          subDir = 'document/STR';
+          break;
+        case 'sip':
+          subDir = 'document/SIP';
+          break;
+        case 'certificate':
+          subDir = 'certifications';
+          break;
+        default:
+          subDir = 'document'; // fallback for unknown document types
+      }
     } else if (file.fieldname === 'certification') {
       subDir = 'certifications';
     } else {
@@ -441,7 +462,55 @@ router.post('/upload-document', authenticate, upload.single('document'), (req, r
     }
 
     const { documentType } = req.body;
-    const documentUrl = `/uploads/document/${req.file.filename}`;
+    console.log('📄 Document upload - documentType:', documentType);
+    console.log('📄 Document upload - file saved to:', req.file.path);
+    console.log('📄 Document upload - expected destination based on type:', documentType);
+    
+    // Move file to correct directory if it's in wrong place
+    const fs = require('fs');
+    const path = require('path');
+    
+    let correctSubDir = '';
+    switch (documentType) {
+      case 'education_degree':
+        correctSubDir = 'document/Ijazah';
+        break;
+      case 'skdg':
+        correctSubDir = 'document/SKDG';
+        break;
+      case 'str':
+        correctSubDir = 'document/STR';
+        break;
+      case 'sip':
+        correctSubDir = 'document/SIP';
+        break;
+      case 'certificate':
+        correctSubDir = 'certifications';
+        break;
+      default:
+        correctSubDir = 'document';
+    }
+    
+    const correctDir = path.join(__dirname, '../../uploads', correctSubDir);
+    const correctPath = path.join(correctDir, req.file.filename);
+    
+    // Ensure correct directory exists
+    if (!fs.existsSync(correctDir)) {
+      fs.mkdirSync(correctDir, { recursive: true });
+    }
+    
+    // Move file if it's not in the correct location
+     if (req.file.path !== correctPath) {
+       fs.renameSync(req.file.path, correctPath);
+       console.log('📄 File moved to correct location:', correctPath);
+       // Update req.file.path to reflect the new location
+       req.file.path = correctPath;
+     }
+     
+     // Use the correct URL path based on where file is actually stored
+     const documentUrl = `/uploads/${correctSubDir}/${req.file.filename}`;
+     console.log('📄 Document URL:', documentUrl);
+     console.log('📄 File final location:', req.file.path);
 
     res.json({
       success: true,
@@ -468,10 +537,125 @@ router.put('/', authenticate, require('../middleware/validation').validateProfil
     const { role } = req.user;
     const updates = req.body;
 
-    console.log('🔍 Profile update request for role:', role);
-    console.log('🔍 Profile update data:', updates);
+    // Filter out null values and ensure arrays are clean
+    const cleanArray = (arr) => {
+      if (!Array.isArray(arr)) return [];
+      return arr.filter(item => item !== null && item !== undefined && item !== '');
+    };
+    
+    // Clean arrays in updates to prevent null values
+    if (updates.verificationDocs) {
+      const cleaned = cleanArray(updates.verificationDocs);
+      if (cleaned.length > 0) {
+        updates.verificationDocs = cleaned;
+      } else {
+        delete updates.verificationDocs;
+      }
+    }
+    if (updates.paymentMethods) {
+      const cleaned = cleanArray(updates.paymentMethods);
+      if (cleaned.length > 0) {
+        updates.paymentMethods = cleaned;
+      } else {
+        delete updates.paymentMethods;
+      }
+    }
+    if (updates.acceptedInsurance) {
+      const cleaned = cleanArray(updates.acceptedInsurance);
+      if (cleaned.length > 0) {
+        updates.acceptedInsurance = cleaned;
+      } else {
+        delete updates.acceptedInsurance;
+      }
+    }
+    if (updates.subspecialties) {
+      const cleaned = cleanArray(updates.subspecialties);
+      if (cleaned.length > 0) {
+        updates.subspecialties = cleaned;
+      } else {
+        delete updates.subspecialties;
+      }
+    }
+    if (updates.certifications) {
+      const cleaned = cleanArray(updates.certifications);
+      if (cleaned.length > 0) {
+        updates.certifications = cleaned;
+      } else {
+        delete updates.certifications;
+      }
+    }
+    if (updates.services) {
+      const cleaned = cleanArray(updates.services);
+      if (cleaned.length > 0) {
+        updates.services = cleaned;
+      } else {
+        delete updates.services;
+      }
+    }
+     
+     // Clean doctor-specific document arrays
+     if (role === 'DOCTOR') {
+       const documentFields = ['educationDegree', 'skdg', 'str', 'sip', 'additionalCerts'];
+       
+       documentFields.forEach(field => {
+         if (updates[field] !== undefined) {
+           const cleaned = cleanArray(updates[field]);
+           if (cleaned.length > 0) {
+             updates[field] = cleaned;
+           } else {
+             delete updates[field];
+           }
+           console.log(`🧹 Cleaned ${field}:`, cleaned);
+         }
+       });
+
+       // Auto-populate verificationDocs with all professional documents
+       const allVerificationDocs = [];
+       console.log('🔍 Starting auto-population of verificationDocs...');
+       
+       if (updates.educationDegree && updates.educationDegree.length > 0) {
+         console.log('📚 Adding educationDegree to verificationDocs:', updates.educationDegree);
+         allVerificationDocs.push(...updates.educationDegree);
+       }
+       if (updates.skdg && updates.skdg.length > 0) {
+         console.log('📚 Adding skdg to verificationDocs:', updates.skdg);
+         allVerificationDocs.push(...updates.skdg);
+       }
+       if (updates.str && updates.str.length > 0) {
+         console.log('📚 Adding str to verificationDocs:', updates.str);
+         allVerificationDocs.push(...updates.str);
+       }
+       if (updates.sip && updates.sip.length > 0) {
+         console.log('📚 Adding sip to verificationDocs:', updates.sip);
+         allVerificationDocs.push(...updates.sip);
+       }
+       
+       console.log('🔍 All verification docs collected:', allVerificationDocs);
+       
+       // Update verificationDocs with all professional documents (remove duplicates)
+       if (allVerificationDocs.length > 0) {
+         updates.verificationDocs = [...new Set(allVerificationDocs)];
+         console.log('📋 Auto-populated verificationDocs:', updates.verificationDocs);
+       } else {
+         console.log('⚠️ No verification docs to populate');
+       }
+
+       // Auto-populate certifications with additional certificates
+       console.log('🔍 Starting auto-population of certifications...');
+       if (updates.additionalCerts && updates.additionalCerts.length > 0) {
+         updates.certifications = [...updates.additionalCerts];
+         console.log('📋 Auto-populated certifications:', updates.certifications);
+       } else {
+         console.log('⚠️ No additional certs to populate');
+       }
+     }
+     
+     console.log('🔍 Profile update request for role:', role);
+    console.log('🔍 Profile update data (cleaned):', updates);
     console.log('💳 PaymentMethods in request:', updates.paymentMethods);
     console.log('🏥 AcceptedInsurance in request:', updates.acceptedInsurance);
+    console.log('📋 Final verificationDocs before save:', updates.verificationDocs);
+    console.log('📋 Final certifications before save:', updates.certifications);
 
     let profile;
     if (role === 'PATIENT') {
@@ -492,6 +676,8 @@ router.put('/', authenticate, require('../middleware/validation').validateProfil
     }
 
     console.log('✅ Profile updated successfully:', profile.id);
+    console.log('✅ Updated profile verificationDocs:', profile.verificationDocs);
+    console.log('✅ Updated profile certifications:', profile.certifications);
     
     res.json({
       success: true,

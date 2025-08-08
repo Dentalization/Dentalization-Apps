@@ -190,12 +190,107 @@ class DoctorController {
       const doctorId = req.user.id;
       const updateData = req.body;
 
+      console.log('📤 Received update data:', JSON.stringify(updateData, null, 2));
+      console.log('📤 Update data keys:', Object.keys(updateData));
+      console.log('📤 Document fields in request:');
+      console.log('  - educationDegree:', updateData.educationDegree);
+      console.log('  - skdg:', updateData.skdg);
+      console.log('  - str:', updateData.str);
+      console.log('  - sip:', updateData.sip);
+      console.log('  - additionalCerts:', updateData.additionalCerts);
+
+      // Clean and validate document arrays
+      const documentFields = ['educationDegree', 'skdg', 'str', 'sip', 'additionalCerts', 'verificationDocs', 'certifications'];
+      
+      documentFields.forEach(field => {
+        if (updateData[field]) {
+          // Ensure it's an array and filter out null/undefined values
+          if (Array.isArray(updateData[field])) {
+            updateData[field] = updateData[field].filter(item => 
+              item !== null && item !== undefined && item !== '' && item.trim() !== ''
+            );
+          } else if (typeof updateData[field] === 'string') {
+            // Convert single string to array
+            updateData[field] = [updateData[field]];
+          } else {
+            // Invalid data type, set to empty array
+            updateData[field] = [];
+          }
+          
+          console.log(`🔍 Processed ${field}:`, updateData[field]);
+        }
+      });
+
+      // Auto-populate verificationDocs with all professional documents
+      const allVerificationDocs = [];
+      console.log('🔍 Starting auto-population of verificationDocs...');
+      
+      if (updateData.educationDegree && updateData.educationDegree.length > 0) {
+        console.log('📚 Adding educationDegree to verificationDocs:', updateData.educationDegree);
+        allVerificationDocs.push(...updateData.educationDegree);
+      }
+      if (updateData.skdg && updateData.skdg.length > 0) {
+        console.log('📚 Adding skdg to verificationDocs:', updateData.skdg);
+        allVerificationDocs.push(...updateData.skdg);
+      }
+      if (updateData.str && updateData.str.length > 0) {
+        console.log('📚 Adding str to verificationDocs:', updateData.str);
+        allVerificationDocs.push(...updateData.str);
+      }
+      if (updateData.sip && updateData.sip.length > 0) {
+        console.log('📚 Adding sip to verificationDocs:', updateData.sip);
+        allVerificationDocs.push(...updateData.sip);
+      }
+      
+      console.log('🔍 All verification docs collected:', allVerificationDocs);
+      
+      // Update verificationDocs with all professional documents (remove duplicates)
+      if (allVerificationDocs.length > 0) {
+        updateData.verificationDocs = [...new Set(allVerificationDocs)];
+        console.log('📋 Auto-populated verificationDocs:', updateData.verificationDocs);
+      } else {
+        console.log('⚠️ No verification docs to populate');
+      }
+
+      // Auto-populate certifications with additional certificates
+      console.log('🔍 Starting auto-population of certifications...');
+      if (updateData.additionalCerts && updateData.additionalCerts.length > 0) {
+        updateData.certifications = [...updateData.additionalCerts];
+        console.log('📋 Auto-populated certifications:', updateData.certifications);
+      } else {
+        console.log('⚠️ No additional certs to populate');
+      }
+
+      // Ensure subspecialties, services, acceptedInsurance, paymentMethods are arrays
+      const arrayFields = ['subspecialties', 'services', 'acceptedInsurance', 'paymentMethods'];
+      arrayFields.forEach(field => {
+        if (updateData[field] && !Array.isArray(updateData[field])) {
+          if (typeof updateData[field] === 'string') {
+            try {
+              updateData[field] = JSON.parse(updateData[field]);
+            } catch {
+              updateData[field] = [updateData[field]];
+            }
+          } else {
+            updateData[field] = [];
+          }
+        }
+      });
+
+      console.log('📋 Final update data before database save:', JSON.stringify(updateData, null, 2));
+      console.log('📋 Final verificationDocs:', updateData.verificationDocs);
+      console.log('📋 Final certifications:', updateData.certifications);
+
       const updatedProfile = await prisma.doctorProfile.update({
         where: {
           userId: doctorId,
         },
         data: updateData,
       });
+
+      console.log('✅ Profile updated successfully:', updatedProfile.id);
+      console.log('✅ Updated profile verificationDocs:', updatedProfile.verificationDocs);
+      console.log('✅ Updated profile certifications:', updatedProfile.certifications);
 
       res.json({
         success: true,
@@ -207,6 +302,7 @@ class DoctorController {
       res.status(500).json({
         success: false,
         message: 'Error updating profile',
+        error: error.message
       });
     }
   }
