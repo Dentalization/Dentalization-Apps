@@ -138,6 +138,13 @@ model DoctorProfile {
   education         String?
   certifications    String[]  // Array of certifications
   
+  // Document categories for validation
+  educationDegree   String[]  // Ijazah dan Gelar Pendidikan (S1, S2, S3)
+  skdg              String[]  // SKDG (Sertifikat Kompetensi Dokter Gigi)
+  str               String[]  // STR (Surat Tanda Registrasi)
+  sip               String[]  // SIP (Surat Izin Praktik)
+  additionalCerts   String[]  // Additional certificates
+  
   // Clinic information
   clinicName        String?
   clinicAddress     String?

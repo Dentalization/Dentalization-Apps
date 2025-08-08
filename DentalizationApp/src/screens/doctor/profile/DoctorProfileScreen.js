@@ -623,9 +623,9 @@ const DoctorProfileScreen = () => {
 
           <ProfileCard
             icon="work-outline"
-            title="Professional Details"
+            title="Professional Details" 
             subtitle="Manage your qualifications and specializations"
-            onPress={() => console.log('Professional Details')}
+            onPress={() => navigation.navigate('ProfessionalDetails')}
           />
 
           <ProfileCard
