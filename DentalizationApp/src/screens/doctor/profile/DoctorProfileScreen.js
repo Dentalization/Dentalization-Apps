@@ -221,7 +221,7 @@ const DoctorProfileScreen = () => {
     }).start();
   };
 
-  // Handle scroll for profile header animation with modern smooth transitions
+  // Handle scroll for profile header animation with dynamic smooth transitions
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
     {
@@ -233,45 +233,59 @@ const DoctorProfileScreen = () => {
     }
   );
 
-  // Modern smooth opacity animation with refined curve
+  // Dynamic opacity animation with smooth fade effect
   const profileOpacity = scrollY.interpolate({
-    inputRange: [0, 30, 60, 100],
-    outputRange: [1, 0.95, 0.7, 0],
+    inputRange: [0, 50, 120, 180],
+    outputRange: [1, 0.9, 0.4, 0],
     extrapolate: 'clamp',
   });
 
-  // Enhanced transform animation with smoother progression
+  // Enhanced parallax transform with fluid motion
   const profileTranslateY = scrollY.interpolate({
-    inputRange: [0, 40, 80, 120],
-    outputRange: [0, -8, -16, -30],
+    inputRange: [0, 60, 120, 200],
+    outputRange: [0, -15, -35, -60],
     extrapolate: 'clamp',
   });
 
-  // Refined scale animation with subtle transitions
+  // Dynamic scale animation with elastic feel
   const profileScale = scrollY.interpolate({
-    inputRange: [0, 40, 80, 120],
-    outputRange: [1, 0.98, 0.95, 0.88],
+    inputRange: [0, 50, 100, 150],
+    outputRange: [1, 0.95, 0.85, 0.75],
     extrapolate: 'clamp',
   });
 
-  // Smoother border radius transition
+  // Smooth border radius transition with curve
   const headerBorderRadius = scrollY.interpolate({
-    inputRange: [0, 20, 40],
+    inputRange: [0, 30, 60],
     outputRange: [30, 15, 0],
     extrapolate: 'clamp',
   });
 
-  // Enhanced stats animation with modern easing curve
+  // Enhanced stats animation with staggered entrance
   const statsOpacity = scrollY.interpolate({
-    inputRange: [0, 15, 35, 60],
-    outputRange: [0, 0.3, 0.8, 1],
+    inputRange: [0, 20, 50, 80],
+    outputRange: [0, 0.2, 0.7, 1],
     extrapolate: 'clamp',
   });
 
-  // Smoother stats slide-in animation
+  // Bouncy stats slide-in animation
   const statsTranslateY = scrollY.interpolate({
-    inputRange: [0, 25, 50],
-    outputRange: [30, 10, 0],
+    inputRange: [0, 40, 80],
+    outputRange: [50, 15, 0],
+    extrapolate: 'clamp',
+  });
+
+  // Profile rotation animation for dynamic effect
+  const profileRotate = scrollY.interpolate({
+    inputRange: [0, 100, 200],
+    outputRange: ['0deg', '2deg', '5deg'],
+    extrapolate: 'clamp',
+  });
+
+  // Profile blur effect simulation with opacity layers
+  const profileBlurOpacity = scrollY.interpolate({
+    inputRange: [0, 80, 150],
+    outputRange: [0, 0.3, 0.7],
     extrapolate: 'clamp',
   });
 
@@ -409,19 +423,7 @@ const DoctorProfileScreen = () => {
             alignItems: 'center',
             justifyContent: 'space-between',
           }}>
-            <TouchableOpacity
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 20,
-                backgroundColor: 'rgba(255,255,255,0.2)',
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}
-              onPress={() => console.log('Back pressed')}
-            >
-              <MaterialIcons name="arrow-back" size={24} color="#FFFFFF" />
-            </TouchableOpacity>
+            <View style={{ width: 40 }} />
             
             <Text style={{
               fontSize: 18,
@@ -534,43 +536,81 @@ const DoctorProfileScreen = () => {
               </TouchableOpacity>
             </View>
             
-            {/* Doctor Info */}
-            <Text style={{
-              fontSize: 24,
-              fontWeight: 'bold',
-              color: '#FFFFFF',
-              marginBottom: 4,
+            {/* Doctor Info with Enhanced Animation */}
+            <Animated.View style={{
+              transform: [
+                { rotateZ: profileRotate },
+                { perspective: 1000 }
+              ]
             }}>
-              {user?.profile?.firstName && user?.profile?.lastName 
-                ? `${user.profile.firstName} ${user.profile.lastName}` 
-                : 'Doctor Profile'}
-            </Text>
-            <Text style={{
-              fontSize: 16,
-              color: '#E8E8FF',
-              marginBottom: 8,
-            }}>
-              {user?.profile?.specialization || 'Dental Specialist'}
-            </Text>
-            <View style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              backgroundColor: 'rgba(255,255,255,0.2)',
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 20,
-              marginBottom: 24,
-            }}>
-              <MaterialIcons name="verified" size={16} color="#4CAF50" />
               <Text style={{
-                fontSize: 14,
+                fontSize: 24,
+                fontWeight: 'bold',
                 color: '#FFFFFF',
-                marginLeft: 4,
-                fontWeight: '500',
+                marginBottom: 4,
+                textShadowColor: 'rgba(0,0,0,0.3)',
+                textShadowOffset: { width: 0, height: 2 },
+                textShadowRadius: 4,
               }}>
-                Verified Professional
+                {user?.profile?.firstName && user?.profile?.lastName 
+                  ? `${user.profile.firstName} ${user.profile.lastName}` 
+                  : 'Doctor Profile'}
               </Text>
-            </View>
+              <Text style={{
+                fontSize: 16,
+                color: '#E8E8FF',
+                marginBottom: 8,
+                textShadowColor: 'rgba(0,0,0,0.2)',
+                textShadowOffset: { width: 0, height: 1 },
+                textShadowRadius: 2,
+              }}>
+                {user?.profile?.specialization || 'Dental Specialist'}
+              </Text>
+              <Animated.View style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: 'rgba(255,255,255,0.25)',
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 20,
+                marginBottom: 24,
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.3)',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.2,
+                shadowRadius: 8,
+                transform: [{
+                  scale: scrollY.interpolate({
+                    inputRange: [0, 50, 100],
+                    outputRange: [1, 1.05, 0.95],
+                    extrapolate: 'clamp',
+                  })
+                }]
+              }}>
+                <MaterialIcons name="verified" size={16} color="#4CAF50" />
+                <Text style={{
+                  fontSize: 14,
+                  color: '#FFFFFF',
+                  marginLeft: 4,
+                  fontWeight: '600',
+                }}>
+                  Verified Professional
+                </Text>
+              </Animated.View>
+            </Animated.View>
+            
+            {/* Blur overlay for depth effect */}
+            <Animated.View style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(255,255,255,0.1)',
+              opacity: profileBlurOpacity,
+              borderRadius: 20,
+            }} />
           </View>
         </LinearGradient>
       </Animated.View>

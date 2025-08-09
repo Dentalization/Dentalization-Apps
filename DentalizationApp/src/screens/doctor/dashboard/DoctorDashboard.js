@@ -16,6 +16,7 @@ import { useSelector } from 'react-redux';
 import { MaterialIcons, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { API_CONFIG } from '../../../constants/api';
+import ShinyText from '../../../components/common/ShinyText';
 
 const DoctorDashboard = ({ navigation }) => {
   const { user } = useSelector(state => state.auth);
@@ -106,7 +107,7 @@ const DoctorDashboard = ({ navigation }) => {
     const colors = getStatusColor();
     return (
       <View style={{ backgroundColor: colors.bg, borderColor: colors.border, borderWidth: 1, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4 }}>
-        <Text style={{ fontSize: 12, fontWeight: '600', color: colors.text }}>{status}</Text>
+        <ShinyText text={status} style={{ fontSize: 12, fontWeight: '600', color: colors.text }} />
       </View>
     );
   };
@@ -164,9 +165,9 @@ const DoctorDashboard = ({ navigation }) => {
           />
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 32, fontWeight: '800', color: '#1A1A1A', marginBottom: 6, letterSpacing: -0.5 }}>{value}</Text>
-              <Text style={{ fontSize: 15, color: '#666666', marginBottom: 4, fontWeight: '500' }}>{title}</Text>
-              {subtitle && <Text style={{ fontSize: 13, color: color, fontWeight: '600' }}>{subtitle}</Text>}
+              <ShinyText text={value} style={{ fontSize: 32, fontWeight: '800', color: '#1A1A1A', marginBottom: 6, letterSpacing: -0.5 }} />
+               <ShinyText text={title} style={{ fontSize: 15, color: '#666666', marginBottom: 4, fontWeight: '500' }} />
+               {subtitle && <ShinyText text={subtitle} style={{ fontSize: 13, color: color, fontWeight: '600' }} />}
             </View>
             <View style={{
               width: 56,
@@ -234,23 +235,7 @@ const DoctorDashboard = ({ navigation }) => {
         onPressOut={handlePressOut}
         activeOpacity={0.8}
       >
-        <Animated.View style={[
-          {
-            backgroundColor: '#FFFFFF',
-            borderRadius: 20,
-            padding: 18,
-            alignItems: 'center',
-            shadowColor: color,
-            shadowOffset: { width: 0, height: 6 },
-            shadowOpacity: 0.15,
-            shadowRadius: 12,
-            elevation: 6,
-            marginBottom: 12,
-            borderWidth: 1,
-            borderColor: `${color}08`,
-          },
-          { transform: [{ scale: scaleAnim }] }
-        ]}>
+          <Animated.View style={[{ backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18, alignItems: 'center', shadowColor: color, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6, marginBottom: 12, borderWidth: 1, borderColor: `${color}08` }, { transform: [{ scale: scaleAnim }] }]}>
           <LinearGradient
             colors={[`${color}08`, `${color}03`]}
             style={{
@@ -281,7 +266,7 @@ const DoctorDashboard = ({ navigation }) => {
           ]}>
             <MaterialIcons name={icon} size={26} color={color} />
           </Animated.View>
-          <Text style={{ fontSize: 13, fontWeight: '700', color: '#1A1A1A', textAlign: 'center', letterSpacing: 0.2 }}>{title}</Text>
+          <ShinyText text={title} style={{ fontSize: 13, fontWeight: '700', color: '#1A1A1A', textAlign: 'center', letterSpacing: 0.2 }} />
         </Animated.View>
       </TouchableOpacity>
     );
@@ -293,43 +278,14 @@ const DoctorDashboard = ({ navigation }) => {
       
       {/* Professional Header with Glassmorphism */}
       <Animated.View
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 1000,
-          opacity: scrollY.interpolate({
-            inputRange: [0, 50, 100],
-            outputRange: [1, 0.95, 0.9],
-            extrapolate: 'clamp',
-          }),
-          transform: [{
-            translateY: scrollY.interpolate({
-              inputRange: [0, 100],
-              outputRange: [0, -10],
-              extrapolate: 'clamp',
-            }),
-          }],
-        }}
+        style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000, opacity: scrollY.interpolate({ inputRange: [0, 50, 100], outputRange: [1, 0.95, 0.9], extrapolate: 'clamp' }), transform: [{ translateY: scrollY.interpolate({ inputRange: [0, 100], outputRange: [0, -10], extrapolate: 'clamp' }) }] }}
       >
         <LinearGradient
           colors={isScrolled ? 
             ['rgba(72, 58, 160, 0.65)', 'rgba(99, 102, 241, 0.65)'] : 
             ['#483AA0', '#6366F1']
           }
-          style={{
-            paddingTop: 70,
-            paddingHorizontal: 20,
-            paddingBottom: 23,
-            borderBottomLeftRadius: isScrolled ? 0 : 25,
-            borderBottomRightRadius: isScrolled ? 0 : 25,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: isScrolled ? 8 : 4 },
-            shadowOpacity: isScrolled ? 0.3 : 0.1,
-            shadowRadius: isScrolled ? 16 : 8,
-            elevation: isScrolled ? 12 : 4,
-          }}
+          style={{ paddingTop: 70, paddingHorizontal: 20, paddingBottom: 23, borderBottomLeftRadius: isScrolled ? 0 : 25, borderBottomRightRadius: isScrolled ? 0 : 25, shadowColor: '#000', shadowOffset: { width: 0, height: isScrolled ? 8 : 4 }, shadowOpacity: isScrolled ? 0.3 : 0.1, shadowRadius: isScrolled ? 16 : 8, elevation: isScrolled ? 12 : 4 }}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
         >
@@ -350,11 +306,9 @@ const DoctorDashboard = ({ navigation }) => {
               />
             </View>
             <View style={{ flex: 2 }}>
-              <Text style={{ fontSize: 16, color: 'rgba(255,255,255,0.9)', marginBottom: 2 }}>{getGreeting()}</Text>
-              <Text style={{ fontSize: 20, fontWeight: 'bold', color: 'white', marginBottom: 4 }}>
-                {user?.profile?.firstName ? user.profile.firstName : user?.name ? user.name : 'Dr. Sarah'}
-              </Text>
-              <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }}>{getCurrentDate()}</Text>
+              <ShinyText text={getGreeting()} style={{ fontSize: 16, color: 'rgba(255,255,255,0.9)', marginBottom: 2 }} />
+              <ShinyText text={user?.profile?.firstName ? user.profile.firstName : user?.name ? user.name : 'Dr. Sarah'} style={{ fontSize: 20, fontWeight: 'bold', color: 'white', marginBottom: 4 }} />
+              <ShinyText text={getCurrentDate()} style={{ fontSize: 13, color: 'rgba(255,255,255,0.8)' }} />
             </View>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -490,8 +444,8 @@ const DoctorDashboard = ({ navigation }) => {
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <MaterialIcons name="person" size={18} color="#667eea" style={{ marginRight: 8 }} />
                       <Text style={{ fontSize: 16, fontWeight: '600', color: '#667eea' }}>Patient</Text>
-                    </View>
-                    <Text style={{ fontSize: 17, color: '#1A1A1A', fontWeight: '800' }}>{dashboardData.aiInsights.latestDiagnosis.patient}</Text>
+                     </View>
+                     <Text style={{ fontSize: 17, color: '#1A1A1A', fontWeight: '800' }}>{dashboardData.aiInsights.latestDiagnosis.patient}</Text>
                   </View>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -526,8 +480,8 @@ const DoctorDashboard = ({ navigation }) => {
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
                     <MaterialIcons name="lightbulb" size={20} color="white" style={{ marginRight: 8 }} />
                     <Text style={{ fontSize: 14, fontWeight: '700', color: 'white', letterSpacing: 0.5 }}>AI RECOMMENDATION</Text>
-                  </View>
-                  <Text style={{ fontSize: 16, color: 'white', lineHeight: 24, fontWeight: '500', opacity: 0.95 }}>{dashboardData.aiInsights.latestDiagnosis.recommendation}</Text>
+                   </View>
+                   <Text style={{ fontSize: 16, color: 'white', lineHeight: 24, fontWeight: '500', opacity: 0.95 }}>{dashboardData.aiInsights.latestDiagnosis.recommendation}</Text>
                 </LinearGradient>
               </View>
               
@@ -579,7 +533,7 @@ const DoctorDashboard = ({ navigation }) => {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
               <View>
                 <Text style={{ fontSize: 22, fontWeight: '800', color: '#1A1A1A', letterSpacing: -0.3 }}>Recent Messages</Text>
-                <Text style={{ fontSize: 14, color: '#666666', marginTop: 2 }}>{dashboardData.chatSummary.filter(chat => chat.unread).length} unread messages</Text>
+                <Text style={{ fontSize: 14, color: '#666666', marginTop: 2 }}>{`${dashboardData.chatSummary.filter(chat => chat.unread).length} unread messages`}</Text>
               </View>
               <TouchableOpacity style={{ backgroundColor: '#483AA0', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, shadowColor: '#483AA0', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 }}>
                 <Text style={{ fontSize: 14, color: 'white', fontWeight: '600' }}>View All</Text>
@@ -595,19 +549,8 @@ const DoctorDashboard = ({ navigation }) => {
                       <Image source={{ uri: chat.avatar }} style={{ width: chat.unread ? 44 : 46, height: chat.unread ? 44 : 46 }} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{
-                        fontSize: 17,
-                        fontWeight: chat.unread ? '700' : '600',
-                        color: '#1A1A1A',
-                        marginBottom: 4,
-                        letterSpacing: -0.2
-                      }}>{chat.patient}</Text>
-                      <Text style={{
-                        fontSize: 14,
-                        color: chat.unread ? '#483AA0' : '#666666',
-                        numberOfLines: 1,
-                        fontWeight: chat.unread ? '600' : '500'
-                      }}>{chat.message}</Text>
+                      <Text style={{ fontSize: 17, fontWeight: chat.unread ? '700' : '600', color: '#1A1A1A', marginBottom: 4, letterSpacing: -0.2 }}>{chat.patient}</Text>
+                      <Text style={{ fontSize: 14, color: chat.unread ? '#483AA0' : '#666666', numberOfLines: 1, fontWeight: chat.unread ? '600' : '500' }}>{chat.message}</Text>
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
