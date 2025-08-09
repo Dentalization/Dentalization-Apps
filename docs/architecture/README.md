@@ -97,16 +97,25 @@ Koleksi lengkap diagram sistem untuk memahami berbagai aspek arsitektur.
 - Data Flow Diagram
 - Network Architecture Diagram
 
+### 10. [Mermaid Architecture Diagrams](./10-mermaid-diagrams.md)
+Kumpulan diagram Mermaid yang memvisualisasikan struktur repositori, layanan, dan relasi data.
+
+**Mencakup:**
+- Struktur direktori dan modul proyek
+- Diagram layanan frontend dan backend
+- Entity Relationship Diagram (ERD) terperinci
+
 ## 🚀 Quick Start
 
 Untuk memahami arsitektur sistem dengan cepat:
 
 1. **Mulai dengan [Overview](./01-overview.md)** untuk mendapatkan gambaran umum
-2. **Lihat [System Diagrams](./09-system-diagrams.md)** untuk memahami use case dan flow sistem
-3. **Baca [Frontend Architecture](./02-frontend-architecture.md)** jika Anda fokus pada pengembangan mobile
-4. **Baca [Backend Architecture](./03-backend-architecture.md)** jika Anda fokus pada pengembangan API
-5. **Lihat [Database Schema](./04-database-schema.md)** untuk memahami struktur data
-6. **Gunakan [API Endpoints](./05-api-endpoints.md)** sebagai referensi saat development
+2. **Telusuri [Mermaid Architecture Diagrams](./10-mermaid-diagrams.md)** untuk overview visual struktur repositori dan relasi data
+3. **Lihat [System Diagrams](./09-system-diagrams.md)** untuk memahami use case dan flow sistem
+4. **Baca [Frontend Architecture](./02-frontend-architecture.md)** jika Anda fokus pada pengembangan mobile
+5. **Baca [Backend Architecture](./03-backend-architecture.md)** jika Anda fokus pada pengembangan API
+6. **Lihat [Database Schema](./04-database-schema.md)** untuk memahami struktur data
+7. **Gunakan [API Endpoints](./05-api-endpoints.md)** sebagai referensi saat development
 
 ## 🏗️ Arsitektur Tingkat Tinggi
 
