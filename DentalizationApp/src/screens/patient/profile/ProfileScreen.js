@@ -19,6 +19,20 @@ import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../../components/common/ThemeProvider';
 import { logoutUser, checkAuthStatus, updateUserData } from '../../../store/slices/authSlice';
 import profileService from '../../../services/profileService';
+import { API_CONFIG } from '../../../constants/api';
+
+// Helper function to build absolute URLs
+const buildAbsoluteUrl = (base, path) => {
+  if (!path) return null;
+  try {
+    if (/^https?:\/\//i.test(path)) return path;
+    const safeBase = /^https?:\/\//i.test(base) ? base : `https://${base.replace(/^\/+/, '')}`;
+    const normalized = path.startsWith('/') ? path : `/${path}`;
+    return encodeURI(`${safeBase}${normalized}`);
+  } catch {
+    return null;
+  }
+};
 
 const ProfileScreen = ({ navigation }) => {
   const theme = useTheme();
@@ -30,18 +44,11 @@ const ProfileScreen = ({ navigation }) => {
   const scaleAnims = useRef(Array.from({ length: 4 }, () => new Animated.Value(1))).current;
   const progressAnim = useRef(new Animated.Value(0)).current;
 
-  // Debug log for profile picture
+  // Clean up invalid profile picture URLs
   React.useEffect(() => {
-    console.log('🔍 ProfileScreen - Current user data:', JSON.stringify(user, null, 2));
-    console.log('🔍 ProfileScreen - Profile picture URL:', user?.profile?.profilePicture);
-    console.log('🔍 ProfileScreen - Profile picture type:', typeof user?.profile?.profilePicture);
-    console.log('🔍 ProfileScreen - Profile picture length:', user?.profile?.profilePicture?.length);
-    
-    // Clean up invalid profile picture URLs
     if (user?.profile?.profilePicture && 
         (user.profile.profilePicture.includes('undefined') || 
          user.profile.profilePicture.includes('null'))) {
-      console.log('🔍 ProfileScreen - Detected invalid profile picture URL, cleaning up...');
       cleanupInvalidProfilePicture();
     }
   }, [user]);
@@ -377,16 +384,7 @@ const ProfileScreen = ({ navigation }) => {
         console.log('🔍 Response data URL type:', typeof responseData?.url);
         
         // Convert relative URL to full URL and validate
-        const baseURL = __DEV__ 
-          ? 'http://127.0.0.1:3001' 
-          : 'https://api.dentalization.com';
-        
-        let fullPhotoUrl = null;
-        if (responseData?.url && responseData.url !== 'undefined' && responseData.url !== 'null') {
-          fullPhotoUrl = responseData.url.startsWith('http') 
-            ? responseData.url 
-            : `${baseURL}${responseData.url}`;
-        }
+        const fullPhotoUrl = buildAbsoluteUrl(API_CONFIG.BASE_URL, responseData?.url);
         
         console.log('✅ Photo uploaded successfully, full URL:', fullPhotoUrl);
         console.log('🔍 Current user before update:', JSON.stringify(user, null, 2));
@@ -624,29 +622,32 @@ const ProfileScreen = ({ navigation }) => {
                 colors={['#FFFFFF', '#F3F4F6']}
                 style={{ width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center', marginRight: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 8, overflow: 'hidden' }}
               >
-                {user?.profile?.profilePicture && 
-                 !user.profile.profilePicture.includes('undefined') && 
-                 !user.profile.profilePicture.includes('null') &&
-                 user.profile.profilePicture.startsWith('http') ? (
-                  <>
-                    <Image
-                      source={{ uri: user.profile.profilePicture }}
-                      style={{ width: 80, height: 80, borderRadius: 40 }}
-                      resizeMode="cover"
-                      onError={(e) => {
-                        console.log('🔍 ProfileScreen - Image load error:', e.nativeEvent.error);
-                        console.log('🔍 ProfileScreen - Image URI:', user.profile.profilePicture);
-                      }}
-                      onLoad={() => {
-                        console.log('🔍 ProfileScreen - Image loaded successfully:', user.profile.profilePicture);
-                      }}
-                    />
-                  </>
-                ) : (
-                  <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#8B5CF6' }}>
-                    {(user?.profile?.firstName?.[0] || user?.name?.[0] || 'P').toUpperCase()}
-                  </Text>
-                )}
+                {(() => {
+                  const profilePicture = user?.profile?.profilePicture;
+                  
+                  if (profilePicture && 
+                      !profilePicture.includes('undefined') && 
+                      !profilePicture.includes('null')) {
+                    return (
+                      <Image
+                        source={{
+                          uri: `${API_CONFIG.BASE_URL}${profilePicture}`
+                        }}
+                        style={{ width: 80, height: 80, borderRadius: 40 }}
+                        resizeMode="cover"
+                        onError={(error) => {
+                          console.log('❌ Profile image loading error:', error.nativeEvent.error);
+                        }}
+                      />
+                    );
+                  }
+                  
+                  return (
+                    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#8B5CF6' }}>
+                      {(user?.profile?.firstName?.[0] || user?.name?.[0] || 'P').toUpperCase()}
+                    </Text>
+                  );
+                })()}
               </LinearGradient>
               
               {/* Camera icon overlay */}

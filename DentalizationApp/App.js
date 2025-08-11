@@ -6,6 +6,7 @@ import { store } from './src/store';
 import apiService from './src/services/apiService';
 import RootNavigator from './src/navigation/RootNavigator';
 import { ThemeProvider } from './src/components/common/ThemeProvider';
+import { AppointmentProvider } from './src/contexts/AppointmentContext';
 
 // Remove this debug screen when navigation is working properly
 const DEBUG = false;
@@ -17,7 +18,9 @@ export default function App() {
       <Provider store={store}>
         <SafeAreaProvider>
           <ThemeProvider>
-            <RootNavigator />
+            <AppointmentProvider>
+              <RootNavigator />
+            </AppointmentProvider>
           </ThemeProvider>
         </SafeAreaProvider>
       </Provider>

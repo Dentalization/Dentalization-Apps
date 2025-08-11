@@ -11,6 +11,10 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { wp, hp, spacing, fontSizes, borderRadius, iconSizes, responsiveDimensions } from '../../../utils/responsive';
+import ResponsiveContainer from '../../../components/layouts/ResponsiveContainer';
+import ResponsiveCard from '../../../components/layouts/ResponsiveCard';
+import ResponsiveText from '../../../components/layouts/ResponsiveText';
 
 const { width, height } = Dimensions.get('window');
 

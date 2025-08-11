@@ -499,7 +499,7 @@ const DoctorProfileScreen = () => {
                     uri: profilePhoto?.uri || 
                       (user?.profile?.profilePicture 
                         ? `${API_CONFIG.BASE_URL}${user.profile.profilePicture}`
-                        : null)
+                        : 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=100&h=100&fit=crop&crop=face')
                   }} 
                   style={{
                     width: 100,
@@ -507,6 +507,9 @@ const DoctorProfileScreen = () => {
                     borderRadius: 50,
                   }}
                   resizeMode="cover"
+                  onError={(error) => {
+                    console.log('❌ Image loading error:', error.nativeEvent.error);
+                  }}
                 />
               ) : (
                 <MaterialIcons name="person" size={50} color="#483AA0" />

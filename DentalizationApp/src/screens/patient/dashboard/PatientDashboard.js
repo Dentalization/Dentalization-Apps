@@ -5,6 +5,10 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ROUTES } from '../../../constants';
+import { wp, hp, spacing, fontSizes, borderRadius, iconSizes, responsiveDimensions } from '../../../utils/responsive';
+import ResponsiveContainer from '../../../components/layouts/ResponsiveContainer';
+import ResponsiveCard from '../../../components/layouts/ResponsiveCard';
+import ResponsiveText from '../../../components/layouts/ResponsiveText';
 
 const { width } = Dimensions.get('window');
 const PatientDashboard = ({ navigation }) => {
@@ -311,10 +315,7 @@ const PatientDashboard = ({ navigation }) => {
   console.log('🔍 Dashboard - completionPercentage:', completionPercentage);
 
   return (
-    <View style={{
-      flex: 1,
-      backgroundColor: '#F8FAFC',
-    }}>
+    <ResponsiveContainer safeArea={false} backgroundColor="#F8FAFC" padding={0}>
       <StatusBar barStyle="light-content" backgroundColor="#667eea" />
       
       {/* Enhanced Gradient Header with Glassmorphism */}
@@ -345,11 +346,11 @@ const PatientDashboard = ({ navigation }) => {
             ['#8B5CF6', '#667eea']
           }
           style={{
-            paddingTop: 70,
-            paddingHorizontal: 20,
-            paddingBottom: 10,
-            borderBottomLeftRadius: isScrolled ? 0 : 30,
-            borderBottomRightRadius: isScrolled ? 0 : 30,
+            paddingTop: hp(8.5),
+            paddingHorizontal: spacing.lg,
+            paddingBottom: spacing.sm,
+            borderBottomLeftRadius: isScrolled ? 0 : borderRadius.xl,
+            borderBottomRightRadius: isScrolled ? 0 : borderRadius.xl,
             shadowColor: '#000',
             shadowOffset: { width: 0, height: isScrolled ? 8 : 4 },
             shadowOpacity: isScrolled ? 0.3 : 0.1,
@@ -371,51 +372,51 @@ const PatientDashboard = ({ navigation }) => {
             }} />
           )}
           {/* Profile Section */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 25 }}>
-            <View style={{ width: 50, height: 50, borderRadius: 25, overflow: 'hidden', marginRight: 12, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xl }}>
+            <View style={{ width: wp(12), height: wp(12), borderRadius: wp(6), overflow: 'hidden', marginRight: spacing.sm, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' }}>
               <Image
                 source={{
                   uri: user?.profile?.profilePicture ||
                   'https://images.unsplash.com/photo-1494790108755-2616b612b830?w=100&h=100&fit=crop&crop=face'
                 }}
-                style={{ width: 46, height: 46 }}
+                style={{ width: wp(11), height: wp(11) }}
               />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)', marginBottom: 2 }}>Welcome Back</Text>
-              <Text style={{ fontSize: 18, fontWeight: 'bold', color: 'white' }}>
+              <ResponsiveText size="sm" color="rgba(255,255,255,0.8)" style={{ marginBottom: 2 }}>Welcome Back</ResponsiveText>
+              <ResponsiveText size="lg" weight="bold" color="white">
                 {user?.profile?.firstName || user?.name || 'Siren.uix'} 👋
-              </Text>
+              </ResponsiveText>
             </View>
             <TouchableOpacity 
               onPress={() => navigation.navigate(ROUTES.NOTIFICATIONS)}
               style={{ 
-                width: 40, 
-                height: 40, 
-                borderRadius: 20, 
+                width: wp(10), 
+                height: wp(10), 
+                borderRadius: wp(5), 
                 backgroundColor: 'rgba(255,255,255,0.2)', 
                 justifyContent: 'center', 
                 alignItems: 'center' 
               }}
             >
-              <Icon name="notifications-none" size={20} color="white" />
+              <Icon name="notifications-none" size={iconSizes.md} color="white" />
             </TouchableOpacity>
           </View>
 
           {/* Search Bar */}
-          <View style={{ flexDirection: 'row', marginBottom: 20, alignItems: 'center' }}>
-            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: 25, paddingHorizontal: 18, paddingVertical: 12, marginRight: 12 }}>
-              <Icon name="search" size={20} color="#9CA3AF" />
+          <View style={{ flexDirection: 'row', marginBottom: spacing.lg, alignItems: 'center' }}>
+            <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: 'white', borderRadius: borderRadius.xl, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginRight: spacing.sm }}>
+              <Icon name="search" size={iconSizes.md} color="#9CA3AF" />
               <TextInput 
-                style={{ flex: 1, fontSize: 14, color: '#333', marginLeft: 12 }}
+                style={{ flex: 1, fontSize: fontSizes.sm, color: '#333', marginLeft: spacing.sm }}
                 placeholder="Search doctor or anything..."
                 value={searchText}
                 onChangeText={setSearchText}
                 placeholderTextColor="#9CA3AF"
               />
             </View>
-            <TouchableOpacity style={{ width: 44, height: 44, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 22, justifyContent: 'center', alignItems: 'center' }}>
-              <MaterialCommunityIcons name="tune-variant" size={20} color="white" />
+            <TouchableOpacity style={{ width: wp(11), height: wp(11), backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: wp(5.5), justifyContent: 'center', alignItems: 'center' }}>
+              <MaterialCommunityIcons name="tune-variant" size={iconSizes.md} color="white" />
             </TouchableOpacity>
           </View>
 
@@ -423,21 +424,21 @@ const PatientDashboard = ({ navigation }) => {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingRight: 20 }}
+            contentContainerStyle={{ paddingRight: spacing.lg }}
           >
             {categories.map((category, index) => (
               <TouchableOpacity
                 key={category.id}
                 onPress={() => handleCategoryPress(category.name)}
-                style={{ marginRight: 12 }}
+                style={{ marginRight: spacing.sm }}
                 activeOpacity={0.8}
               >
-                <View style={{ backgroundColor: selectedCategory === category.name ? 'white' : 'rgba(255,255,255,0.2)', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', borderWidth: selectedCategory === category.name ? 0 : 1, borderColor: 'rgba(255,255,255,0.3)' }}>
-                  <Icon name={category.icon} size={16} color={selectedCategory === category.name ? '#667eea' : 'white'} style={{ marginRight: category.name !== 'All' ? 6 : 0 }} />
+                <View style={{ backgroundColor: selectedCategory === category.name ? 'white' : 'rgba(255,255,255,0.2)', borderRadius: borderRadius.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, flexDirection: 'row', alignItems: 'center', borderWidth: selectedCategory === category.name ? 0 : 1, borderColor: 'rgba(255,255,255,0.3)' }}>
+                  <Icon name={category.icon} size={iconSizes.sm} color={selectedCategory === category.name ? '#667eea' : 'white'} style={{ marginRight: category.name !== 'All' ? spacing.xs : 0 }} />
                   {category.name !== 'All' && (
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: selectedCategory === category.name ? '#667eea' : 'white' }}>
+                    <ResponsiveText size="sm" weight="600" color={selectedCategory === category.name ? '#667eea' : 'white'}>
                       {category.name}
-                    </Text>
+                    </ResponsiveText>
                   )}
                 </View>
               </TouchableOpacity>
@@ -447,7 +448,7 @@ const PatientDashboard = ({ navigation }) => {
       </Animated.View>
       
       {/* Enhanced Scrollable Content */}
-      <SafeAreaView style={{ flex: 1 }}>
+      <View style={{ flex: 1 }}>
         <Animated.ScrollView 
           style={{
             flex: 1,
@@ -824,8 +825,8 @@ const PatientDashboard = ({ navigation }) => {
           ))}
         </View>
         </Animated.ScrollView>
-      </SafeAreaView>
-    </View>
+      </View>
+    </ResponsiveContainer>
   );
 };
 
