@@ -9,9 +9,11 @@ import {
   Animated,
   RefreshControl,
   Alert,
+  StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
+import { useAppointments } from '../../../contexts/AppointmentContext';
 
 const ScheduleScreen = ({ navigation }) => {
   const [selectedFilter, setSelectedFilter] = useState('Today');
@@ -21,8 +23,9 @@ const ScheduleScreen = ({ navigation }) => {
   const [expandedCards, setExpandedCards] = useState({});
   const scrollY = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const { getAppointmentsByFilter, updateAppointmentStatus } = useAppointments();
 
-  // Mock appointment data
+  // Get appointment data from context
   const mockAppointments = {
     Today: [
       {
@@ -149,7 +152,7 @@ const ScheduleScreen = ({ navigation }) => {
   };
 
   useEffect(() => {
-    setAppointments(mockAppointments[selectedFilter] || []);
+    setAppointments(getAppointmentsByFilter(selectedFilter) || []);
     
     // Fade in animation
     Animated.timing(fadeAnim, {
@@ -226,7 +229,10 @@ const ScheduleScreen = ({ navigation }) => {
           `Are you sure you want to cancel the appointment with ${appointment.patientName}?`,
           [
             { text: 'No', style: 'cancel' },
-            { text: 'Yes', style: 'destructive', onPress: () => console.log('Appointment cancelled') }
+            { text: 'Yes', style: 'destructive', onPress: () => {
+              updateAppointmentStatus(appointment.id, 'Cancelled');
+              setAppointments(getAppointmentsByFilter(selectedFilter));
+            }}
           ]
         );
         break;
@@ -596,10 +602,17 @@ const ScheduleScreen = ({ navigation }) => {
   );
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F2F1F8' }}>
-      {/* Header */}
+    <View style={{ flex: 1, backgroundColor: '#F2F1F8' }}>
+      <StatusBar barStyle="light-content" backgroundColor="#483AA0" />
+      
+      {/* Professional Header with Glassmorphism */}
       <Animated.View
         style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 1000,
           opacity: scrollY.interpolate({
             inputRange: [0, 50, 100],
             outputRange: [1, 0.95, 0.9],
@@ -608,7 +621,7 @@ const ScheduleScreen = ({ navigation }) => {
           transform: [{
             translateY: scrollY.interpolate({
               inputRange: [0, 100],
-              outputRange: [0, -5],
+              outputRange: [0, -10],
               extrapolate: 'clamp',
             }),
           }],
@@ -617,29 +630,23 @@ const ScheduleScreen = ({ navigation }) => {
         <LinearGradient
           colors={isScrolled ? ['rgba(72, 58, 160, 0.65)', 'rgba(99, 102, 241, 0.65)'] : ['#483AA0', '#6366F1']}
           style={{
-            paddingTop: 20,
+            paddingTop: 70,
             paddingBottom: 30,
             paddingHorizontal: 20,
-            borderBottomLeftRadius: isScrolled ? 0 : 24,
-            borderBottomRightRadius: isScrolled ? 0 : 24,
+            borderBottomLeftRadius: isScrolled ? 0 : 25,
+            borderBottomRightRadius: isScrolled ? 0 : 25,
             shadowColor: '#000',
-            shadowOffset: { width: 0, height: isScrolled ? 6 : 4 },
-            shadowOpacity: isScrolled ? 0.15 : 0.1,
-            shadowRadius: isScrolled ? 12 : 8,
-            elevation: isScrolled ? 8 : 5,
+            shadowOffset: { width: 0, height: isScrolled ? 8 : 4 },
+            shadowOpacity: isScrolled ? 0.3 : 0.1,
+            shadowRadius: isScrolled ? 16 : 8,
+            elevation: isScrolled ? 12 : 4,
           }}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
         >
+          {/* Glassmorphism overlay when scrolled */}
           {isScrolled && (
-            <View
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              }}
-            />
+            <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
           )}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
             <View>
@@ -700,6 +707,7 @@ const ScheduleScreen = ({ navigation }) => {
       {/* Content */}
       <ScrollView
         style={{ flex: 1 }}
+        contentContainerStyle={{ paddingTop: 220 }}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         refreshControl={
@@ -719,7 +727,7 @@ const ScheduleScreen = ({ navigation }) => {
           )}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

@@ -28,6 +28,10 @@ import { ROUTES } from '../../constants/routes';
 import { API_CONFIG } from '../../constants/api';
 import { AUTH_ENDPOINTS } from '../../constants/auth';
 import authService from '../../services/authService';
+import { wp, hp, spacing, fontSizes, borderRadius, iconSizes, responsiveDimensions } from '../../utils/responsive';
+import ResponsiveContainer from '../../components/layouts/ResponsiveContainer';
+import ResponsiveCard from '../../components/layouts/ResponsiveCard';
+import ResponsiveText from '../../components/layouts/ResponsiveText';
 
 const { width, height } = Dimensions.get('window');
 

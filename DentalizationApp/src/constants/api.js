@@ -1,8 +1,8 @@
 // API Configuration
 export const API_CONFIG = {
-  // Using localhost for development access
+  // Using network IP for development access (for mobile devices)
   BASE_URL: __DEV__ 
-    ? 'http://localhost:3001' 
+    ? 'http://192.168.1.2:3001' 
     : 'https://api.dentalization.com',
   TIMEOUT: 45000,  // Increased timeout for slow connections
   RETRY_ATTEMPTS: 3,

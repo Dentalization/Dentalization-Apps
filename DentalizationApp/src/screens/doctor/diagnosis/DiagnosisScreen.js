@@ -18,6 +18,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { useSelector } from 'react-redux';
 import aiService from '../../../services/aiService';
 import aiDiagnosisHistoryService from '../../../services/aiDiagnosisHistoryService';
+import { wp, hp, spacing, fontSizes, borderRadius, iconSizes, responsiveDimensions } from '../../../utils/responsive';
+import ResponsiveContainer from '../../../components/layouts/ResponsiveContainer';
+import ResponsiveCard from '../../../components/layouts/ResponsiveCard';
+import ResponsiveText from '../../../components/layouts/ResponsiveText';
 
 const { width, height } = Dimensions.get('window');
 

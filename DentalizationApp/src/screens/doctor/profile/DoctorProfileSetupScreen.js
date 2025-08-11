@@ -12,6 +12,10 @@ import Input from '../../../components/common/Input';
 import Card from '../../../components/common/Card';
 import { updateUser, setProfileComplete } from '../../../store/slices/authSlice';
 import profileService from '../../../services/profileService';
+import { wp, hp, spacing, fontSizes, borderRadius, iconSizes, responsiveDimensions } from '../../../utils/responsive';
+import ResponsiveContainer from '../../../components/layouts/ResponsiveContainer';
+import ResponsiveCard from '../../../components/layouts/ResponsiveCard';
+import ResponsiveText from '../../../components/layouts/ResponsiveText';
 
 const { width, height } = Dimensions.get('window');
 
