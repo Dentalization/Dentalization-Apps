@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInRight, FadeInUp } from 'react-native-reanimated';
-import * as ImagePicker from 'expo-image-picker';
+
 import { setProfileComplete, updateUser } from '../../../store/slices/authSlice';
 import profileService from '../../../services/profileService';
 import authService from '../../../services/authService';
@@ -27,6 +27,7 @@ const PatientProfileSetupScreen = ({ navigation }) => {
 
   // Animation references for progress and step transitions
   const progressAnim = new RNAnimated.Value(0);
+  const scrollRef = useRef(null);
   
   const [profileData, setProfileData] = useState({
     // Personal Information - Initialize with existing user data
@@ -110,47 +111,13 @@ const PatientProfileSetupScreen = ({ navigation }) => {
       }
     })() : '',
     
-    // Profile Photo
-    profilePhoto: null,
+
   });
 
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 5;
 
-  // Request permissions for camera/photos on component mount
-  useEffect(() => {
-    (async () => {
-      if (Platform.OS !== 'web') {
-        try {
-          // Request media library permissions
-          const { status: mediaStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (mediaStatus !== 'granted') {
-            Alert.alert(
-              'Izin Diperlukan', 
-              'Aplikasi memerlukan izin akses galeri foto untuk mengunggah foto profil. Silakan berikan izin melalui pengaturan aplikasi.',
-              [
-                { text: 'OK', style: 'default' }
-              ]
-            );
-          }
-          
-          // Request camera permissions
-          const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
-          if (cameraStatus !== 'granted') {
-            Alert.alert(
-              'Izin Diperlukan', 
-              'Aplikasi memerlukan izin akses kamera untuk mengambil foto profil. Silakan berikan izin melalui pengaturan aplikasi.',
-              [
-                { text: 'OK', style: 'default' }
-              ]
-            );
-          }
-        } catch (error) {
-          console.error('Error requesting permissions:', error);
-        }
-      }
-    })();
-  }, []);
+
 
   // Update progress animation when step changes
   useEffect(() => {
@@ -165,153 +132,111 @@ const PatientProfileSetupScreen = ({ navigation }) => {
     setProfileData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleImagePicker = async () => {
-    Alert.alert(
-      'Pilih Foto Profil',
-      'Pilih cara mengunggah foto profil Anda',
-      [
-        { text: 'Kamera', onPress: openCamera },
-        { text: 'Galeri Foto', onPress: openImageLibrary },
-        { text: 'Batal', style: 'cancel' },
-      ]
-    );
-  };
-
-  const openCamera = async () => {
-    try {
-      // Check camera permissions first
-      const { status } = await ImagePicker.getCameraPermissionsAsync();
-      
-      if (status !== 'granted') {
-        const { status: newStatus } = await ImagePicker.requestCameraPermissionsAsync();
-        if (newStatus !== 'granted') {
-          Alert.alert(
-            'Izin Diperlukan',
-            'Untuk mengambil foto, aplikasi memerlukan izin akses kamera. Silakan berikan izin melalui pengaturan aplikasi.',
-            [
-              { text: 'OK', style: 'default' }
-            ]
-          );
-          return;
-        }
-      }
-
-      console.log('Opening camera...');
-      
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaType.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      console.log('Camera result:', result);
-
-      if (!result.canceled && result.assets && result.assets[0]) {
-        console.log('Photo taken:', result.assets[0]);
-        setProfileData(prev => ({
-          ...prev,
-          profilePhoto: result.assets[0]
-        }));
-        Alert.alert('Berhasil', 'Foto berhasil diambil!');
-      } else {
-        console.log('Camera operation was canceled');
-      }
-    } catch (error) {
-      console.error('Error opening camera:', error);
-      Alert.alert(
-        'Error', 
-        `Gagal membuka kamera: ${error.message || 'Terjadi kesalahan yang tidak diketahui'}. Pastikan aplikasi memiliki izin akses kamera.`
-      );
-    }
-  };
-
-  const openImageLibrary = async () => {
-    try {
-      // Check permissions first
-      const { status } = await ImagePicker.getMediaLibraryPermissionsAsync();
-      
-      if (status !== 'granted') {
-        const { status: newStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (newStatus !== 'granted') {
-          Alert.alert(
-            'Izin Diperlukan',
-            'Untuk memilih foto dari galeri, aplikasi memerlukan izin akses ke galeri foto Anda. Silakan berikan izin melalui pengaturan aplikasi.',
-            [
-              { text: 'OK', style: 'default' }
-            ]
-          );
-          return;
-        }
-      }
-
-      console.log('Opening image library...');
-      
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaType.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-        allowsMultipleSelection: false,
-      });
-
-      console.log('Image picker result:', result);
-
-      if (!result.canceled && result.assets && result.assets[0]) {
-        console.log('Image selected:', result.assets[0]);
-        setProfileData(prev => ({
-          ...prev,
-          profilePhoto: result.assets[0]
-        }));
-        Alert.alert('Berhasil', 'Foto profil berhasil dipilih!');
-      } else {
-        console.log('Image selection was canceled');
-      }
-    } catch (error) {
-      console.error('Error opening image library:', error);
-      Alert.alert(
-        'Error', 
-        `Gagal membuka galeri foto: ${error.message || 'Terjadi kesalahan yang tidak diketahui'}. Pastikan aplikasi memiliki izin akses galeri foto.`
-      );
-    }
-  };
-
+  
   const renderStepIndicator = () => (
-    <View style={{ alignItems: 'center', marginBottom: 30 }}>
-      <View style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', height: 8, borderRadius: 4, width: '100%', overflow: 'hidden', marginBottom: 20 }}>
+    <View style={{ alignItems: 'center', marginBottom: 32 }}>
+      {/* Progress Bar */}
+      <View style={{ 
+        backgroundColor: 'rgba(139, 92, 246, 0.08)', 
+        height: 6, 
+        borderRadius: 8, 
+        width: '100%', 
+        overflow: 'hidden', 
+        marginBottom: 24,
+        shadowColor: '#8B5CF6',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2
+      }}>
         <RNAnimated.View
           style={{
             height: '100%',
-            borderRadius: 4,
+            borderRadius: 8,
             backgroundColor: '#8B5CF6',
             width: progressAnim.interpolate({
               inputRange: [0, 1],
               outputRange: ['0%', '100%']
-            })
+            }),
+            shadowColor: '#8B5CF6',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 3
           }}
         />
       </View>
       
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+      {/* Step Circles */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', alignItems: 'center', marginBottom: 20 }}>
         {[1, 2, 3, 4, 5].map((step) => (
           <View key={step} style={{ alignItems: 'center', flex: 1 }}>
-            <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: step <= currentStep ? '#8B5CF6' : 'rgba(139, 92, 246, 0.2)', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+            <View style={{ 
+              width: 44, 
+              height: 44, 
+              borderRadius: 22, 
+              backgroundColor: step <= currentStep ? '#8B5CF6' : '#F3F4F6', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              marginBottom: 10,
+              borderWidth: step <= currentStep ? 0 : 2,
+              borderColor: step === currentStep ? '#8B5CF6' : '#E5E7EB',
+              shadowColor: step <= currentStep ? '#8B5CF6' : '#000',
+              shadowOffset: { width: 0, height: step <= currentStep ? 4 : 2 },
+              shadowOpacity: step <= currentStep ? 0.3 : 0.1,
+              shadowRadius: step <= currentStep ? 8 : 4,
+              elevation: step <= currentStep ? 6 : 2
+            }}>
               {step < currentStep ? (
-                <MaterialCommunityIcons name="check" size={20} color="#FFFFFF" />
+                <MaterialCommunityIcons name="check" size={22} color="#FFFFFF" />
               ) : (
-                <Text style={{ color: step <= currentStep ? '#FFFFFF' : '#8B5CF6', fontSize: 16, fontWeight: 'bold' }}>{step}</Text>
+                <Text style={{ 
+                  color: step <= currentStep ? '#FFFFFF' : step === currentStep ? '#8B5CF6' : '#9CA3AF', 
+                  fontSize: 16, 
+                  fontWeight: 'bold' 
+                }}>{step}</Text>
               )}
             </View>
-            <Text style={{ fontSize: 10, color: step <= currentStep ? '#8B5CF6' : '#9CA3AF', fontWeight: '600', textAlign: 'center' }}>
+            <Text style={{ 
+              fontSize: 12, 
+              color: step <= currentStep ? '#8B5CF6' : '#9CA3AF', 
+              fontWeight: '700', 
+              textAlign: 'center',
+              lineHeight: 16,
+              letterSpacing: 0.3
+            }}>
               {['Pribadi', 'Gigi', 'Kesehatan', 'Darurat', 'Preferensi'][step - 1]}
             </Text>
           </View>
         ))}
       </View>
       
-      <Text style={{ fontSize: 16, fontWeight: '600', color: '#1F2937', marginTop: 16, textAlign: 'center' }}>
-        Langkah {currentStep} dari {totalSteps}: {['Informasi Pribadi', 'Riwayat Gigi', 'Informasi Kesehatan', 'Kontak Darurat', 'Preferensi & Asuransi'][currentStep - 1]}
-      </Text>
+      {/* Current Step Title */}
+      <LinearGradient
+        colors={['rgba(139, 92, 246, 0.15)', 'rgba(139, 92, 246, 0.08)']}
+        style={{
+          paddingHorizontal: 24,
+          paddingVertical: 16,
+          borderRadius: 20,
+          borderWidth: 1,
+          borderColor: 'rgba(139, 92, 246, 0.3)',
+          shadowColor: '#8B5CF6',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.15,
+          shadowRadius: 8,
+          elevation: 4
+        }}
+      >
+        <Text style={{ 
+          fontSize: 18, 
+          fontWeight: '800', 
+          color: '#1F2937', 
+          textAlign: 'center',
+          letterSpacing: 0.8
+        }}>
+          Langkah {currentStep} dari {totalSteps}: {['Informasi Pribadi', 'Riwayat Gigi', 'Informasi Kesehatan', 'Kontak Darurat', 'Preferensi & Asuransi'][currentStep - 1]}
+        </Text>
+      </LinearGradient>
     </View>
   );
 
@@ -330,45 +255,35 @@ const PatientProfileSetupScreen = ({ navigation }) => {
           <Text style={{ fontSize: 14, color: '#6B7280', textAlign: 'center' }}>Ceritakan tentang diri Anda</Text>
         </View>
 
-        {/* Profile Photo */}
-        <View style={{ alignItems: 'center', marginBottom: 32 }}>
-          <TouchableOpacity
-            onPress={handleImagePicker}
-            style={{ width: 120, height: 120, borderRadius: 60, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#8B5CF6', borderStyle: 'dashed', marginBottom: 12, overflow: 'hidden' }}
-            activeOpacity={0.7}
-          >
-            {profileData.profilePhoto ? (
-              <Image
-                source={{ uri: profileData.profilePhoto.uri }}
-                style={{ width: 114, height: 114, borderRadius: 57 }}
-              />
-            ) : (
-              <LinearGradient
-                colors={['rgba(139, 92, 246, 0.1)', 'rgba(139, 92, 246, 0.05)']}
-                style={{ width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' }}
-              >
-                <MaterialCommunityIcons name="camera-plus" size={36} color="#8B5CF6" />
-              </LinearGradient>
-            )}
-          </TouchableOpacity>
-          <Text style={{ fontSize: 14, color: '#6B7280', textAlign: 'center', fontWeight: '500' }}>
-            {profileData.profilePhoto ? 'Ketuk untuk mengganti foto' : 'Ketuk untuk menambah foto profil'}
-          </Text>
-        </View>
+
 
         {/* Modern Input Fields */}
-        <View style={{ gap: 16 }}>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
+        <View style={{ gap: 20 }}>
+          <View style={{ flexDirection: 'row', gap: 16 }}>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Nama Depan *</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1, borderColor: profileData.firstName ? '#8B5CF6' : '#E5E7EB' }}>
+              <View style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                backgroundColor: '#F9FAFB', 
+                borderRadius: 16, 
+                paddingHorizontal: 18, 
+                paddingVertical: 16, 
+                borderWidth: 2, 
+                borderColor: profileData.firstName ? '#8B5CF6' : '#E5E7EB',
+                shadowColor: profileData.firstName ? '#8B5CF6' : '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: profileData.firstName ? 0.1 : 0.05,
+                shadowRadius: 4,
+                elevation: 2
+              }}>
                 <MaterialCommunityIcons name="account" size={20} color="#8B5CF6" style={{ marginRight: 12 }} />
                 <TextInput placeholder="Masukkan nama depan" value={profileData.firstName} onChangeText={(value) => handleInputChange('firstName', value)} style={{ flex: 1, fontSize: 16, color: '#374151' }} placeholderTextColor="#9CA3AF" />
               </View>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Nama Belakang *</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1, borderColor: profileData.lastName ? '#8B5CF6' : '#E5E7EB' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 16, paddingHorizontal: 18, paddingVertical: 16, borderWidth: 2, borderColor: profileData.lastName ? '#8B5CF6' : '#E5E7EB', shadowColor: profileData.lastName ? '#8B5CF6' : '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: profileData.lastName ? 0.1 : 0.05, shadowRadius: 4, elevation: 2 }}>
                 <MaterialCommunityIcons name="account" size={20} color="#8B5CF6" style={{ marginRight: 12 }} />
                 <TextInput placeholder="Masukkan nama belakang" value={profileData.lastName} onChangeText={(value) => handleInputChange('lastName', value)} style={{ flex: 1, fontSize: 16, color: '#374151' }} placeholderTextColor="#9CA3AF" />
               </View>
@@ -377,7 +292,7 @@ const PatientProfileSetupScreen = ({ navigation }) => {
 
           <View>
             <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Nomor Telepon *</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1, borderColor: profileData.phone ? '#8B5CF6' : '#E5E7EB' }}>
+<View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 16, paddingHorizontal: 18, paddingVertical: 16, borderWidth: 2, borderColor: profileData.phone ? '#8B5CF6' : '#E5E7EB', shadowColor: profileData.phone ? '#8B5CF6' : '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: profileData.phone ? 0.1 : 0.05, shadowRadius: 4, elevation: 2 }}>
               <MaterialCommunityIcons name="phone" size={20} color="#8B5CF6" style={{ marginRight: 12 }} />
               <TextInput placeholder="Masukkan nomor telepon" value={profileData.phone} onChangeText={(value) => handleInputChange('phone', value)} keyboardType="phone-pad" style={{ flex: 1, fontSize: 16, color: '#374151' }} placeholderTextColor="#9CA3AF" />
             </View>
@@ -385,7 +300,7 @@ const PatientProfileSetupScreen = ({ navigation }) => {
 
           <View>
             <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Alamat *</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#F9FAFB', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1, borderColor: profileData.address ? '#8B5CF6' : '#E5E7EB' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#F9FAFB', borderRadius: 16, paddingHorizontal: 18, paddingVertical: 16, borderWidth: 2, borderColor: profileData.address ? '#8B5CF6' : '#E5E7EB', shadowColor: profileData.address ? '#8B5CF6' : '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: profileData.address ? 0.1 : 0.05, shadowRadius: 4, elevation: 2 }}>
               <MaterialCommunityIcons name="home" size={20} color="#8B5CF6" style={{ marginRight: 12, marginTop: 2 }} />
               <TextInput placeholder="Masukkan alamat Anda" value={profileData.address} onChangeText={(value) => handleInputChange('address', value)} multiline numberOfLines={2} style={{ flex: 1, fontSize: 16, color: '#374151', textAlignVertical: 'top' }} placeholderTextColor="#9CA3AF" />
             </View>
@@ -393,7 +308,7 @@ const PatientProfileSetupScreen = ({ navigation }) => {
 
           <View>
             <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Tanggal Lahir *</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1, borderColor: profileData.dateOfBirth ? '#8B5CF6' : '#E5E7EB' }}>
+<View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 16, paddingHorizontal: 18, paddingVertical: 16, borderWidth: 2, borderColor: profileData.dateOfBirth ? '#8B5CF6' : '#E5E7EB', shadowColor: profileData.dateOfBirth ? '#8B5CF6' : '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: profileData.dateOfBirth ? 0.1 : 0.05, shadowRadius: 4, elevation: 2 }}>
               <MaterialCommunityIcons name="calendar" size={20} color="#8B5CF6" style={{ marginRight: 12 }} />
               <TextInput 
                 placeholder="DD/MM/YYYY (contoh: 12/05/2000)" 
@@ -420,12 +335,26 @@ const PatientProfileSetupScreen = ({ navigation }) => {
 
           <View>
             <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Jenis Kelamin</Text>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ flexDirection: 'row', gap: 16 }}>
               {['Pria', 'Wanita', 'Lainnya'].map((gender, index) => (
                 <TouchableOpacity
                   key={gender}
                   onPress={() => handleInputChange('gender', ['Male', 'Female', 'Other'][index])}
-                  style={{ flex: 1, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 12, borderWidth: 2, borderColor: profileData.gender === ['Male', 'Female', 'Other'][index] ? '#8B5CF6' : '#E5E7EB', backgroundColor: profileData.gender === ['Male', 'Female', 'Other'][index] ? 'rgba(139, 92, 246, 0.1)' : '#FFFFFF', alignItems: 'center' }}
+                  style={{ 
+                    flex: 1, 
+                    paddingVertical: 16, 
+                    paddingHorizontal: 18, 
+                    borderRadius: 16, 
+                    borderWidth: 2, 
+                    borderColor: profileData.gender === ['Male', 'Female', 'Other'][index] ? '#8B5CF6' : '#E5E7EB', 
+                    backgroundColor: profileData.gender === ['Male', 'Female', 'Other'][index] ? 'rgba(139, 92, 246, 0.1)' : '#FFFFFF', 
+                    alignItems: 'center',
+                    shadowColor: profileData.gender === ['Male', 'Female', 'Other'][index] ? '#8B5CF6' : '#000',
+                    shadowOffset: { width: 0, height: 2 },
+                    shadowOpacity: profileData.gender === ['Male', 'Female', 'Other'][index] ? 0.1 : 0.05,
+                    shadowRadius: 4,
+                    elevation: 2
+                  }}
                   activeOpacity={0.7}
                 >
                   <Text style={{ color: profileData.gender === ['Male', 'Female', 'Other'][index] ? '#8B5CF6' : '#6B7280', fontSize: 14, fontWeight: '600' }}>
@@ -439,14 +368,14 @@ const PatientProfileSetupScreen = ({ navigation }) => {
           <View style={{ flexDirection: 'row', gap: 12 }}>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Tinggi Badan (cm)</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1, borderColor: profileData.height ? '#8B5CF6' : '#E5E7EB' }}>
+<View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 16, paddingHorizontal: 18, paddingVertical: 16, borderWidth: 2, borderColor: profileData.height ? '#8B5CF6' : '#E5E7EB', shadowColor: profileData.height ? '#8B5CF6' : '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: profileData.height ? 0.1 : 0.05, shadowRadius: 4, elevation: 2 }}>
                 <MaterialCommunityIcons name="human-male-height" size={20} color="#8B5CF6" style={{ marginRight: 12 }} />
                 <TextInput placeholder="170" value={profileData.height} onChangeText={(value) => handleInputChange('height', value)} keyboardType="numeric" style={{ flex: 1, fontSize: 16, color: '#374151' }} placeholderTextColor="#9CA3AF" />
               </View>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Berat Badan (kg)</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1, borderColor: profileData.weight ? '#8B5CF6' : '#E5E7EB' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 16, paddingHorizontal: 18, paddingVertical: 16, borderWidth: 2, borderColor: profileData.weight ? '#8B5CF6' : '#E5E7EB', shadowColor: profileData.weight ? '#8B5CF6' : '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: profileData.weight ? 0.1 : 0.05, shadowRadius: 4, elevation: 2 }}>
                 <MaterialCommunityIcons name="weight" size={20} color="#8B5CF6" style={{ marginRight: 12 }} />
                 <TextInput placeholder="70" value={profileData.weight} onChangeText={(value) => handleInputChange('weight', value)} keyboardType="numeric" style={{ flex: 1, fontSize: 16, color: '#374151' }} placeholderTextColor="#9CA3AF" />
               </View>
@@ -455,7 +384,7 @@ const PatientProfileSetupScreen = ({ navigation }) => {
 
           <View>
             <Text style={{ fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Golongan Darah</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, borderWidth: 1, borderColor: profileData.bloodType ? '#8B5CF6' : '#E5E7EB' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F9FAFB', borderRadius: 16, paddingHorizontal: 18, paddingVertical: 16, borderWidth: 2, borderColor: profileData.bloodType ? '#8B5CF6' : '#E5E7EB', shadowColor: profileData.bloodType ? '#8B5CF6' : '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: profileData.bloodType ? 0.1 : 0.05, shadowRadius: 4, elevation: 2 }}>
               <MaterialCommunityIcons name="water" size={20} color="#8B5CF6" style={{ marginRight: 12 }} />
               <TextInput placeholder="A+, B-, O+, dst." value={profileData.bloodType} onChangeText={(value) => handleInputChange('bloodType', value)} style={{ flex: 1, fontSize: 16, color: '#374151' }} placeholderTextColor="#9CA3AF" />
             </View>
@@ -752,6 +681,8 @@ const PatientProfileSetupScreen = ({ navigation }) => {
   const handleNext = () => {
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
+      // Scroll to top when moving to next step
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
     } else {
       handleSubmit();
     }
@@ -760,6 +691,8 @@ const PatientProfileSetupScreen = ({ navigation }) => {
   const handlePrevious = () => {
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
+      // Scroll to top when moving to previous step
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
     }
   };
 
@@ -852,36 +785,7 @@ const PatientProfileSetupScreen = ({ navigation }) => {
         }
       }
 
-      // First, upload profile photo if exists
-      let profilePictureUrl = null;
-      if (profileData.profilePhoto) {
-        console.log('🔍 Uploading profile photo:', {
-          uri: profileData.profilePhoto.uri,
-          userId: user.id,
-          photoData: profileData.profilePhoto
-        });
-        
-        const photoResponse = await profileService.uploadProfilePhoto(
-          profileData.profilePhoto.uri, 
-          user.id
-        );
-        
-        console.log('🔍 Photo upload response:', photoResponse);
-        
-        if (photoResponse.success) {
-          // Convert relative URL to full URL
-          const baseURL = __DEV__ 
-            ? 'http://127.0.0.1:3001' 
-            : 'https://api.dentalization.com';
-          profilePictureUrl = `${baseURL}${photoResponse.data.url}`;
-          console.log('✅ Photo uploaded successfully:', profilePictureUrl);
-        } else {
-          console.log('❌ Photo upload failed:', photoResponse.message);
-          Alert.alert('Peringatan', 'Gagal mengunggah foto profil, tetapi profil akan disimpan tanpa foto.');
-        }
-      } else {
-        console.log('🔍 No profile photo selected');
-      }
+
 
       // Convert date format from DD/MM/YYYY to YYYY-MM-DD for backend
       const formatDateForBackend = (dateStr) => {
@@ -947,10 +851,10 @@ const PatientProfileSetupScreen = ({ navigation }) => {
         lastDentalVisit: formatMonthYearForBackend(profileData.lastDentalVisit),
         
         // App-specific
-        profilePicture: profilePictureUrl,
+        profilePicture: null,
       };
 
-      console.log('🔍 Profile picture URL being sent:', profilePictureUrl);
+
       console.log('Submitting profile data:', apiProfileData);
 
       // Submit profile to backend
@@ -1060,24 +964,95 @@ const PatientProfileSetupScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1 }}
-        showsVerticalScrollIndicator={false}
+    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+      {/* Modern Beautiful Header */}
+      <LinearGradient
+        colors={['#667eea', '#764ba2', '#f093fb']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{
+          paddingTop: Platform.OS === 'ios' ? 60 : 40,
+          paddingBottom: 40,
+          paddingHorizontal: 24,
+          borderBottomLeftRadius: 30,
+          borderBottomRightRadius: 30,
+          shadowColor: '#667eea',
+          shadowOffset: { width: 0, height: 10 },
+          shadowOpacity: 0.3,
+          shadowRadius: 20,
+          elevation: 15
+        }}
       >
-        <View style={{ padding: 24 }}>
-          {/* Header */}
-          <View style={{ alignItems: 'center', marginBottom: 32 }}>
-            <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(139, 92, 246, 0.1)', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
-              <MaterialCommunityIcons name="clipboard-text" size={40} color="#8B5CF6" />
-            </View>
-            <Text style={{ fontSize: 28, fontWeight: 'bold', color: '#1F2937', marginBottom: 8, textAlign: 'center' }}>
-              Lengkapi Profil Anda
-            </Text>
-            <Text style={{ fontSize: 16, color: '#6B7280', textAlign: 'center', paddingHorizontal: 20 }}>
-              Bantu kami memberikan perawatan gigi terbaik dengan melengkapi profil medis Anda
-            </Text>
+        <Animated.View
+          entering={FadeInUp.delay(100).duration(800)}
+          style={{ alignItems: 'center' }}
+        >
+          {/* Profile Icon with Glow Effect */}
+          <View style={{
+            width: 80,
+            height: 80,
+            borderRadius: 40,
+            backgroundColor: 'rgba(255, 255, 255, 0.25)',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginBottom: 20,
+            borderWidth: 3,
+            borderColor: 'rgba(255, 255, 255, 0.4)',
+            shadowColor: '#FFFFFF',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.8,
+            shadowRadius: 15,
+            elevation: 10
+          }}>
+            <MaterialCommunityIcons name="account-circle" size={45} color="#FFFFFF" />
           </View>
+          
+          {/* Modern Typography */}
+          <Text style={{
+            fontSize: 28,
+            fontWeight: '800',
+            color: '#FFFFFF',
+            textAlign: 'center',
+            marginBottom: 8,
+            letterSpacing: 0.5,
+            textShadowColor: 'rgba(0, 0, 0, 0.3)',
+            textShadowOffset: { width: 0, height: 2 },
+            textShadowRadius: 4
+          }}>
+            Lengkapi Profil Anda
+          </Text>
+          
+          <Text style={{
+            fontSize: 16,
+            color: 'rgba(255, 255, 255, 0.9)',
+            textAlign: 'center',
+            lineHeight: 24,
+            paddingHorizontal: 20,
+            fontWeight: '500',
+            textShadowColor: 'rgba(0, 0, 0, 0.2)',
+            textShadowOffset: { width: 0, height: 1 },
+            textShadowRadius: 2
+          }}>
+            Bantu kami memberikan perawatan terbaik dengan melengkapi informasi Anda
+          </Text>
+        </Animated.View>
+      </LinearGradient>
+
+      {/* Content Area */}
+      <SafeAreaView style={{ flex: 1 }}>
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          style={{ flex: 1 }}
+        >
+          <View style={{
+            flex: 1,
+            paddingTop: 30,
+            paddingHorizontal: 24,
+            backgroundColor: '#F8FAFC'
+          }}>
 
           {/* Step Indicator */}
           {renderStepIndicator()}
@@ -1086,15 +1061,31 @@ const PatientProfileSetupScreen = ({ navigation }) => {
           {renderCurrentStep()}
 
           {/* Navigation Buttons */}
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 24, gap: 16 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 40, marginBottom: 40, gap: 16 }}>
             {currentStep > 1 && (
               <TouchableOpacity
                 onPress={handlePrevious}
-                style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 24, borderRadius: 16, borderWidth: 2, borderColor: '#8B5CF6', backgroundColor: '#FFFFFF' }}
+                style={{ 
+                  flex: 1, 
+                  flexDirection: 'row', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  paddingVertical: 18, 
+                  paddingHorizontal: 28, 
+                  borderRadius: 16, 
+                  borderWidth: 2, 
+                  borderColor: '#8B5CF6', 
+                  backgroundColor: '#FFFFFF',
+                  shadowColor: '#8B5CF6',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                  elevation: 2
+                }}
                 activeOpacity={0.8}
               >
                 <MaterialCommunityIcons name="arrow-left" size={20} color="#8B5CF6" style={{ marginRight: 8 }} />
-                <Text style={{ color: '#8B5CF6', fontSize: 16, fontWeight: '600' }}>Sebelumnya</Text>
+                <Text style={{ color: '#8B5CF6', fontSize: 16, fontWeight: '700' }}>Sebelumnya</Text>
               </TouchableOpacity>
             )}
 
@@ -1106,7 +1097,19 @@ const PatientProfileSetupScreen = ({ navigation }) => {
             >
               <LinearGradient
                 colors={['#8B5CF6', '#7C3AED']}
-                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 16, paddingHorizontal: 24, borderRadius: 16 }}
+                style={{ 
+                  flexDirection: 'row', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  paddingVertical: 18, 
+                  paddingHorizontal: 28, 
+                  borderRadius: 16,
+                  shadowColor: '#8B5CF6',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
+                  elevation: 6
+                }}
               >
                 {isSubmitting ? (
                   <MaterialCommunityIcons name="loading" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
@@ -1115,15 +1118,16 @@ const PatientProfileSetupScreen = ({ navigation }) => {
                 ) : (
                   <MaterialCommunityIcons name="arrow-right" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
                 )}
-                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
+                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700' }}>
                   {isSubmitting ? 'Menyimpan...' : currentStep === totalSteps ? 'Lengkapi Profil' : 'Selanjutnya'}
                 </Text>
               </LinearGradient>
             </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 };
 

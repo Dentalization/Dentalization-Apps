@@ -2,7 +2,7 @@
 export const API_CONFIG = {
   // Using network IP for development access (for mobile devices)
   BASE_URL: __DEV__ 
-    ? 'http://192.168.1.2:3001' 
+    ? 'http://192.168.0.155:3001' 
     : 'https://api.dentalization.com',
   TIMEOUT: 45000,  // Increased timeout for slow connections
   RETRY_ATTEMPTS: 3,
