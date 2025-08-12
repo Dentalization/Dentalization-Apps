@@ -1,210 +1,362 @@
 import { API_CONFIG } from '../constants/api';
-import { AUTH_STORAGE_KEYS } from '../constants/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import authService from './authService';
 
-class AiDiagnosisHistoryService {
-  async getAuthHeaders() {
-    let token = await AsyncStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+class AIService {
+  constructor() {
+    this.baseURL = 'https://development-srv.burro-platy.ts.net:10000'; // Replace with actual deployed server URL
+    this.timeout = 120000; // 120 seconds timeout for AI processing
+    this.maxRetries = 3; // Maximum retry attempts
+    this.retryDelay = 2000; // 2 seconds delay between retries
+  }
+
+  /**
+   * Delay function for retry mechanism
+   */
+  delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Check if error is retryable
+   */
+  isRetryableError(error) {
+    const retryableErrors = [
+      'insufficient_quota',
+      'rate_limit_exceeded',
+      'timeout',
+      'network_error',
+      'server_error'
+    ];
     
-    // If no token, try to refresh
-    if (!token) {
-      const refreshToken = await AsyncStorage.getItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN);
-      if (refreshToken) {
-        const refreshResult = await authService.refreshAccessToken(refreshToken);
-        if (refreshResult.success) {
-          token = refreshResult.data.token;
+    const errorMessage = error.toLowerCase();
+    return retryableErrors.some(retryableError => errorMessage.includes(retryableError));
+  }
+
+  /**
+   * Check AI server health status
+   */
+  async healthCheck() {
+    try {
+      const response = await fetch(`${this.baseURL}/api/health`, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+        },
+        timeout: 10000,
+      });
+
+      const data = await response.json();
+      
+      return {
+        success: response.ok,
+        data: data,
+        status: response.status
+      };
+    } catch (error) {
+      console.error('❌ AIService: Health check failed:', error);
+      return {
+        success: false,
+        error: error.message || 'AI server not available',
+      };
+    }
+  }
+
+  /**
+   * Detect dental conditions from image
+   * @param {string} imageUri - Local image URI
+   * @param {boolean} generateVisualization - Whether to generate visualization
+   */
+  async detectConditions(imageUri, generateVisualization = true) {
+    try {
+      const formData = new FormData();
+      formData.append('image', {
+        uri: imageUri,
+        type: 'image/jpeg',
+        name: `dental_detection_${Date.now()}.jpg`,
+      });
+
+      const url = `${this.baseURL}/api/detect${generateVisualization ? '?generate_visualization=true' : ''}`;
+      
+      console.log('🔍 AIService: Starting dental condition detection...');
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Accept': 'application/json',
+        },
+        timeout: this.timeout,
+      });
+
+      const data = await response.json();
+      
+      if (response.ok) {
+        console.log('✅ AIService: Detection completed successfully');
+        return {
+          success: true,
+          data: data,
+        };
+      } else {
+        console.error('❌ AIService: Detection failed:', data);
+        return {
+          success: false,
+          error: data.message || 'Detection failed',
+        };
+      }
+    } catch (error) {
+      console.error('❌ AIService: Network error during detection:', error);
+      return {
+        success: false,
+        error: error.message || 'Network error during detection',
+      };
+    }
+  }
+
+  /**
+   * Perform comprehensive dental reasoning with AI (with retry mechanism)
+   * @param {string} imageUri - Local image URI
+   * @param {Object} patientInfo - Patient information object
+   * @param {boolean} generateVisualization - Whether to generate visualization
+   * @param {boolean} generateReport - Whether to generate detailed report
+   */
+  async performDentalReasoning(imageUri, patientInfo = null, generateVisualization = true, generateReport = true) {
+    let lastError = null;
+    
+    for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+      try {
+        console.log(`🧠 AIService: Starting dental reasoning analysis (attempt ${attempt}/${this.maxRetries})...`);
+        console.log('🧠 AIService: Patient info:', patientInfo);
+        
+        const formData = new FormData();
+        formData.append('image', {
+          uri: imageUri,
+          type: 'image/jpeg',
+          name: `dental_reasoning_${Date.now()}.jpg`,
+        });
+
+        // Add patient information if provided
+        // Comment out patient_info for doctor app - not needed for doctor diagnosis
+        // For patient app, this will be provided later
+        // if (patientInfo) {
+        //   formData.append('patient_info', JSON.stringify(patientInfo));
+        // }
+
+        const queryParams = new URLSearchParams();
+        if (generateVisualization) queryParams.append('generate_visualization', 'true');
+        if (generateReport) queryParams.append('generate_report', 'true');
+        
+        const url = `${this.baseURL}/api/reason${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+        
+        const response = await fetch(url, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'Accept': 'application/json',
+          },
+          timeout: this.timeout,
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+          console.log('✅ AIService: Reasoning analysis completed successfully');
+          return {
+            success: true,
+            data: data,
+          };
+        } else {
+          const errorMessage = data.message || 'Reasoning analysis failed';
+          console.error(`❌ AIService: Reasoning analysis failed (attempt ${attempt}):`, errorMessage);
+          
+          lastError = errorMessage;
+          
+          // Check if error is retryable
+          if (attempt < this.maxRetries && this.isRetryableError(errorMessage)) {
+            console.log(`⏳ AIService: Retrying in ${this.retryDelay}ms...`);
+            await this.delay(this.retryDelay);
+            continue;
+          }
+          
+          return {
+            success: false,
+            error: errorMessage,
+          };
         }
+      } catch (error) {
+        const errorMessage = error.message || 'Network error during reasoning analysis';
+        console.error(`❌ AIService: Network error during reasoning (attempt ${attempt}):`, errorMessage);
+        
+        lastError = errorMessage;
+        
+        // Check if error is retryable
+        if (attempt < this.maxRetries && this.isRetryableError(errorMessage)) {
+          console.log(`⏳ AIService: Retrying in ${this.retryDelay}ms...`);
+          await this.delay(this.retryDelay);
+          continue;
+        }
+        
+        return {
+          success: false,
+          error: errorMessage,
+        };
       }
     }
     
     return {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
+      success: false,
+      error: lastError || 'All retry attempts failed',
     };
   }
 
-  // Save AI diagnosis result to history
-  async saveDiagnosis(diagnosisData) {
+  /**
+   * Batch detect conditions from multiple images
+   * @param {Array} imageUris - Array of local image URIs
+   * @param {boolean} generateVisualization - Whether to generate visualization
+   */
+  async batchDetectConditions(imageUris, generateVisualization = true) {
     try {
-      const headers = await this.getAuthHeaders();
+      const formData = new FormData();
       
-      // Check if we have a valid token
-      if (!headers.Authorization || headers.Authorization === 'Bearer null') {
-        throw new Error('Authentication required. Please login again.');
-      }
+      imageUris.forEach((imageUri, index) => {
+        formData.append('images', {
+          uri: imageUri,
+          type: 'image/jpeg',
+          name: `dental_batch_${index}_${Date.now()}.jpg`,
+        });
+      });
+
+      const url = `${this.baseURL}/api/batch-detect${generateVisualization ? '?generate_visualization=true' : ''}`;
       
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/ai-diagnosis`, {
+      console.log('📊 AIService: Starting batch detection for', imageUris.length, 'images...');
+      
+      const response = await fetch(url, {
         method: 'POST',
-        headers,
-        body: JSON.stringify(diagnosisData),
+        body: formData,
+        headers: {
+          'Accept': 'application/json',
+        },
+        timeout: this.timeout * 2, // Double timeout for batch processing
       });
 
       const data = await response.json();
       
-      if (!response.ok) {
-        // Handle authentication errors specifically
-        if (response.status === 401) {
-          throw new Error('Authentication expired. Please login again.');
-        }
-        throw new Error(data.message || 'Failed to save diagnosis');
+      if (response.ok) {
+        console.log('✅ AIService: Batch detection completed successfully');
+        return {
+          success: true,
+          data: data,
+        };
+      } else {
+        console.error('❌ AIService: Batch detection failed:', data);
+        return {
+          success: false,
+          error: data.message || 'Batch detection failed',
+        };
       }
-
-      return data;
     } catch (error) {
-      console.error('Save diagnosis error:', error);
-      throw error;
+      console.error('❌ AIService: Network error during batch detection:', error);
+      return {
+        success: false,
+        error: error.message || 'Network error during batch detection',
+      };
     }
   }
 
-  // Get AI diagnosis history for a specific patient (for doctors)
-  async getDiagnosisHistory(patientId, page = 1, limit = 10) {
+  /**
+   * Get file from AI server (visualization, report, etc.)
+   * @param {string} filePath - File path returned from AI API
+   */
+  async getFile(filePath) {
     try {
-      const headers = await this.getAuthHeaders();
+      const url = `${this.baseURL}${filePath}`;
       
-      if (!headers.Authorization || headers.Authorization === 'Bearer null') {
-        throw new Error('Authentication required. Please login again.');
-      }
-      
-      const response = await fetch(
-        `${API_CONFIG.BASE_URL}/api/ai-diagnosis/history/${patientId}?page=${page}&limit=${limit}`,
-        {
-          method: 'GET',
-          headers,
-        }
-      );
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Authentication expired. Please login again.');
-        }
-        throw new Error(data.message || 'Failed to get diagnosis history');
-      }
-
-      return data;
-    } catch (error) {
-      console.error('Get diagnosis history error:', error);
-      throw error;
-    }
-  }
-
-  // Get AI diagnosis history for current user (for patients)
-  async getMyDiagnosisHistory(page = 1, limit = 10) {
-    try {
-      const headers = await this.getAuthHeaders();
-      
-      if (!headers.Authorization || headers.Authorization === 'Bearer null') {
-        throw new Error('Authentication required. Please login again.');
-      }
-      
-      const response = await fetch(
-        `${API_CONFIG.BASE_URL}/api/ai-diagnosis/my-history?page=${page}&limit=${limit}`,
-        {
-          method: 'GET',
-          headers,
-        }
-      );
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Authentication expired. Please login again.');
-        }
-        throw new Error(data.message || 'Failed to get diagnosis history');
-      }
-
-      return data;
-    } catch (error) {
-      console.error('Get my diagnosis history error:', error);
-      throw error;
-    }
-  }
-
-  // Get specific AI diagnosis by ID
-  async getDiagnosisById(diagnosisId) {
-    try {
-      const headers = await this.getAuthHeaders();
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/ai-diagnosis/${diagnosisId}`, {
-        method: 'GET',
-        headers,
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to get diagnosis');
-      }
-
-      return data;
-    } catch (error) {
-      console.error('Get diagnosis by ID error:', error);
-      throw error;
-    }
-  }
-
-  // Delete AI diagnosis
-  async deleteDiagnosis(diagnosisId) {
-    try {
-      const headers = await this.getAuthHeaders();
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/ai-diagnosis/${diagnosisId}`, {
-        method: 'DELETE',
-        headers,
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to delete diagnosis');
-      }
-
-      return data;
-    } catch (error) {
-      console.error('Delete diagnosis error:', error);
-      throw error;
-    }
-  }
-
-  // Get diagnosis statistics
-  async getDiagnosisStats(patientId = null) {
-    try {
-      const headers = await this.getAuthHeaders();
-      const url = patientId 
-        ? `${API_CONFIG.BASE_URL}/api/ai-diagnosis/stats?patientId=${patientId}`
-        : `${API_CONFIG.BASE_URL}/api/ai-diagnosis/stats`;
+      console.log('📁 AIService: Fetching file:', url);
       
       const response = await fetch(url, {
         method: 'GET',
-        headers,
+        timeout: 30000,
       });
 
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to get diagnosis statistics');
+      if (response.ok) {
+        console.log('✅ AIService: File fetched successfully');
+        return {
+          success: true,
+          url: url,
+          blob: await response.blob(),
+        };
+      } else {
+        console.error('❌ AIService: File fetch failed:', response.status);
+        return {
+          success: false,
+          error: `File not found: ${response.status}`,
+        };
       }
-
-      return data;
     } catch (error) {
-      console.error('Get diagnosis stats error:', error);
-      throw error;
+      console.error('❌ AIService: Network error during file fetch:', error);
+      return {
+        success: false,
+        error: error.message || 'Network error during file fetch',
+      };
     }
   }
 
-  // Format diagnosis data for saving
-  formatDiagnosisForSaving(analysisResult, imageUri, patientId = null) {
+  /**
+   * Get full URL for AI server files
+   * @param {string} relativePath - Relative path from AI API response
+   */
+  getFileUrl(relativePath) {
+    if (!relativePath) return null;
+    return `${this.baseURL}${relativePath}`;
+  }
+
+  /**
+   * Validate image before sending to AI
+   * @param {string} imageUri - Local image URI
+   */
+  validateImage(imageUri) {
+    if (!imageUri) {
+      return { valid: false, error: 'Image URI is required' };
+    }
+
+    // Check if it's a valid URI format
+    if (!imageUri.startsWith('file://') && !imageUri.startsWith('content://')) {
+      return { valid: false, error: 'Invalid image URI format' };
+    }
+
+    return { valid: true };
+  }
+
+  /**
+   * Format patient info for AI analysis
+   * @param {Object} userProfile - User profile from Redux store
+   */
+  formatPatientInfo(userProfile) {
+    if (!userProfile) return null;
+
+    const calculateAge = (dateOfBirth) => {
+      if (!dateOfBirth) return null;
+      const today = new Date();
+      const birthDate = new Date(dateOfBirth);
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      
+      return age;
+    };
+
     return {
-      patientId,
-      imageUrl: imageUri,
-      detectionResult: analysisResult.detection_result,
-      reasoningResult: analysisResult.reasoning_result,
-      reportUrl: analysisResult.report_url,
-      requestId: analysisResult.request_id,
-      aiServerResponse: analysisResult
+      name: `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim() || 'Pasien',
+      age: userProfile.dateOfBirth ? calculateAge(userProfile.dateOfBirth) : null,
+      gender: userProfile.gender || 'tidak diketahui',
+      chief_complaint: userProfile.dentalConcerns || 'Tidak ada keluhan khusus',
+      medical_history: userProfile.medicalHistory || userProfile.allergies || 'Tidak ada riwayat medis yang tercatat',
+      dental_history: userProfile.dentalHistory || 'Tidak ada riwayat dental yang tercatat',
+      medications: userProfile.medications || 'Tidak ada obat yang sedang dikonsumsi',
+      allergies: userProfile.allergies || 'Tidak ada alergi yang diketahui'
     };
   }
 }
 
-export default new AiDiagnosisHistoryService();
+export default new AIService();

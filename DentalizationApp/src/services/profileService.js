@@ -1,16 +1,23 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { API_ENDPOINTS } from '../constants/api';
 import { AUTH_STORAGE_KEYS } from '../constants/auth';
 
 class ProfileService {
   constructor() {
     this.baseURL = __DEV__ 
-      ? 'http://127.0.0.1:3001' 
+      ? 'http://192.168.0.155:3001' 
       : 'https://api.dentalization.com';
   }
 
   async getAuthHeaders() {
     const token = await AsyncStorage.getItem(AUTH_STORAGE_KEYS.ACCESS_TOKEN);
+    console.log('🔑 ProfileService: Retrieved token:', token ? 'Token exists' : 'No token found');
+    
+    if (!token) {
+      throw new Error('No authentication token found');
+    }
+    
     return {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`,
@@ -21,7 +28,7 @@ class ProfileService {
     try {
       const headers = await this.getAuthHeaders();
       
-      const response = await fetch(`${this.baseURL}/profile/patient`, {
+      const response = await fetch(`${this.baseURL}${API_ENDPOINTS.PROFILE.PATIENT}`, {
         method: 'POST',
         headers,
         body: JSON.stringify(profileData),
@@ -97,52 +104,177 @@ class ProfileService {
     }
   }
 
-  async uploadProfilePhoto(imageUri, userId) {
+  async uploadProfilePhoto(imageUri, userId, base64Data = null) {
     try {
+      console.log('📸 ProfileService: Starting photo upload process...');
+      
+      // Validate URI or base64
+      if (!imageUri || typeof imageUri !== 'string') {
+        throw new Error('Invalid image URI provided');
+      }
+      
+      // Check if URI is properly formatted
+      const isValidUri = imageUri.startsWith('file://') || imageUri.startsWith('content://') || imageUri.startsWith('ph://');
+      if (!isValidUri) {
+        console.warn('📸 ProfileService: URI may not be properly formatted:', imageUri);
+        
+        // If URI is invalid and we have base64 data, use it instead
+        if (base64Data) {
+          console.log('📸 ProfileService: Using base64 data as fallback for invalid URI');
+          return await this.uploadProfilePhotoBase64(base64Data, userId);
+        }
+      }
+      
       const headers = await this.getAuthHeaders();
       delete headers['Content-Type']; // Let FormData set the boundary
+      
+      console.log('📸 ProfileService: Auth headers prepared');
 
       const formData = new FormData();
-      formData.append('photo', {
+      
+      // Use simple file object format for better Expo compatibility
+      console.log('📸 ProfileService: Creating file object for upload');
+      const fileObject = {
         uri: imageUri,
         type: 'image/jpeg',
         name: `profile_${userId}_${Date.now()}.jpg`,
-      });
+      };
+      
+      console.log('📸 ProfileService: Original URI:', imageUri);
+      console.log('📸 ProfileService: Platform:', Platform.OS);
+      console.log('📸 ProfileService: File object type:', fileObject.uri.substring(0, 20) + '...');
+      
+      formData.append('photo', fileObject);
       formData.append('userId', userId);
 
       console.log('📸 ProfileService: Uploading profile photo for user:', userId);
+      console.log('📸 ProfileService: Image URI:', imageUri);
+      console.log('📸 ProfileService: File object:', fileObject);
+      console.log('📸 ProfileService: Endpoint:', `${this.baseURL}${API_ENDPOINTS.PROFILE.UPLOAD_PHOTO}`);
 
+      // Remove all headers for FormData to work properly with Expo
+      const cleanHeaders = await this.getAuthHeaders();
+      delete cleanHeaders['Content-Type'];
+      delete cleanHeaders['Accept'];
+      
       const response = await fetch(`${this.baseURL}${API_ENDPOINTS.PROFILE.UPLOAD_PHOTO}`, {
         method: 'POST',
-        headers,
+        headers: {
+          'Authorization': cleanHeaders['Authorization']
+        },
         body: formData,
       });
 
-      const data = await response.json();
+      console.log('📸 ProfileService: Response status:', response.status);
+      console.log('📸 ProfileService: Response headers:', response.headers);
       
-      console.log('📸 ProfileService: Photo upload response:', response.status, data);
-
-      if (response.ok) {
-        console.log('✅ ProfileService: Profile photo uploaded successfully');
-        return {
-          success: true,
-          data: data,
-        };
-      } else {
-        console.error('❌ ProfileService: Photo upload failed:', data);
+      const responseText = await response.text();
+      console.log('📸 ProfileService: Raw response:', responseText);
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ ProfileService: Failed to parse response as JSON:', parseError);
         return {
           success: false,
-          message: data.message || 'Photo upload failed',
+          message: 'Invalid response format from server',
         };
       }
+      
+      if (!response.ok) {
+        console.error('❌ ProfileService: Upload failed with status:', response.status);
+        return {
+          success: false,
+          message: data.message || 'Upload failed',
+        };
+      }
+      
+      return {
+        success: true,
+        data: data,
+      };
     } catch (error) {
-      console.error('❌ ProfileService: Network error during photo upload:', error);
+      console.error('❌ ProfileService: Error uploading photo:', error);
+      
+      // If URI parsing error and we have base64 data, try base64 upload
+      if (error.message && error.message.includes('URI parsing error') && base64Data) {
+        console.log('📸 ProfileService: URI parsing failed, trying base64 upload...');
+        return await this.uploadProfilePhotoBase64(base64Data, userId);
+      }
+      
       return {
         success: false,
-        message: error.message || 'Network error',
+        message: error.message || 'Failed to upload photo',
       };
     }
   }
+  
+  async uploadProfilePhotoBase64(base64Data, userId) {
+    try {
+      console.log('📸 ProfileService: Starting base64 photo upload...');
+      
+      if (!base64Data || typeof base64Data !== 'string') {
+        throw new Error('Invalid base64 data provided');
+      }
+      
+      const headers = await this.getAuthHeaders();
+      
+      const payload = {
+        photo: `data:image/jpeg;base64,${base64Data}`,
+        userId: userId,
+      };
+      
+      console.log('📸 ProfileService: Uploading base64 photo for user:', userId);
+      console.log('📸 ProfileService: Base64 data length:', base64Data.length);
+      
+      const response = await fetch(`${this.baseURL}${API_ENDPOINTS.PROFILE.UPLOAD_PHOTO}`, {
+        method: 'POST',
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      
+      console.log('📸 ProfileService: Base64 upload response status:', response.status);
+      
+      const responseText = await response.text();
+      console.log('📸 ProfileService: Base64 upload raw response:', responseText);
+      
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('❌ ProfileService: Failed to parse base64 response as JSON:', parseError);
+        return {
+          success: false,
+          message: 'Invalid response format from server',
+        };
+      }
+      
+      console.log('📸 ProfileService: Parsed base64 response data:', data);
+       
+       if (!response.ok) {
+         console.error('❌ ProfileService: Base64 upload failed with status:', response.status);
+         return {
+           success: false,
+           message: data.message || 'Base64 upload failed',
+         };
+       }
+       
+       return {
+         success: true,
+         data: data,
+       };
+     } catch (error) {
+       console.error('❌ ProfileService: Error uploading base64 photo:', error);
+       return {
+         success: false,
+         message: error.message || 'Failed to upload base64 photo',
+       };
+     }
+   }
 
   async uploadDocument(documentUri, documentType, userId) {
     try {
