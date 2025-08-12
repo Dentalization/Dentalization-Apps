@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ROUTES } from '../../../constants';
+import { ROUTES, API_CONFIG } from '../../../constants';
 import { wp, hp, spacing, fontSizes, borderRadius, iconSizes, responsiveDimensions } from '../../../utils/responsive';
 import ResponsiveContainer from '../../../components/layouts/ResponsiveContainer';
 import ResponsiveCard from '../../../components/layouts/ResponsiveCard';
@@ -346,7 +346,7 @@ const PatientDashboard = ({ navigation }) => {
             ['#8B5CF6', '#667eea']
           }
           style={{
-            paddingTop: hp(8.5),
+            paddingTop: hp((7)),
             paddingHorizontal: spacing.lg,
             paddingBottom: spacing.sm,
             borderBottomLeftRadius: isScrolled ? 0 : borderRadius.xl,
@@ -376,16 +376,17 @@ const PatientDashboard = ({ navigation }) => {
             <View style={{ width: wp(12), height: wp(12), borderRadius: wp(6), overflow: 'hidden', marginRight: spacing.sm, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' }}>
               <Image
                 source={{
-                  uri: user?.profile?.profilePicture ||
-                  'https://images.unsplash.com/photo-1494790108755-2616b612b830?w=100&h=100&fit=crop&crop=face'
+                  uri: user?.profile?.profilePicture ? 
+                    `${API_CONFIG.BASE_URL}${user.profile.profilePicture}` :
+                    'https://images.unsplash.com/photo-1494790108755-2616b612b830?w=100&h=100&fit=crop&crop=face'
                 }}
                 style={{ width: wp(11), height: wp(11) }}
               />
             </View>
             <View style={{ flex: 1 }}>
-              <ResponsiveText size="sm" color="rgba(255,255,255,0.8)" style={{ marginBottom: 2 }}>Welcome Back</ResponsiveText>
+              <ResponsiveText size="sm" color="rgba(255,255,255,0.8)" style={{ marginBottom: 0 }}>Welcome Back</ResponsiveText>
               <ResponsiveText size="lg" weight="bold" color="white">
-                {user?.profile?.firstName || user?.name || 'Siren.uix'} 👋
+                {user?.profile?.firstName || user?.name || 'User'} 👋
               </ResponsiveText>
             </View>
             <TouchableOpacity 

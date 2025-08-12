@@ -375,16 +375,19 @@ const ProfileScreen = ({ navigation }) => {
       console.log('🔍 Photo upload response:', photoResponse);
       
       if (photoResponse.success) {
-        // Handle response structure from API - backend returns {data: {url: "..."}}
+        // Handle response structure from API - backend returns {data: {data: {url: "..."}}}
         const responseData = photoResponse.data;
         console.log('🔍 Parsed response data:', responseData);
         console.log('🔍 Response data type:', typeof responseData);
         console.log('🔍 Response data keys:', responseData ? Object.keys(responseData) : 'null');
-        console.log('🔍 Response data URL field:', responseData?.url);
-        console.log('🔍 Response data URL type:', typeof responseData?.url);
+        
+        // Extract URL from nested structure: data.data.url
+        const photoUrl = responseData?.data?.url || responseData?.url;
+        console.log('🔍 Extracted photo URL:', photoUrl);
+        console.log('🔍 Photo URL type:', typeof photoUrl);
         
         // Convert relative URL to full URL and validate
-        const fullPhotoUrl = buildAbsoluteUrl(API_CONFIG.BASE_URL, responseData?.url);
+        const fullPhotoUrl = buildAbsoluteUrl(API_CONFIG.BASE_URL, photoUrl);
         
         console.log('✅ Photo uploaded successfully, full URL:', fullPhotoUrl);
         console.log('🔍 Current user before update:', JSON.stringify(user, null, 2));
@@ -491,7 +494,7 @@ const ProfileScreen = ({ navigation }) => {
 
   const profileOptions = [
     {
-      title: 'Lengkapi Profil',
+      title: 'Lengkapi Profil Anda',
       subtitle: `${calculateProfileCompletion()}% Lengkap - ${getProfileStatus().text.split(' ').slice(1).join(' ')}`, // ADD () - it's a function!
       icon: 'account-edit',
       iconType: 'MaterialCommunityIcons',
@@ -502,7 +505,6 @@ const ProfileScreen = ({ navigation }) => {
         console.log('🔍 ProfileScreen - Edit profile button tapped');
         navigation.navigate('PatientProfileSetup');
       },
-      showProgress: true,
     },
     {
       title: 'Informasi Pribadi',
