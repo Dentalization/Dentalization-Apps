@@ -161,22 +161,7 @@ const NotificationPatient = ({ navigation }) => {
 
   const NotificationItem = ({ notification }) => (
     <TouchableOpacity 
-      style={{
-        backgroundColor: '#FFFFFF',
-        marginHorizontal: 16,
-        marginVertical: 8,
-        borderRadius: 28,
-        padding: 22,
-        shadowColor: notification.isNew ? notification.color : '#000',
-        shadowOffset: { width: 0, height: notification.isNew ? 12 : 6 },
-        shadowOpacity: notification.isNew ? 0.3 : 0.15,
-        shadowRadius: notification.isNew ? 20 : 12,
-        elevation: notification.isNew ? 10 : 6,
-        borderWidth: notification.isNew ? 2 : 0,
-        borderColor: notification.isNew ? `${notification.color}25` : 'transparent',
-        opacity: notification.isNew ? 1 : 0.88,
-        transform: [{ scale: notification.isNew ? 1.03 : 1 }]
-      }}
+      style={{ backgroundColor: '#FFFFFF', marginHorizontal: 16, marginVertical: 8, borderRadius: 28, padding: 22, shadowColor: notification.isNew ? notification.color : '#000', shadowOffset: { width: 0, height: notification.isNew ? 12 : 6 }, shadowOpacity: notification.isNew ? 0.3 : 0.15, shadowRadius: notification.isNew ? 20 : 12, elevation: notification.isNew ? 10 : 6, borderWidth: notification.isNew ? 2 : 0, borderColor: notification.isNew ? `${notification.color}25` : 'transparent', opacity: notification.isNew ? 1 : 0.88, transform: [{ scale: notification.isNew ? 1.03 : 1 }] }}
       onPress={() => markAsRead(notification.id)}
       activeOpacity={0.6}
     >
@@ -195,71 +180,26 @@ const NotificationPatient = ({ navigation }) => {
       />
       
       <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-        <View style={{
-          width: 60,
-          height: 60,
-          borderRadius: 30,
-          backgroundColor: `${notification.color}18`,
-          justifyContent: 'center',
-          alignItems: 'center',
-          marginRight: 18,
-          shadowColor: notification.color,
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.25,
-          shadowRadius: 12,
-          elevation: 6,
-          borderWidth: 3,
-          borderColor: `${notification.color}30`
-        }}>
+        <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: `${notification.color}18`, justifyContent: 'center', alignItems: 'center', marginRight: 18, shadowColor: notification.color, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 6, borderWidth: 3, borderColor: `${notification.color}30` }}>
           <MaterialIcons name={notification.icon} size={30} color={notification.color} />
         </View>
         
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-            <Text style={{
-              fontSize: 18,
-              fontWeight: '700',
-              color: '#1A1A1A',
-              flex: 1,
-              lineHeight: 26
-            }}>
+            <Text style={{ fontSize: 18, fontWeight: '700', color: '#1A1A1A', flex: 1, lineHeight: 26 }}>
               {notification.title}
             </Text>
             {notification.isNew && (
-              <View style={{
-                width: 14,
-                height: 14,
-                borderRadius: 7,
-                backgroundColor: '#FF5252',
-                marginLeft: 10,
-                shadowColor: '#FF5252',
-                shadowOffset: { width: 0, height: 3 },
-                shadowOpacity: 0.5,
-                shadowRadius: 6,
-                elevation: 4
-              }} />
+              <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#FF5252', marginLeft: 10, shadowColor: '#FF5252', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.5, shadowRadius: 6, elevation: 4 }} />
             )}
           </View>
           
-          <Text style={{
-            fontSize: 15,
-            color: '#555555',
-            lineHeight: 23,
-            marginBottom: 14,
-            fontWeight: '400'
-          }}>
+          <Text style={{ fontSize: 15, color: '#555555', lineHeight: 23, marginBottom: 14, fontWeight: '400' }}>
             {notification.message}
           </Text>
           
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{
-              backgroundColor: `${notification.color}15`,
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: `${notification.color}25`
-            }}>
+            <View style={{ backgroundColor: `${notification.color}15`, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: `${notification.color}25` }}>
               <Text style={{
                 fontSize: 13,
                 color: notification.color,
@@ -270,17 +210,7 @@ const NotificationPatient = ({ navigation }) => {
             </View>
             
             {notification.isNew && (
-              <View style={{
-                backgroundColor: '#FF5252',
-                paddingHorizontal: 10,
-                paddingVertical: 5,
-                borderRadius: 14,
-                shadowColor: '#FF5252',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.3,
-                shadowRadius: 4,
-                elevation: 3
-              }}>
+              <View style={{ backgroundColor: '#FF5252', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, shadowColor: '#FF5252', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 3 }}>
                 <Text style={{
                   fontSize: 11,
                   color: '#FFFFFF',

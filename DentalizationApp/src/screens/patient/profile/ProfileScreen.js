@@ -151,11 +151,9 @@ const ProfileScreen = ({ navigation }) => {
       return 0;
     }
     
-    // Check if profile is marked as complete in backend
-    if (user.profile.profileComplete === true) {
-      console.log('🔍 ProfileScreen - Profile marked as complete in backend');
-      return 100;
-    }
+    // Always calculate real completion percentage based on actual field values
+    // Don't trust backend profileComplete flag as it may be inaccurate
+    console.log('🔍 ProfileScreen - Calculating real-time completion based on field values');
     
     const requiredFields = [
       'firstName', 'lastName', 'phone', 'address', 'dateOfBirth',
@@ -167,7 +165,7 @@ const ProfileScreen = ({ navigation }) => {
     ];
     
     let completed = 0;
-    const total = requiredFields.length + optionalFields.length;
+    const total = requiredFields.length + optionalFields.length + 1; // +1 for profile picture
     
     console.log('🔍 ProfileScreen - Checking required fields:');
     requiredFields.forEach(field => {
@@ -220,6 +218,17 @@ const ProfileScreen = ({ navigation }) => {
       }
     });
     
+    // Check profile picture
+    const profilePicture = user.profile.profilePicture;
+    const hasValidProfilePicture = profilePicture && 
+      !profilePicture.includes('undefined') && 
+      !profilePicture.includes('null') && 
+      profilePicture.trim() !== '';
+    console.log(`  profilePicture: "${profilePicture}" -> ${hasValidProfilePicture ? 'COMPLETE' : 'MISSING'}`);
+    if (hasValidProfilePicture) {
+      completed += 1;
+    }
+    
     console.log('🔍 ProfileScreen - Checking optional fields:');
     optionalFields.forEach(field => {
       let value = null;
@@ -252,10 +261,11 @@ const ProfileScreen = ({ navigation }) => {
       const hasValue = value && value.toString().trim() !== '';
       console.log(`  ${field}: "${value}" -> ${hasValue ? 'COMPLETE' : 'MISSING'}`);
       if (hasValue) {
-        completed += 0.5; // Optional fields count as half
+        completed += 1; // All fields count as 1 point
       }
     });
     
+    console.log(`🔍 ProfileScreen - Total completed: ${completed}, Total fields: ${total}`);
     const percentage = Math.round((completed / total) * 100);
     console.log(`🔍 ProfileScreen - Completion: ${completed}/${total} = ${percentage}%`);
     
@@ -318,6 +328,9 @@ const ProfileScreen = ({ navigation }) => {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        exif: false,
+        base64: true,
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
@@ -350,6 +363,9 @@ const ProfileScreen = ({ navigation }) => {
         aspect: [1, 1],
         quality: 0.8,
         allowsMultipleSelection: false,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        exif: false,
+        base64: true,
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
@@ -363,13 +379,22 @@ const ProfileScreen = ({ navigation }) => {
 
   const uploadProfilePhoto = async (photoAsset) => {
     try {
-      console.log('🔍 ProfileScreen - Uploading new profile photo:', photoAsset.uri);
+      console.log('🔍 ProfileScreen - Photo asset received:', photoAsset);
+      console.log('🔍 ProfileScreen - Photo URI:', photoAsset.uri);
+      
+      // Validate photo asset
+      if (!photoAsset || !photoAsset.uri) {
+        Alert.alert('Error', 'Foto tidak valid. Silakan coba lagi.');
+        return;
+      }
+      
       Alert.alert('Info', 'Sedang mengunggah foto...');
       
       // Upload photo to backend
       const photoResponse = await profileService.uploadProfilePhoto(
         photoAsset.uri, 
-        user.id
+        user.id,
+        photoAsset.base64
       );
       
       console.log('🔍 Photo upload response:', photoResponse);
@@ -417,15 +442,15 @@ const ProfileScreen = ({ navigation }) => {
             if (updateResponse.success) {
               console.log('✅ ProfileScreen - Photo URL successfully saved to backend database');
             } else {
-              console.error('❌ ProfileScreen - Failed to save photo URL to backend:', updateResponse.message);
-              Alert.alert('Peringatan', 'Foto terupload tetapi gagal disimpan ke profil. Coba upload ulang.');
-              return;
-            }
-          } catch (error) {
-            console.error('❌ ProfileScreen - Error updating profile:', error);
-            Alert.alert('Error', 'Gagal menyimpan foto ke profil. Coba upload ulang.');
-            return;
-          }
+          console.error('❌ ProfileScreen - Failed to save photo URL to backend:', updateResponse.message);
+          Alert.alert('Peringatan', 'Foto terupload tetapi gagal disimpan ke profil. Coba upload ulang.');
+          return;
+        }
+      } catch (error) {
+        console.error('❌ ProfileScreen - Error updating profile:', error);
+        Alert.alert('Error', 'Gagal menyimpan foto ke profil. Coba upload ulang.');
+        return;
+      }
           
           console.log('✅ ProfileScreen - Photo URL updated and saved to AsyncStorage:', fullPhotoUrl);
           
@@ -446,12 +471,47 @@ const ProfileScreen = ({ navigation }) => {
           Alert.alert('Error', 'Foto berhasil diupload tetapi URL tidak valid. Coba upload ulang.');
         }
       } else {
-        console.log('❌ Photo upload failed:', photoResponse.message);
-        Alert.alert('Error', 'Gagal mengunggah foto: ' + (photoResponse.message || 'Unknown error'));
+        console.error('❌ ProfileScreen - Photo upload failed:', photoResponse.message);
+        
+        // Handle specific error cases
+        if (photoResponse.requiresReauth) {
+          Alert.alert(
+            'Sesi Berakhir', 
+            'Sesi login Anda telah berakhir. Silakan login kembali.',
+            [
+              {
+                text: 'Login Ulang',
+                onPress: () => {
+                  dispatch(logoutUser());
+                  navigation.navigate('Login');
+                }
+              }
+            ]
+          );
+        } else {
+          Alert.alert('Error', photoResponse.message || 'Gagal mengunggah foto. Silakan coba lagi.');
+        }
       }
     } catch (error) {
-      console.error('Upload photo error:', error);
-      Alert.alert('Error', 'Terjadi kesalahan saat mengunggah foto');
+      console.error('❌ ProfileScreen - Error uploading photo:', error);
+      
+      // Handle specific error types
+      let errorMessage = 'Terjadi kesalahan saat mengunggah foto. Silakan coba lagi.';
+      
+      if (error.message && error.message.includes('URI parsing error')) {
+        errorMessage = 'Format foto tidak didukung. Silakan pilih foto lain.';
+      } else if (error.message && error.message.includes('Invalid image URI')) {
+        errorMessage = 'Foto tidak valid. Silakan pilih foto lain.';
+      } else if (error.message && error.message.includes('Network request failed')) {
+        errorMessage = 'Koneksi internet bermasalah. Periksa koneksi Anda.';
+      } else if (error.message && error.message.includes('requiresReauth')) {
+        errorMessage = 'Sesi Anda telah berakhir. Silakan login kembali.';
+        // Navigate to login if session expired
+        navigation.navigate('Login');
+        return;
+      }
+      
+      Alert.alert('Error', errorMessage);
     }
   };
 
@@ -632,15 +692,17 @@ const ProfileScreen = ({ navigation }) => {
                       !profilePicture.includes('null')) {
                     return (
                       <Image
-                        source={{
-                          uri: `${API_CONFIG.BASE_URL}${profilePicture}`
-                        }}
-                        style={{ width: 80, height: 80, borderRadius: 40 }}
-                        resizeMode="cover"
-                        onError={(error) => {
-                          console.log('❌ Profile image loading error:', error.nativeEvent.error);
-                        }}
-                      />
+                  source={{
+                    uri: profilePicture.startsWith('http') 
+                      ? profilePicture 
+                      : `${API_CONFIG.BASE_URL}${profilePicture}`
+                  }}
+                  style={{ width: 80, height: 80, borderRadius: 40 }}
+                  resizeMode="cover"
+                  onError={(error) => {
+                    console.log('❌ Profile image loading error:', error.nativeEvent.error);
+                  }}
+                />
                     );
                   }
                   

@@ -7,6 +7,32 @@ class AIService {
   }
 
   /**
+   * Delay function for retry mechanism
+   */
+  delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Check if error is retryable
+   */
+  isRetryableError(error) {
+    if (!error) return false;
+    
+    const errorStr = error.toString().toLowerCase();
+    return (
+      errorStr.includes('insufficient_quota') ||
+      errorStr.includes('timeout') ||
+      errorStr.includes('network') ||
+      errorStr.includes('connection') ||
+      errorStr.includes('server_error') ||
+      errorStr.includes('503') ||
+      errorStr.includes('502') ||
+      errorStr.includes('504')
+    );
+  }
+
+  /**
    * Check AI server health status
    */
   async healthCheck() {
@@ -87,68 +113,103 @@ class AIService {
   }
 
   /**
-   * Perform comprehensive dental reasoning with AI
+   * Perform comprehensive dental reasoning with AI (with retry mechanism)
    * @param {string} imageUri - Local image URI
    * @param {Object} patientInfo - Patient information object
    * @param {boolean} generateVisualization - Whether to generate visualization
    * @param {boolean} generateReport - Whether to generate detailed report
    */
   async performDentalReasoning(imageUri, patientInfo = null, generateVisualization = true, generateReport = true) {
-    try {
-      const formData = new FormData();
-      formData.append('image', {
-        uri: imageUri,
-        type: 'image/jpeg',
-        name: `dental_reasoning_${Date.now()}.jpg`,
-      });
+    const maxRetries = 3;
+    const retryDelay = 2000; // 2 seconds
+    let lastError = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🧠 AIService: Starting dental reasoning analysis (attempt ${attempt}/${maxRetries})...`);
+        console.log('🧠 AIService: Patient info:', patientInfo);
+        
+        const formData = new FormData();
+        formData.append('image', {
+          uri: imageUri,
+          type: 'image/jpeg',
+          name: `dental_reasoning_${Date.now()}.jpg`,
+        });
 
-      // Add patient information if provided
-      // Comment out patient_info for doctor app - not needed for doctor diagnosis
-      // For patient app, this will be provided later
-      // if (patientInfo) {
-      //   formData.append('patient_info', JSON.stringify(patientInfo));
-      // }
+        // Add patient information if provided
+        // Comment out patient_info for doctor app - not needed for doctor diagnosis
+        // For patient app, this will be provided later
+        // if (patientInfo) {
+        //   formData.append('patient_info', JSON.stringify(patientInfo));
+        // }
 
-      const queryParams = new URLSearchParams();
-      if (generateVisualization) queryParams.append('generate_visualization', 'true');
-      if (generateReport) queryParams.append('generate_report', 'true');
-      
-      const url = `${this.baseURL}/api/reason${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-      
-      console.log('🧠 AIService: Starting dental reasoning analysis...');
-      console.log('🧠 AIService: Patient info:', patientInfo);
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Accept': 'application/json',
-        },
-        timeout: this.timeout,
-      });
+        const queryParams = new URLSearchParams();
+        if (generateVisualization) queryParams.append('generate_visualization', 'true');
+        if (generateReport) queryParams.append('generate_report', 'true');
+        
+        const url = `${this.baseURL}/api/reason${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+        
+        const response = await fetch(url, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'Accept': 'application/json',
+          },
+          timeout: 120000, // Increased timeout to 120 seconds
+        });
 
-      const data = await response.json();
-      
-      if (response.ok) {
-        console.log('✅ AIService: Reasoning analysis completed successfully');
-        return {
-          success: true,
-          data: data,
-        };
-      } else {
-        console.error('❌ AIService: Reasoning analysis failed:', data);
+        const data = await response.json();
+        
+        if (response.ok) {
+          console.log('✅ AIService: Reasoning analysis completed successfully');
+          return {
+            success: true,
+            data: data,
+          };
+        } else {
+          console.error('❌ AIService: Reasoning analysis failed:', data);
+          
+          // Check if error is retryable
+          const errorMessage = data.message || data.detail || 'Reasoning analysis failed';
+          const isRetryable = this.isRetryableError(errorMessage);
+          
+          if (isRetryable && attempt < maxRetries) {
+            console.log(`⏳ Retrying in ${retryDelay}ms... (attempt ${attempt + 1}/${maxRetries})`);
+            await this.delay(retryDelay);
+            lastError = errorMessage;
+            continue;
+          }
+          
+          return {
+            success: false,
+            error: errorMessage,
+          };
+        }
+      } catch (error) {
+        console.error('❌ AIService: Network error during reasoning:', error);
+        
+        const errorMessage = error.message || 'Network error during reasoning analysis';
+        const isRetryable = this.isRetryableError(errorMessage);
+        
+        if (isRetryable && attempt < maxRetries) {
+          console.log(`⏳ Retrying in ${retryDelay}ms... (attempt ${attempt + 1}/${maxRetries})`);
+          await this.delay(retryDelay);
+          lastError = errorMessage;
+          continue;
+        }
+        
         return {
           success: false,
-          error: data.message || 'Reasoning analysis failed',
+          error: errorMessage,
         };
       }
-    } catch (error) {
-      console.error('❌ AIService: Network error during reasoning:', error);
-      return {
-        success: false,
-        error: error.message || 'Network error during reasoning analysis',
-      };
     }
+    
+    // If all retries failed
+    return {
+      success: false,
+      error: lastError || 'All retry attempts failed',
+    };
   }
 
   /**

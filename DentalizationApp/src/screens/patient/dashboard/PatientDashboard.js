@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, SafeAreaView, ScrollView, TouchableOpacity, Image, TextInput, Dimensions, Animated, StatusBar, } from 'react-native';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,9 +9,11 @@ import { wp, hp, spacing, fontSizes, borderRadius, iconSizes, responsiveDimensio
 import ResponsiveContainer from '../../../components/layouts/ResponsiveContainer';
 import ResponsiveCard from '../../../components/layouts/ResponsiveCard';
 import ResponsiveText from '../../../components/layouts/ResponsiveText';
+import { updateUserData } from '../../../store/slices/authSlice';
 
 const { width } = Dimensions.get('window');
 const PatientDashboard = ({ navigation }) => {
+  const dispatch = useDispatch();
   const { user } = useSelector(state => state.auth);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchText, setSearchText] = useState('');
@@ -23,6 +25,34 @@ const PatientDashboard = ({ navigation }) => {
   const scrollY = useRef(new Animated.Value(0)).current;
   const scrollX = useRef(new Animated.Value(0)).current;
   const [isScrolled, setIsScrolled] = useState(false);
+
+  // Clean up invalid profile picture URLs
+  const cleanupInvalidProfilePicture = async () => {
+    try {
+      // Update Redux store to remove invalid URL
+      const updatedUser = {
+        ...user,
+        profile: {
+          ...user.profile,
+          profilePicture: null,
+        }
+      };
+      
+      dispatch(updateUserData(updatedUser));
+      console.log('✅ PatientDashboard - Invalid profile picture URL cleaned up');
+    } catch (error) {
+      console.error('❌ PatientDashboard - Error cleaning up profile picture:', error);
+    }
+  };
+
+  // Clean up invalid profile picture URLs on mount
+  useEffect(() => {
+    if (user?.profile?.profilePicture && 
+        (user.profile.profilePicture.includes('undefined') || 
+         user.profile.profilePicture.includes('null'))) {
+      cleanupInvalidProfilePicture();
+    }
+  }, [user]);
 
   useEffect(() => {
     // Entrance animations
@@ -258,13 +288,23 @@ const PatientDashboard = ({ navigation }) => {
       'emergencyContactName', 'emergencyContactPhone'
     ];
     
+    const optionalFields = [
+      'profilePicture', 'allergies', 'medications', 'dentalConcerns', 'insuranceProvider'
+    ];
+    
     let completed = 0;
+    const total = requiredFields.length + optionalFields.length + 1; // +1 for profile picture
+    
     console.log('🔍 Dashboard - Checking required fields:');
     requiredFields.forEach(field => {
-      let value = user.profile[field];
+      let value = null;
       
-      // Handle emergencyContact parsing
-      if (field === 'emergencyContactName' || field === 'emergencyContactPhone') {
+      // Priority 1: Check if already parsed in Redux
+      if (user.profile[field]) {
+        value = user.profile[field];
+      }
+      // Priority 2: Handle emergencyContact parsing fallback
+      else if (field === 'emergencyContactName' || field === 'emergencyContactPhone') {
         if (user.profile.emergencyContact) {
           try {
             const emergencyContact = typeof user.profile.emergencyContact === 'string' 
@@ -289,6 +329,10 @@ const PatientDashboard = ({ navigation }) => {
           }
         }
       }
+      // Priority 3: Get other field values directly
+      else {
+        value = user.profile[field];
+      }
       
       // Clean up null/undefined string values
       if (value === 'null' || value === 'undefined' || value === null || value === undefined) {
@@ -302,8 +346,56 @@ const PatientDashboard = ({ navigation }) => {
       }
     });
     
-    const percentage = Math.round((completed / requiredFields.length) * 100);
-    console.log(`🔍 Dashboard - Completion: ${completed}/${requiredFields.length} = ${percentage}%`);
+    console.log('🔍 Dashboard - Checking optional fields:');
+    optionalFields.forEach(field => {
+      let value = null;
+      
+      // Priority 1: Check if already parsed in Redux
+      if (user.profile[field]) {
+        value = user.profile[field];
+      }
+      // Priority 2: Handle insurance info parsing fallback
+      else if (field === 'insuranceProvider' && user.profile.insuranceInfo) {
+        try {
+          const insurance = typeof user.profile.insuranceInfo === 'string' 
+            ? JSON.parse(user.profile.insuranceInfo) 
+            : user.profile.insuranceInfo;
+          value = insurance?.provider;
+        } catch {
+          value = user.profile.insuranceInfo;
+        }
+      }
+      // Priority 3: Get other field values directly
+      else {
+        value = user.profile[field];
+      }
+      
+      // Clean up null/undefined string values
+      if (value === 'null' || value === 'undefined' || value === null || value === undefined) {
+        value = '';
+      }
+      
+      const hasValue = value && value.toString().trim() !== '';
+       console.log(`  ${field}: "${value}" -> ${hasValue ? 'COMPLETE' : 'MISSING'}`);
+       if (hasValue) {
+         completed += 1; // All fields count as 1 point
+       }
+     });
+     
+     // Check profile picture
+     const profilePicture = user.profile.profilePicture;
+     const hasValidProfilePicture = profilePicture && 
+       !profilePicture.includes('undefined') && 
+       !profilePicture.includes('null') && 
+       profilePicture.trim() !== '';
+     console.log(`  profilePicture: "${profilePicture}" -> ${hasValidProfilePicture ? 'COMPLETE' : 'MISSING'}`);
+     if (hasValidProfilePicture) {
+       completed += 1;
+     }
+     
+     console.log(`🔍 Dashboard - Total completed: ${completed}, Total fields: ${total}`);
+     const percentage = Math.round((completed / total) * 100);
+    console.log(`🔍 Dashboard - Completion: ${completed}/${total} = ${percentage}%`);
     
     return percentage;
   };
@@ -372,21 +464,50 @@ const PatientDashboard = ({ navigation }) => {
             }} />
           )}
           {/* Profile Section */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xl }}>
-            <View style={{ width: wp(12), height: wp(12), borderRadius: wp(6), overflow: 'hidden', marginRight: spacing.sm, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)' }}>
-              <Image
-                source={{
-                  uri: user?.profile?.profilePicture ? 
-                    `${API_CONFIG.BASE_URL}${user.profile.profilePicture}` :
-                    'https://images.unsplash.com/photo-1494790108755-2616b612b830?w=100&h=100&fit=crop&crop=face'
-                }}
-                style={{ width: wp(11), height: wp(11) }}
-              />
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
+            <View style={{ width: wp(12), height: wp(12), borderRadius: wp(6), overflow: 'hidden', marginRight: spacing.sm, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' }}>
+              {(() => {
+                const profilePicture = user?.profile?.profilePicture;
+                
+                if (profilePicture && 
+                    !profilePicture.includes('undefined') && 
+                    !profilePicture.includes('null')) {
+                  return (
+                    <Image
+                      source={{
+                        uri: profilePicture.startsWith('http') 
+                          ? profilePicture 
+                          : `${API_CONFIG.BASE_URL}${profilePicture}`,
+                        timeout: 10000, // 10 second timeout
+                        cache: 'force-cache'
+                      }}
+                      defaultSource={require('../../../assets/images/default-avatar.svg')}
+                      style={{ width: wp(11), height: wp(11) }}
+                      resizeMode="cover"
+                      onError={(error) => {
+                        console.log('❌ PatientDashboard - Profile image loading error:', error.nativeEvent.error);
+                        cleanupInvalidProfilePicture();
+                      }}
+                      onLoadStart={() => console.log('🔄 PatientDashboard - Loading profile picture...')}
+                      onLoad={() => console.log('✅ PatientDashboard - Profile picture loaded successfully')}
+                      onLoadEnd={() => console.log('🏁 PatientDashboard - Profile picture load ended')}
+                    />
+                  );
+                }
+                
+                return (
+                  <ResponsiveText size="lg" weight="bold" color="white" style={{ fontSize: wp(5) }}>
+                    {(user?.profile?.firstName?.[0] || user?.name?.[0] || 'P').toUpperCase()}
+                  </ResponsiveText>
+                );
+              })()}
             </View>
             <View style={{ flex: 1 }}>
               <ResponsiveText size="sm" color="rgba(255,255,255,0.8)" style={{ marginBottom: 0 }}>Welcome Back</ResponsiveText>
               <ResponsiveText size="lg" weight="bold" color="white">
-                {user?.profile?.firstName || user?.name || 'User'} 👋
+                {user?.profile?.firstName && user?.profile?.lastName 
+                  ? `${user.profile.firstName} ${user.profile.lastName}` 
+                  : user?.profile?.firstName || user?.username || user?.name || 'User'} 👋
               </ResponsiveText>
             </View>
             <TouchableOpacity 
@@ -426,6 +547,7 @@ const PatientDashboard = ({ navigation }) => {
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingRight: spacing.lg }}
+            style={{ marginBottom: spacing.lg }}
           >
             {categories.map((category, index) => (
               <TouchableOpacity
@@ -511,7 +633,7 @@ const PatientDashboard = ({ navigation }) => {
           )}
 
           {/* Enhanced Featured Doctor Cards Carousel */}
-          <View style={{ marginTop: 25, marginBottom: 30, paddingTop: 180 }}>
+          <View style={{ marginTop: 25, marginBottom: 30, paddingTop: 280 }}>
             <ScrollView
               ref={scrollViewRef}
               horizontal
