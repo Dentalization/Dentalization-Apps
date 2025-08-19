@@ -9,6 +9,8 @@ import {
   TextInput,
   StatusBar,
   Animated,
+  Linking,
+  Alert,
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -194,17 +196,39 @@ const DoctorDashboard = ({ navigation }) => {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
             <View style={{ width: 55, height: 55, borderRadius: 27.5, overflow: 'hidden', marginRight: 15, borderWidth: 3, borderColor: 'rgba(255,255,255,0.3)' }}>
-              <Image
-                source={{
-                  uri: user?.profile?.profilePicture
-                    ? `${API_CONFIG.BASE_URL}${user.profile.profilePicture}`
-                    : 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=110&h=110&fit=crop&crop=face'
-                }}
-                style={{ width: 49, height: 49 }}
-                onError={(error) => {
-                  console.log('❌ Dashboard image loading error:', error.nativeEvent.error);
-                }}
-              />
+              {user?.profile?.profilePicture && !user.profile.profilePicture.includes('undefined') && !user.profile.profilePicture.includes('null') ? (
+                <Image
+                  source={{
+                    uri: user.profile.profilePicture.startsWith('http') 
+                      ? user.profile.profilePicture
+                      : `${API_CONFIG.BASE_URL}${user.profile.profilePicture}`,
+                    timeout: 10000
+                  }}
+                  style={{ width: 49, height: 49, borderRadius: 24.5 }}
+                  resizeMode="cover"
+                  defaultSource={require('../../../assets/images/default-avatar.svg')}
+                  onError={(error) => {
+                    console.log('❌ Dashboard image loading error:', error.nativeEvent.error);
+                  }}
+                />
+              ) : (
+                <View style={{
+                  width: 49,
+                  height: 49,
+                  borderRadius: 24.5,
+                  backgroundColor: '#F0F0FF',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <Text style={{
+                    fontSize: 20,
+                    fontWeight: 'bold',
+                    color: '#483AA0',
+                  }}>
+                    {(user?.profile?.firstName?.[0] || user?.name?.[0] || 'D').toUpperCase()}
+                  </Text>
+                </View>
+              )}
             </View>
             <View style={{ flex: 2 }}>
               <Text style={{ fontSize: 16, color: 'rgba(255,255,255,0.9)', marginBottom: 2 }}>{getGreeting()}</Text>
@@ -472,6 +496,465 @@ const DoctorDashboard = ({ navigation }) => {
                 </TouchableOpacity>
               ))}
             </View>
+          </View>
+
+          {/* Premium Advertising Section - Card 1 */}
+          <View style={{ marginBottom: 32 }}>
+            <TouchableOpacity
+              activeOpacity={0.95}
+              onPress={async () => {
+                try {
+                  const url = 'https://www.dentaleconomics.com/science-tech/article/14203440/revolutionary-dental-implant-technology';
+                  const supported = await Linking.canOpenURL(url);
+                  if (supported) {
+                    await Linking.openURL(url);
+                  } else {
+                    Alert.alert('Error', 'Cannot open this link');
+                  }
+                } catch (error) {
+                  Alert.alert('Error', 'Failed to open link');
+                }
+              }}
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: 28,
+                overflow: 'hidden',
+                shadowColor: '#FF6B35',
+                shadowOffset: { width: 0, height: 12 },
+                shadowOpacity: 0.15,
+                shadowRadius: 24,
+                elevation: 12,
+                borderWidth: 1,
+                borderColor: '#FFF0ED'
+              }}
+            >
+              <View style={{
+                height: 200,
+                backgroundColor: '#1A1A1A',
+                position: 'relative',
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}>
+                <Image
+                  source={{ uri: 'https://images.unsplash.com/photo-1606811841689-23dfddce3e95?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80' }}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0
+                  }}
+                  resizeMode="cover"
+                />
+                
+                <LinearGradient
+                  colors={['rgba(0, 0, 0, 0.3)', 'rgba(0, 0, 0, 0.1)', 'rgba(0, 0, 0, 0.4)']}
+                  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+                />
+                
+                <View style={{
+                  position: 'absolute',
+                  bottom: 16,
+                  left: 16,
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center'
+                }}>
+                  <MaterialIcons name="article" size={14} color="#4CAF50" style={{ marginRight: 6 }} />
+                  <Text style={{ color: 'white', fontSize: 12, fontWeight: '600' }}>ARTICLE</Text>
+                </View>
+                
+                <View style={{
+                  position: 'absolute',
+                  bottom: 16,
+                  right: 16,
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 12
+                }}>
+                  <Text style={{ color: 'white', fontSize: 12, fontWeight: '600' }}>5 min read</Text>
+                </View>
+                
+                <View style={{
+                  position: 'absolute',
+                  top: 16,
+                  right: 16,
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 16,
+                  flexDirection: 'row',
+                  alignItems: 'center'
+                }}>
+                  <MaterialIcons name="open-in-new" size={14} color="#FF6B35" style={{ marginRight: 4 }} />
+                  <Text style={{ color: '#FF6B35', fontSize: 12, fontWeight: '700' }}>TAP TO READ</Text>
+                </View>
+              </View>
+              
+              <View style={{ padding: 24 }}>
+                <LinearGradient
+                  colors={['#FF6B35', '#F7931E']}
+                  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.05 }}
+                />
+                
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={{
+                    fontSize: 22,
+                    fontWeight: '900',
+                    color: '#1A1A1A',
+                    marginBottom: 8,
+                    letterSpacing: -0.4
+                  }}>
+                    Revolutionary Dental Implant Technology
+                  </Text>
+                  <Text style={{
+                    fontSize: 16,
+                    color: '#666666',
+                    lineHeight: 24,
+                    fontWeight: '500'
+                  }}>
+                    Discover the latest breakthrough in dental implant procedures that reduces healing time by 50% and improves patient comfort.
+                  </Text>
+                </View>
+                
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingTop: 20,
+                  borderTopWidth: 1,
+                  borderTopColor: 'rgba(255, 107, 53, 0.1)'
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      backgroundColor: '#FF6B35',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginRight: 12
+                    }}>
+                      <MaterialIcons name="business" size={20} color="white" />
+                    </View>
+                    <View>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#1A1A1A' }}>DentalTech Pro</Text>
+                      <Text style={{ fontSize: 12, color: '#666666' }}>Sponsored Content</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Premium Advertising Section - Card 2 */}
+          <View style={{ marginBottom: 32 }}>
+            <TouchableOpacity
+              activeOpacity={0.95}
+              onPress={async () => {
+                try {
+                  const url = 'https://www.dentistrytoday.com/digital-dentistry-innovations';
+                  const supported = await Linking.canOpenURL(url);
+                  if (supported) {
+                    await Linking.openURL(url);
+                  } else {
+                    Alert.alert('Error', 'Cannot open this link');
+                  }
+                } catch (error) {
+                  Alert.alert('Error', 'Failed to open link');
+                }
+              }}
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: 28,
+                overflow: 'hidden',
+                shadowColor: '#2196F3',
+                shadowOffset: { width: 0, height: 12 },
+                shadowOpacity: 0.15,
+                shadowRadius: 24,
+                elevation: 12,
+                borderWidth: 1,
+                borderColor: '#E3F2FD'
+              }}
+            >
+              <View style={{
+                height: 200,
+                backgroundColor: '#1A1A1A',
+                position: 'relative',
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}>
+                <Image
+                  source={{ uri: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80' }}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0
+                  }}
+                  resizeMode="cover"
+                />
+                
+                <LinearGradient
+                  colors={['rgba(0, 0, 0, 0.3)', 'rgba(0, 0, 0, 0.1)', 'rgba(0, 0, 0, 0.4)']}
+                  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+                />
+                
+                <View style={{
+                  position: 'absolute',
+                  bottom: 16,
+                  left: 16,
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center'
+                }}>
+                  <MaterialIcons name="computer" size={14} color="#2196F3" style={{ marginRight: 6 }} />
+                  <Text style={{ color: 'white', fontSize: 12, fontWeight: '600' }}>TECH</Text>
+                </View>
+                
+                <View style={{
+                  position: 'absolute',
+                  bottom: 16,
+                  right: 16,
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 12
+                }}>
+                  <Text style={{ color: 'white', fontSize: 12, fontWeight: '600' }}>7 min read</Text>
+                </View>
+                
+                <View style={{
+                  position: 'absolute',
+                  top: 16,
+                  right: 16,
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 16,
+                  flexDirection: 'row',
+                  alignItems: 'center'
+                }}>
+                  <MaterialIcons name="open-in-new" size={14} color="#2196F3" style={{ marginRight: 4 }} />
+                  <Text style={{ color: '#2196F3', fontSize: 12, fontWeight: '700' }}>TAP TO read</Text>
+                </View>
+              </View>
+              
+              <View style={{ padding: 24 }}>
+                <LinearGradient
+                  colors={['#2196F3', '#1976D2']}
+                  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.05 }}
+                />
+                
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={{
+                    fontSize: 22,
+                    fontWeight: '900',
+                    color: '#1A1A1A',
+                    marginBottom: 8,
+                    letterSpacing: -0.4
+                  }}>
+                    Digital Dentistry Innovations
+                  </Text>
+                  <Text style={{
+                    fontSize: 16,
+                    color: '#666666',
+                    lineHeight: 24,
+                    fontWeight: '500'
+                  }}>
+                    Explore how AI and digital scanning are transforming modern dental practices and improving patient outcomes.
+                  </Text>
+                </View>
+                
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingTop: 20,
+                  borderTopWidth: 1,
+                  borderTopColor: 'rgba(33, 150, 243, 0.1)'
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      backgroundColor: '#2196F3',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginRight: 12
+                    }}>
+                      <MaterialIcons name="computer" size={20} color="white" />
+                    </View>
+                    <View>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#1A1A1A' }}>DigitalDental</Text>
+                      <Text style={{ fontSize: 12, color: '#666666' }}>Sponsored Content</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Premium Advertising Section - Card 3 */}
+          <View style={{ marginBottom: 32 }}>
+            <TouchableOpacity
+              activeOpacity={0.95}
+              onPress={async () => {
+                try {
+                  const url = 'https://www.oralhealthgroup.com/features/oral-health-prevention-strategies';
+                  const supported = await Linking.canOpenURL(url);
+                  if (supported) {
+                    await Linking.openURL(url);
+                  } else {
+                    Alert.alert('Error', 'Cannot open this link');
+                  }
+                } catch (error) {
+                  Alert.alert('Error', 'Failed to open link');
+                }
+              }}
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: 28,
+                overflow: 'hidden',
+                shadowColor: '#4CAF50',
+                shadowOffset: { width: 0, height: 12 },
+                shadowOpacity: 0.15,
+                shadowRadius: 24,
+                elevation: 12,
+                borderWidth: 1,
+                borderColor: '#E8F5E8'
+              }}
+            >
+              <View style={{
+                height: 200,
+                backgroundColor: '#1A1A1A',
+                position: 'relative',
+                justifyContent: 'center',
+                alignItems: 'center'
+              }}>
+                <Image
+                  source={{ uri: 'https://images.unsplash.com/photo-1609840114035-3c981b782dfe?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80' }}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0
+                  }}
+                  resizeMode="cover"
+                />
+                
+                <LinearGradient
+                  colors={['rgba(0, 0, 0, 0.3)', 'rgba(0, 0, 0, 0.1)', 'rgba(0, 0, 0, 0.4)']}
+                  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+                />
+                
+                <View style={{
+                  position: 'absolute',
+                  bottom: 16,
+                  left: 16,
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center'
+                }}>
+                  <MaterialIcons name="health-and-safety" size={14} color="#4CAF50" style={{ marginRight: 6 }} />
+                  <Text style={{ color: 'white', fontSize: 12, fontWeight: '600' }}>HEALTH</Text>
+                </View>
+                
+                <View style={{
+                  position: 'absolute',
+                  bottom: 16,
+                  right: 16,
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 12
+                }}>
+                  <Text style={{ color: 'white', fontSize: 12, fontWeight: '600' }}>4 min read</Text>
+                </View>
+                
+                <View style={{
+                  position: 'absolute',
+                  top: 16,
+                  right: 16,
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 16,
+                  flexDirection: 'row',
+                  alignItems: 'center'
+                }}>
+                  <MaterialIcons name="open-in-new" size={14} color="#4CAF50" style={{ marginRight: 4 }} />
+                  <Text style={{ color: '#4CAF50', fontSize: 12, fontWeight: '700' }}>TAP TO read</Text>
+                </View>
+              </View>
+              
+              <View style={{ padding: 24 }}>
+                <LinearGradient
+                  colors={['#4CAF50', '#388E3C']}
+                  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.05 }}
+                />
+                
+                <View style={{ marginBottom: 20 }}>
+                  <Text style={{
+                    fontSize: 22,
+                    fontWeight: '900',
+                    color: '#1A1A1A',
+                    marginBottom: 8,
+                    letterSpacing: -0.4
+                  }}>
+                    Oral Health Prevention Strategies
+                  </Text>
+                  <Text style={{
+                    fontSize: 16,
+                    color: '#666666',
+                    lineHeight: 24,
+                    fontWeight: '500'
+                  }}>
+                    Learn evidence-based approaches to preventive dentistry that can reduce patient treatment needs by up to 70%.
+                  </Text>
+                </View>
+                
+                <View style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingTop: 20,
+                  borderTopWidth: 1,
+                  borderTopColor: 'rgba(76, 175, 80, 0.1)'
+                }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 20,
+                      backgroundColor: '#4CAF50',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      marginRight: 12
+                    }}>
+                      <MaterialIcons name="health-and-safety" size={20} color="white" />
+                    </View>
+                    <View>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#1A1A1A' }}>HealthFirst</Text>
+                      <Text style={{ fontSize: 12, color: '#666666' }}>Sponsored Content</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </TouchableOpacity>
           </View>
 
         </Animated.ScrollView>

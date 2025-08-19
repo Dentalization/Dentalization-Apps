@@ -493,13 +493,13 @@ const DoctorProfileScreen = () => {
               shadowRadius: 8,
               elevation: 8,
             }}>
-              {profilePhoto || user?.profile?.profilePicture ? (
+              {profilePhoto || (user?.profile?.profilePicture && !user.profile.profilePicture.includes('undefined') && !user.profile.profilePicture.includes('null')) ? (
                 <Image 
                   source={{ 
                     uri: profilePhoto?.uri || 
-                      (user?.profile?.profilePicture 
-                        ? `${API_CONFIG.BASE_URL}${user.profile.profilePicture}`
-                        : 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=100&h=100&fit=crop&crop=face')
+                      (user?.profile?.profilePicture.startsWith('http') 
+                        ? user.profile.profilePicture
+                        : `${API_CONFIG.BASE_URL}${user.profile.profilePicture}`)
                   }} 
                   style={{
                     width: 100,
@@ -507,12 +507,30 @@ const DoctorProfileScreen = () => {
                     borderRadius: 50,
                   }}
                   resizeMode="cover"
+                  defaultSource={require('../../../assets/images/default-avatar.svg')}
                   onError={(error) => {
                     console.log('❌ Image loading error:', error.nativeEvent.error);
+                    setProfilePhoto(null);
                   }}
+                  timeout={10000}
                 />
               ) : (
-                <MaterialIcons name="person" size={50} color="#483AA0" />
+                <View style={{
+                  width: 100,
+                  height: 100,
+                  borderRadius: 50,
+                  backgroundColor: '#F0F0FF',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <Text style={{
+                    fontSize: 36,
+                    fontWeight: 'bold',
+                    color: '#483AA0',
+                  }}>
+                    {(user?.profile?.firstName?.[0] || 'D').toUpperCase()}
+                  </Text>
+                </View>
               )}
               <TouchableOpacity 
                 style={{
@@ -541,6 +559,7 @@ const DoctorProfileScreen = () => {
             
             {/* Doctor Info with Enhanced Animation */}
             <Animated.View style={{
+              alignItems: 'center',
               transform: [
                 { rotateZ: profileRotate },
                 { perspective: 1000 }
@@ -551,6 +570,7 @@ const DoctorProfileScreen = () => {
                 fontWeight: 'bold',
                 color: '#FFFFFF',
                 marginBottom: 4,
+                textAlign: 'center',
                 textShadowColor: 'rgba(0,0,0,0.3)',
                 textShadowOffset: { width: 0, height: 2 },
                 textShadowRadius: 4,
@@ -563,11 +583,12 @@ const DoctorProfileScreen = () => {
                 fontSize: 16,
                 color: '#E8E8FF',
                 marginBottom: 8,
+                textAlign: 'center',
                 textShadowColor: 'rgba(0,0,0,0.2)',
                 textShadowOffset: { width: 0, height: 1 },
                 textShadowRadius: 2,
               }}>
-                {user?.profile?.specialization || 'Dental Specialist'}
+                {user?.profile?.specialization || 'General Dentistry'}
               </Text>
               <Animated.View style={{
                 flexDirection: 'row',
