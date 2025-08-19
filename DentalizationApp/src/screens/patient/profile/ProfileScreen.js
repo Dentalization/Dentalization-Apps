@@ -678,7 +678,7 @@ const ProfileScreen = ({ navigation }) => {
                 console.log('🔍 ProfileScreen - Profile photo tapped, showing photo options');
                 handleProfilePhotoChange();
               }}
-              style={{ positison: 'relative' }}
+              style={{ position: 'relative' }}
             >
               <LinearGradient
                 colors={['#FFFFFF', '#F3F4F6']}
@@ -692,24 +692,33 @@ const ProfileScreen = ({ navigation }) => {
                       !profilePicture.includes('null')) {
                     return (
                       <Image
-                  source={{
-                    uri: profilePicture.startsWith('http') 
-                      ? profilePicture 
-                      : `${API_CONFIG.BASE_URL}${profilePicture}`
-                  }}
-                  style={{ width: 80, height: 80, borderRadius: 40 }}
-                  resizeMode="cover"
-                  onError={(error) => {
-                    console.log('❌ Profile image loading error:', error.nativeEvent.error);
-                  }}
-                />
+                        source={{
+                          uri: profilePicture.startsWith('http') 
+                            ? profilePicture 
+                            : `${API_CONFIG.BASE_URL}${profilePicture}`
+                        }}
+                        style={{ width: 80, height: 80, borderRadius: 40 }}
+                        resizeMode="cover"
+                        onError={(error) => {
+                          console.log('❌ Profile image loading error:', error.nativeEvent.error);
+                        }}
+                      />
                     );
                   }
                   
                   return (
-                    <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#8B5CF6' }}>
-                      {(user?.profile?.firstName?.[0] || user?.name?.[0] || 'P').toUpperCase()}
-                    </Text>
+                    <View style={{
+                      width: 80,
+                      height: 80,
+                      borderRadius: 40,
+                      backgroundColor: '#F0F0FF',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}>
+                      <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#8B5CF6' }}>
+                        {(user?.profile?.firstName?.[0] || user?.name?.[0] || 'P').toUpperCase()}
+                      </Text>
+                    </View>
                   );
                 })()}
               </LinearGradient>
@@ -732,14 +741,14 @@ const ProfileScreen = ({ navigation }) => {
               </View>
             </TouchableOpacity>
             
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 6 }}>
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 6, textAlign: 'center' }}>
                 {user?.profile?.firstName && user?.profile?.lastName 
                   ? `${user.profile.firstName} ${user.profile.lastName}`
                   : user?.name || 'Pasien'
                 }
               </Text>
-              <Text style={{ fontSize: 16, color: 'rgba(255,255,255,0.8)', marginBottom: 8 }}>
+              <Text style={{ fontSize: 16, color: 'rgba(255,255,255,0.8)', marginBottom: 8, textAlign: 'center' }}>
                 {user?.email}
               </Text>
               <View style={{ backgroundColor: getProfileStatus().bgColor, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 15, alignSelf: 'flex-start', marginBottom: 8 }}>

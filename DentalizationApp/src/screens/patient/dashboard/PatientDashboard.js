@@ -482,7 +482,7 @@ const PatientDashboard = ({ navigation }) => {
                         cache: 'force-cache'
                       }}
                       defaultSource={require('../../../assets/images/default-avatar.svg')}
-                      style={{ width: wp(11), height: wp(11) }}
+                      style={{ width: wp(11), height: wp(11), borderRadius: wp(5.5) }}
                       resizeMode="cover"
                       onError={(error) => {
                         console.log('❌ PatientDashboard - Profile image loading error:', error.nativeEvent.error);
@@ -496,9 +496,18 @@ const PatientDashboard = ({ navigation }) => {
                 }
                 
                 return (
-                  <ResponsiveText size="lg" weight="bold" color="white" style={{ fontSize: wp(5) }}>
-                    {(user?.profile?.firstName?.[0] || user?.name?.[0] || 'P').toUpperCase()}
-                  </ResponsiveText>
+                  <View style={{
+                    width: wp(11),
+                    height: wp(11),
+                    borderRadius: wp(5.5),
+                    backgroundColor: '#F0F0FF',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}>
+                    <ResponsiveText size="lg" weight="bold" color="#483AA0" style={{ fontSize: wp(5) }}>
+                      {(user?.profile?.firstName?.[0] || user?.name?.[0] || 'P').toUpperCase()}
+                    </ResponsiveText>
+                  </View>
                 );
               })()}
             </View>
