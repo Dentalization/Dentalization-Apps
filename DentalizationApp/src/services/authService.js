@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { API_CONFIG } from '../constants/api';
 import { AUTH_ENDPOINTS, AUTH_STORAGE_KEYS } from '../constants/auth';
+import errorHandlingService from './errorHandlingService';
 
 // Mock Keychain for development (biometrics disabled)
 const Keychain = {
@@ -45,7 +46,9 @@ class AuthService {
     
     if (timeSinceLastCall < this.rateLimitBackoff) {
       const waitTime = this.rateLimitBackoff - timeSinceLastCall;
-      console.log(`⚠️ Rate limiting: waiting ${waitTime}ms before calling ${endpoint}`);
+      if (API_CONFIG.DEBUG_MODE) {
+        console.log(`⚠️ Rate limiting: waiting ${waitTime}ms before calling ${endpoint}`);
+      }
       await new Promise(resolve => setTimeout(resolve, waitTime));
     }
     
@@ -60,7 +63,9 @@ class AuthService {
   // Increase backoff time when rate limited
   increaseBackoff() {
     this.rateLimitBackoff = Math.min(this.rateLimitBackoff * 2, 30000); // Max 30 seconds
-    console.log(`📊 Increased rate limit backoff to ${this.rateLimitBackoff}ms`);
+    if (API_CONFIG.DEBUG_MODE) {
+      console.log(`📊 Increased rate limit backoff to ${this.rateLimitBackoff}ms`);
+    }
   }
 
   // Setup axios interceptors for automatic token handling
@@ -125,20 +130,36 @@ class AuthService {
         return response;
       },
       async (error) => {
-        // Log failed responses (reduced verbosity)
-        if (API_CONFIG.DEBUG_MODE) {
-          if (error.response?.status === 401) {
+        // Handle failed responses with user-friendly error modals
+        if (error.response?.status === 401) {
+          // Log for debugging in development
+          if (API_CONFIG.DEBUG_MODE) {
             console.warn(`🔑 [AUTH] Token expired/invalid for ${error.config?.url || 'unknown'}`);
-          } else if (error.response?.status === 429) {
+          }
+        } else if (error.response?.status === 429) {
+          // Log for debugging in development
+          if (API_CONFIG.DEBUG_MODE) {
             console.warn(`⚠️ [RATE_LIMIT] Too many requests for ${error.config?.url || 'unknown'} - backing off`);
-          } else if (!error.message?.includes('timeout') && !error.code?.includes('ECONNABORTED')) {
+          }
+          // Show rate limit error modal
+          errorHandlingService.handleRateLimitError(error, {
+            showRetry: true,
+            onRetry: () => {
+              // Close modal and let the calling code handle retry
+              errorHandlingService.isModalVisible = false;
+            }
+          });
+        } else if (!error.message?.includes('timeout') && !error.code?.includes('ECONNABORTED')) {
+          if (API_CONFIG.DEBUG_MODE) {
             console.error(`❌ [API] ${error.config?.method?.toUpperCase() || 'REQ'} ${error.config?.url || 'unknown'} - ${error.response?.status || 'NETWORK_ERROR'}`);
           }
         }
 
         // Handle rate limiting (429) before other errors
         if (error.response?.status === 429) {
-          console.log('🔍 Rate limit hit, implementing backoff strategy');
+          if (API_CONFIG.DEBUG_MODE) {
+            console.log('🔍 Rate limit hit, implementing backoff strategy');
+          }
           // Don't retry immediately for rate limits - let the calling code handle it
           return Promise.reject(error);
         }
@@ -188,32 +209,57 @@ class AuthService {
 
         // Handle 401 Unauthorized errors with token refresh
         if (error.response?.status === 401 && !originalRequest._retry) {
-          console.log('🔍 Received 401 error, attempting token refresh...');
+          if (API_CONFIG.DEBUG_MODE) {
+            console.log('🔍 Received 401 error, attempting token refresh...');
+          }
           originalRequest._retry = true;
 
           try {
             const refreshToken = await this.getRefreshToken();
             if (refreshToken) {
-              console.log('🔄 Attempting to refresh access token...');
+              if (API_CONFIG.DEBUG_MODE) {
+                console.log('🔄 Attempting to refresh access token...');
+              }
               const response = await this.refreshAccessToken(refreshToken);
               if (response.success) {
-                console.log('✅ Token refresh successful, retrying original request');
+                if (API_CONFIG.DEBUG_MODE) {
+                  console.log('✅ Token refresh successful, retrying original request');
+                }
                 await this.storeTokens(response.data.token, response.data.refreshToken);
                 originalRequest.headers.Authorization = `Bearer ${response.data.token}`;
                 return axios(originalRequest);
               } else {
-                console.log('❌ Token refresh failed:', response.message);
+                if (API_CONFIG.DEBUG_MODE) {
+                  console.log('❌ Token refresh failed:', response.message);
+                }
               }
             } else {
-              console.log('❌ No refresh token available');
+              if (API_CONFIG.DEBUG_MODE) {
+                console.log('❌ No refresh token available');
+              }
             }
           } catch (refreshError) {
-            console.log('❌ Token refresh error:', refreshError.message);
+            if (API_CONFIG.DEBUG_MODE) {
+              console.log('❌ Token refresh error:', refreshError.message);
+            }
           }
           
-          // If refresh fails, clear stored data and don't auto-logout to avoid loops
-          console.log('🔍 Clearing stored auth data due to failed token refresh');
+          // If refresh fails, clear stored data and show auth error modal
+          if (API_CONFIG.DEBUG_MODE) {
+            console.log('🔍 Clearing stored auth data due to failed token refresh');
+          }
           await this.clearAllData();
+          
+          // Show authentication error modal
+          errorHandlingService.handleAuthError(error, {
+            title: 'Sesi Berakhir',
+            message: 'Sesi Anda telah berakhir. Silakan masuk kembali untuk melanjutkan.',
+            subMessage: 'Untuk keamanan, Anda akan diarahkan ke halaman login.',
+            showRetry: false,
+            onClose: () => {
+              // Let the app handle the auth state change
+            }
+          });
           
           // Don't call logout() here as it might cause infinite loops
           // Instead, let the app handle the auth state change
@@ -340,6 +386,25 @@ class AuthService {
         password,
       });
       
+      // Store tokens after successful login
+      if (response.data.success && response.data.data) {
+        const { token, refreshToken, user } = response.data.data;
+        
+        if (token && refreshToken) {
+          await this.storeTokens(token, refreshToken);
+          if (API_CONFIG.DEBUG_MODE) {
+            console.log('✅ Tokens stored successfully after login');
+          }
+        }
+        
+        if (user) {
+          await this.storeUserData(user);
+          if (API_CONFIG.DEBUG_MODE) {
+            console.log('✅ User data stored successfully after login');
+          }
+        }
+      }
+      
       return {
         success: true,
         data: response.data.data, // Extract the nested data object
@@ -347,7 +412,9 @@ class AuthService {
       };
     } catch (error) {
       // Log error for debugging without exposing sensitive details
-      console.error('Login error occurred:', error.response?.status || 'Network error');
+      if (API_CONFIG.DEBUG_MODE) {
+        console.error('Login error occurred:', error.response?.status || 'Network error');
+      }
       
       let errorMessage = 'Gagal masuk';
       
@@ -499,6 +566,26 @@ class AuthService {
           });
           
           console.log('Registration response:', JSON.stringify(response.data, null, 2));
+          
+          // Store tokens after successful registration
+          if (response.data.success && response.data.data) {
+            const { token, refreshToken, user } = response.data.data;
+            
+            if (token && refreshToken) {
+              await this.storeTokens(token, refreshToken);
+              if (API_CONFIG.DEBUG_MODE) {
+                console.log('✅ Tokens stored successfully after registration');
+              }
+            }
+            
+            if (user) {
+              await this.storeUserData(user);
+              if (API_CONFIG.DEBUG_MODE) {
+                console.log('✅ User data stored successfully after registration');
+              }
+            }
+          }
+          
           return {
             success: true,
             data: response.data.data, // Extract the nested data object
@@ -943,10 +1030,21 @@ class AuthService {
         message: response.data.message,
       };
     } catch (error) {
-      console.error('Change password error:', error);
+      if (API_CONFIG.DEBUG_MODE) {
+        console.error('Change password error:', error);
+      }
+      
+      // Handle change password errors with modal notification
+      const errorMessage = error.response?.data?.message || 'Failed to change password';
+      errorHandlingService.handleError(error, {
+        title: 'Change Password Failed',
+        message: errorMessage,
+        showModal: true
+      });
+      
       return {
         success: false,
-        message: error.response?.data?.message || 'Failed to change password',
+        message: errorMessage,
       };
     }
   }
@@ -973,10 +1071,21 @@ class AuthService {
         };
       }
     } catch (error) {
-      console.error('Token refresh error:', error);
+      if (API_CONFIG.DEBUG_MODE) {
+        console.error('Token refresh error:', error);
+      }
+      
+      // Handle token refresh errors with modal notification
+      const errorMessage = error.response?.data?.message || 'Gagal memperbarui token. Silakan masuk kembali.';
+      errorHandlingService.handleError(error, {
+        title: 'Token Refresh Failed',
+        message: errorMessage,
+        showModal: true
+      });
+      
       return {
         success: false,
-        message: 'Gagal memperbarui token. Silakan masuk kembali.',
+        message: errorMessage,
       };
     }
   }

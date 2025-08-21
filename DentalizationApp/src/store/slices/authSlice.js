@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import authService from '../../services/authService';
 import biometricService from '../../services/biometricService';
 import { getReadableError } from '../../utils/errorHandler';
+import { API_CONFIG } from '../../constants/api';
 
 // Async thunks for authentication actions
 export const loginUser = createAsyncThunk(
@@ -121,7 +122,9 @@ export const updateUserData = createAsyncThunk(
       
       return userData;
     } catch (error) {
-      console.error('❌ updateUserData - Error saving to AsyncStorage:', error);
+      if (API_CONFIG.DEBUG_MODE) {
+        console.error('❌ updateUserData - Error saving to AsyncStorage:', error);
+      }
       return rejectWithValue(error.message || 'Failed to update user data');
     }
   }
@@ -134,8 +137,10 @@ export const checkAuthStatus = createAsyncThunk(
       const token = await authService.getAccessToken();
       const userData = await authService.getUserData();
       
-      console.log('🔍 checkAuthStatus - Stored token exists:', !!token);
-      console.log('🔍 checkAuthStatus - Stored userData exists:', !!userData);
+      if (API_CONFIG.DEBUG_MODE) {
+        console.log('🔍 checkAuthStatus - Stored token exists:', !!token);
+        console.log('🔍 checkAuthStatus - Stored userData exists:', !!userData);
+      }
       
       if (token && userData) {
         // Verify token with backend and get fresh user data
@@ -144,7 +149,9 @@ export const checkAuthStatus = createAsyncThunk(
           // Use fresh data from backend, not stored data
           const freshUserData = response.data.data || response.data;
           
-          console.log('🔍 checkAuthStatus - Fresh user data from backend:', JSON.stringify(freshUserData, null, 2));
+          if (API_CONFIG.DEBUG_MODE) {
+            console.log('🔍 checkAuthStatus - Fresh user data from backend:', JSON.stringify(freshUserData, null, 2));
+          }
           
           // Parse JSON fields in profile if they exist
           if (freshUserData.profile) {
@@ -245,14 +252,20 @@ export const checkAuthStatus = createAsyncThunk(
       }
       
       // No token or user data
-      console.log('🔍 checkAuthStatus - No valid token or user data found');
+      if (API_CONFIG.DEBUG_MODE) {
+        console.log('🔍 checkAuthStatus - No valid token or user data found');
+      }
       await authService.clearStoredData();
       return rejectWithValue('Authentication required');
     } catch (error) {
-      console.error('🔍 checkAuthStatus - Error:', error);
+      if (API_CONFIG.DEBUG_MODE) {
+        console.error('🔍 checkAuthStatus - Error:', error);
+      }
       // Handle different error types
       if (error.message && (error.message.includes('401') || error.message.includes('Authentication required'))) {
-        console.log('🔍 checkAuthStatus - Authentication error, clearing stored data');
+        if (API_CONFIG.DEBUG_MODE) {
+          console.log('🔍 checkAuthStatus - Authentication error, clearing stored data');
+        }
         await authService.clearStoredData();
         return rejectWithValue('Authentication expired');
       }
@@ -262,7 +275,9 @@ export const checkAuthStatus = createAsyncThunk(
       const storedToken = await authService.getAccessToken();
       
       if (storedUserData && storedToken) {
-        console.log('🔍 checkAuthStatus - Network error, using stored data');
+        if (API_CONFIG.DEBUG_MODE) {
+          console.log('🔍 checkAuthStatus - Network error, using stored data');
+        }
         return {
           user: storedUserData,
           token: storedToken,
@@ -354,8 +369,10 @@ const authSlice = createSlice({
         state.refreshToken = action.payload.refreshToken;
         state.error = null;
         
-        console.log('🔍 Redux - User data stored:', JSON.stringify(action.payload.user, null, 2));
-        console.log('🔍 Redux - Profile complete:', action.payload.user?.profile?.profileComplete);
+        if (API_CONFIG.DEBUG_MODE) {
+          console.log('🔍 Redux - User data stored:', JSON.stringify(action.payload.user, null, 2));
+          console.log('🔍 Redux - Profile complete:', action.payload.user?.profile?.profileComplete);
+        }
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;
@@ -474,9 +491,13 @@ const authSlice = createSlice({
               userData.profile.verificationDocs = [];
             }
 
-            console.log('🔍 Redux - Parsed user data in extraReducers:', JSON.stringify(userData, null, 2));
+            if (API_CONFIG.DEBUG_MODE) {
+              console.log('🔍 Redux - Parsed user data in extraReducers:', JSON.stringify(userData, null, 2));
+            }
           } catch (error) {
-            console.error('Error parsing profile JSON fields in extraReducers:', error);
+            if (API_CONFIG.DEBUG_MODE) {
+              console.error('Error parsing profile JSON fields in extraReducers:', error);
+            }
           }
         }
         
@@ -484,9 +505,11 @@ const authSlice = createSlice({
         state.token = action.payload.token;
         state.profileComplete = userData?.profile?.profileComplete || false;
         
-        console.log('🔍 Redux - CheckAuth user data:', JSON.stringify(userData, null, 2));
-        console.log('🔍 Redux - CheckAuth profile complete:', userData?.profile?.profileComplete);
-        console.log('🔍 Redux - State profile complete set to:', state.profileComplete);
+        if (API_CONFIG.DEBUG_MODE) {
+          console.log('🔍 Redux - CheckAuth user data:', JSON.stringify(userData, null, 2));
+          console.log('🔍 Redux - CheckAuth profile complete:', userData?.profile?.profileComplete);
+          console.log('🔍 Redux - State profile complete set to:', state.profileComplete);
+        }
       })
       .addCase(checkAuthStatus.rejected, (state, action) => {
         state.isInitializing = false;

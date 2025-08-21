@@ -171,7 +171,9 @@ class AIService {
           
           // Check if error is retryable
           if (attempt < this.maxRetries && this.isRetryableError(errorMessage)) {
+            if (API_CONFIG.DEBUG_MODE) {
             console.log(`⏳ AIService: Retrying in ${this.retryDelay}ms...`);
+          }
             await this.delay(this.retryDelay);
             continue;
           }

@@ -1,8 +1,9 @@
 // API Configuration
 export const API_CONFIG = {
-  // Using localhost for development access
+  // Using staging server for development when localhost is not available
+  // Note: Using HTTP due to SSL certificate issues with staging server
   BASE_URL: __DEV__ 
-    ? 'http://localhost:3001' 
+    ? 'http://staging-api.dentalization.com' 
     : 'https://api.dentalization.com',
   TIMEOUT: 45000,  // Increased timeout for slow connections
   RETRY_ATTEMPTS: 3,
@@ -15,7 +16,7 @@ export const API_CONFIG = {
     LOCAL_IOS: 'http://localhost:3001',
     LOCAL_NETWORK: 'http://192.168.1.X:3001', // Replace X with your machine's IP
     NGROK: 'https://YOUR-NGROK-TUNNEL.ngrok.io', // Replace with your ngrok URL if using
-    STAGING: 'https://staging-api.dentalization.com',
+    STAGING: 'http://staging-api.dentalization.com',
     FALLBACK: 'https://dentalization-api-dev.herokuapp.com', // Add your fallback server if available
   },
   

@@ -1,13 +1,35 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { API_ENDPOINTS } from '../constants/api';
+import { API_ENDPOINTS, API_CONFIG } from '../constants/api';
 import { AUTH_STORAGE_KEYS } from '../constants/auth';
 
 class ProfileService {
   constructor() {
-    this.baseURL = __DEV__ 
-      ? 'http://192.168.0.155:3001' 
-      : 'https://api.dentalization.com';
+    this.baseURL = API_CONFIG.BASE_URL;
+    this.timeout = API_CONFIG.TIMEOUT;
+    this.retryAttempts = API_CONFIG.RETRY_ATTEMPTS;
+  }
+
+  async makeRequestWithRetry(url, options, retryCount = 0) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+      
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      if (retryCount < this.retryAttempts && (error.name === 'AbortError' || error.message.includes('timeout') || error.message.includes('network'))) {
+        console.log(`🔄 ProfileService: Retry attempt ${retryCount + 1}/${this.retryAttempts}`);
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000)); // Exponential backoff
+        return this.makeRequestWithRetry(url, options, retryCount + 1);
+      }
+      throw error;
+    }
   }
 
   async getAuthHeaders() {
@@ -70,7 +92,7 @@ class ProfileService {
       console.log('  - verificationDocs length:', profileData.verificationDocs?.length || 0);
       console.log('📤 ProfileService: Full request body:', JSON.stringify(profileData, null, 2));
       
-      const response = await fetch(`${this.baseURL}${API_ENDPOINTS.PROFILE.DOCTOR}`, {
+      const response = await this.makeRequestWithRetry(`${this.baseURL}${API_ENDPOINTS.PROFILE.DOCTOR}`, {
         method: 'POST',
         headers,
         body: JSON.stringify(profileData),
@@ -88,7 +110,9 @@ class ProfileService {
           data: data,
         };
       } else {
-        console.error('❌ ProfileService: Doctor profile setup failed:', data);
+        if (API_CONFIG.DEBUG_MODE) {
+          console.error('❌ ProfileService: Doctor profile setup failed:', data);
+        }
         return {
           success: false,
           message: data.message || 'Profile setup failed',
@@ -96,10 +120,25 @@ class ProfileService {
         };
       }
     } catch (error) {
-      console.error('❌ ProfileService: Network error during doctor profile setup:', error);
+      if (API_CONFIG.DEBUG_MODE) {
+        console.error('❌ ProfileService: Network error during doctor profile setup:', error);
+      }
+      
+      let errorMessage = 'Network error';
+      if (error.name === 'AbortError') {
+        errorMessage = 'Request timeout. Please check your internet connection and try again.';
+      } else if (error.message.includes('fetch')) {
+        errorMessage = 'Unable to connect to server. Please check your internet connection.';
+      } else if (error.message.includes('timeout')) {
+        errorMessage = 'Request timed out. The server may be busy, please try again.';
+      } else if (error.message.includes('network')) {
+        errorMessage = 'Network connection failed. Please check your internet and try again.';
+      }
+      
       return {
         success: false,
-        message: error.message || 'Network error',
+        message: errorMessage,
+        originalError: error.message,
       };
     }
   }
@@ -253,10 +292,14 @@ class ProfileService {
         };
       }
       
-      console.log('📸 ProfileService: Parsed base64 response data:', data);
+      if (API_CONFIG.DEBUG_MODE) {
+        console.log('📸 ProfileService: Parsed base64 response data:', data);
+      }
        
        if (!response.ok) {
-         console.error('❌ ProfileService: Base64 upload failed with status:', response.status);
+         if (API_CONFIG.DEBUG_MODE) {
+           console.error('❌ ProfileService: Base64 upload failed with status:', response.status);
+         }
          return {
            success: false,
            message: data.message || 'Base64 upload failed',

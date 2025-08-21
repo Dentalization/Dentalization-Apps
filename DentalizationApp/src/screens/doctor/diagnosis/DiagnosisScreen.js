@@ -10,28 +10,38 @@ import {
   ActivityIndicator,
   Animated,
   Dimensions,
-  Modal
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import { useSelector } from 'react-redux';
-import aiService from '../../../services/aiService';
-import aiDiagnosisHistoryService from '../../../services/aiDiagnosisHistoryService';
+import { useNavigation } from '@react-navigation/native';
+import aiAgentService from '../../../services/aiAgentService';
 import { wp, hp, spacing, fontSizes, borderRadius, iconSizes, responsiveDimensions } from '../../../utils/responsive';
 import ResponsiveContainer from '../../../components/layouts/ResponsiveContainer';
 import ResponsiveCard from '../../../components/layouts/ResponsiveCard';
 import ResponsiveText from '../../../components/layouts/ResponsiveText';
+import AIAgentOfflineModal from '../../../components/modals/AIAgentOfflineModal';
 
 const { width, height } = Dimensions.get('window');
 
 const DiagnosisScreen = () => {
+  const navigation = useNavigation();
   const { user } = useSelector(state => state.auth);
   const [selectedImage, setSelectedImage] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [showResultModal, setShowResultModal] = useState(false);
-  const [aiServerStatus, setAiServerStatus] = useState('checking');
+  const [agentServerStatus, setAgentServerStatus] = useState('checking');
+  const [showOfflineModal, setShowOfflineModal] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [currentMessage, setCurrentMessage] = useState('');
+  const [sessionId, setSessionId] = useState(null);
+  const [uploadedImageId, setUploadedImageId] = useState(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
 
@@ -50,23 +60,25 @@ const DiagnosisScreen = () => {
       })
     ]).start();
 
-    // Check AI server status on component mount
-    checkAIServerStatus();
+    // Check AI Agent server status on component mount
+    checkAgentServerStatus();
   }, []);
 
-  const checkAIServerStatus = async () => {
+
+
+  const checkAgentServerStatus = async () => {
     try {
-      const healthCheck = await aiService.healthCheck();
+      const healthCheck = await aiAgentService.healthCheck();
       if (healthCheck.success) {
-        setAiServerStatus('online');
-        console.log('✅ AI Server is online and ready');
+        setAgentServerStatus('online');
+        setShowOfflineModal(false);
       } else {
-        setAiServerStatus('offline');
-        console.log('❌ AI Server is offline:', healthCheck.error);
+        setAgentServerStatus('offline');
+        setShowOfflineModal(true);
       }
     } catch (error) {
-      setAiServerStatus('offline');
-      console.log('❌ AI Server health check failed:', error);
+      setAgentServerStatus('offline');
+      setShowOfflineModal(true);
     }
   };
 
@@ -167,12 +179,18 @@ const DiagnosisScreen = () => {
       return;
     }
 
-    if (aiServerStatus !== 'online') {
+    return analyzeWithAgent();
+  };
+
+
+
+  const analyzeWithAgent = async () => {
+    if (agentServerStatus !== 'online') {
       Alert.alert(
-        'AI Server Offline', 
-        'Server AI diagnosis sedang offline. Silakan periksa koneksi dan coba lagi.',
+        'AI Agent Server Offline', 
+        'Server AI Agent sedang offline. Silakan periksa koneksi dan coba lagi.',
         [
-          { text: 'Coba Lagi', onPress: checkAIServerStatus },
+          { text: 'Coba Lagi', onPress: checkAgentServerStatus },
           { text: 'Batal', style: 'cancel' }
         ]
       );
@@ -182,72 +200,299 @@ const DiagnosisScreen = () => {
     setIsAnalyzing(true);
     
     try {
-      console.log('🔍 Memulai analisis AI...');
+      console.log('🔍 Memulai analisis dengan AI Agent...');
       
-      // Comment out patient info for doctor app - not needed
-      // const patientInfo = {
-      //   name: user?.profile ? `${user.profile.firstName || ''} ${user.profile.lastName || ''}`.trim() : 'Pasien Tidak Dikenal',
-      //   age: user?.profile?.dateOfBirth ? calculateAge(user.profile.dateOfBirth) : null,
-      //   gender: user?.profile?.gender || 'tidak diketahui',
-      //   medical_history: user?.profile?.medicalHistory || 'Tidak ada riwayat medis yang tercatat',
-      //   dental_history: user?.profile?.dentalHistory || 'Tidak ada riwayat dental yang tercatat',
-      //   chief_complaint: 'Pemeriksaan dan diagnosis gigi'
-      // };
+      // Create session if not exists
+      let currentSessionId = sessionId;
+      if (!currentSessionId) {
+        const sessionResult = await aiAgentService.createSession();
+        if (sessionResult.success) {
+          currentSessionId = sessionResult.data.sessionId;
+          setSessionId(currentSessionId);
+          console.log('✅ Session created:', currentSessionId);
+        } else {
+          throw new Error(sessionResult.error);
+        }
+      }
 
-      // console.log('📋 Info Pasien:', patientInfo);
-
-      // Gunakan AIService untuk analisis (tanpa patient info untuk doctor app)
-      const result = await aiService.performDentalReasoning(selectedImage.uri, null);
-      
-      if (result.success) {
-        console.log('✅ Analisis AI berhasil diselesaikan');
-        setAnalysisResult(result.data);
-        setShowResultModal(true);
+      // Upload image
+      const uploadResult = await aiAgentService.uploadImage(selectedImage.uri);
+      if (uploadResult.success) {
+        setUploadedImageId(uploadResult.data.imageId);
+        console.log('✅ Image uploaded:', uploadResult.data.imageId);
         
-        // Save diagnosis to history
-        try {
-          await aiDiagnosisHistoryService.saveDiagnosis({
-            imageUrl: selectedImage.uri,
-            detectionResult: result.data.detection_result,
-            reasoningResult: result.data.reasoning_result,
-            reportUrl: result.data.report_url,
-            requestId: result.data.request_id,
-            aiServerResponse: result.data
+        // Start chat with image analysis
+        const initialMessage = 'Tolong analisis gambar gigi ini dan berikan diagnosis lengkap beserta rekomendasi perawatan.';
+        const chatResult = await aiAgentService.chatWithAgentAndImage(
+          initialMessage,
+          uploadResult.data.imageId,
+          currentSessionId
+        );
+        
+        if (chatResult.success) {
+          const newMessages = [
+            {
+              id: Date.now() + '_user',
+              type: 'user',
+              content: initialMessage,
+              timestamp: new Date().toISOString(),
+              hasImage: true
+            },
+            {
+              id: Date.now() + '_assistant',
+              type: 'assistant',
+              content: chatResult.data.assistantMessage,
+              timestamp: new Date().toISOString(),
+              resources: chatResult.data.resources || [],
+              analysis: chatResult.data.analysis
+            }
+          ];
+          
+          setChatMessages(newMessages);
+          setAnalysisResult({
+            agentMode: true,
+            messages: newMessages,
+            sessionId: currentSessionId,
+            imageId: uploadResult.data.imageId
           });
-          console.log('✅ Diagnosis berhasil disimpan ke history');
-        } catch (saveError) {
-          console.error('❌ Gagal menyimpan diagnosis ke history:', saveError);
-          // Don't show error to user as the main diagnosis was successful
+          
+          // Navigate to AgentChatAi screen with parameters
+          navigation.navigate('AgentChatAi', {
+            sessionId: currentSessionId,
+            imageId: uploadResult.data.imageId,
+            initialMessage: initialMessage,
+            imageUri: selectedImage
+          });
+          
+          console.log('✅ AI Agent analysis completed, navigating to chat');
+        } else {
+          throw new Error(chatResult.error);
         }
       } else {
-        console.error('❌ Analisis AI gagal:', result.error);
-        Alert.alert('Analisis Gagal', result.error || 'Gagal menganalisis gambar');
+        throw new Error(uploadResult.error);
       }
     } catch (error) {
-      console.error('❌ Error saat analisis:', error);
-      Alert.alert('Error', 'Gagal terhubung ke server AI. Silakan periksa koneksi dan coba lagi.');
+      console.error('❌ Error saat analisis dengan AI Agent:', error);
+      Alert.alert('Error', 'Gagal terhubung ke server AI Agent. Silakan periksa koneksi dan coba lagi.');
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  const calculateAge = (dateOfBirth) => {
-    const today = new Date();
-    const birthDate = new Date(dateOfBirth);
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
+  const sendChatMessage = async () => {
+    if (!currentMessage.trim() || !sessionId) return;
     
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
+    const userMessage = {
+      id: Date.now() + '_user',
+      type: 'user',
+      content: currentMessage.trim(),
+      timestamp: new Date().toISOString()
+    };
+    
+    setChatMessages(prev => [...prev, userMessage]);
+    setCurrentMessage('');
+    setIsAnalyzing(true);
+    
+    try {
+      const chatResult = await aiAgentService.chatWithAgent(userMessage.content, sessionId);
+      
+      if (chatResult.success) {
+        const assistantMessage = {
+          id: Date.now() + '_assistant',
+          type: 'assistant',
+          content: chatResult.data.assistantMessage,
+          timestamp: new Date().toISOString(),
+          resources: chatResult.data.resources || [],
+          analysis: chatResult.data.analysis
+        };
+        
+        setChatMessages(prev => [...prev, assistantMessage]);
+      } else {
+        throw new Error(chatResult.error);
+      }
+    } catch (error) {
+      console.error('❌ Error sending chat message:', error);
+      Alert.alert('Error', 'Gagal mengirim pesan. Silakan coba lagi.');
+    } finally {
+      setIsAnalyzing(false);
     }
-    
-    return age;
   };
 
   const resetAnalysis = () => {
     setSelectedImage(null);
     setAnalysisResult(null);
     setShowResultModal(false);
+    setChatMessages([]);
+    setCurrentMessage('');
+    setSessionId(null);
+    setUploadedImageId(null);
+  };
+
+  const renderChatInterface = () => {
+    if (!analysisResult?.agentMode) return null;
+
+    return (
+      <View style={{ backgroundColor: '#F8F9FA', maxHeight: 450, borderRadius: 12, margin: 16 }}>
+        {/* Chat Header */}
+        <View style={{
+          backgroundColor: '#483AA0',
+          paddingVertical: 12,
+          paddingHorizontal: 16,
+          borderTopLeftRadius: 12,
+          borderTopRightRadius: 12,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <MaterialIcons name="chat" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+          <Text style={{
+            color: '#FFFFFF',
+            fontSize: 16,
+            fontWeight: '600'
+          }}>AI Diagnosis Chat</Text>
+        </View>
+        
+        <ScrollView style={{ padding: 16, maxHeight: 320, backgroundColor: '#FFFFFF' }}>
+          {chatMessages.map((message) => (
+            <View key={message.id} style={{
+              marginBottom: 16,
+              alignSelf: message.type === 'user' ? 'flex-end' : 'flex-start',
+              maxWidth: '85%'
+            }}>
+              <View style={{
+                backgroundColor: message.type === 'user' ? '#483AA0' : '#FFFFFF',
+                padding: 16,
+                borderRadius: 16,
+                borderBottomRightRadius: message.type === 'user' ? 4 : 16,
+                borderBottomLeftRadius: message.type === 'user' ? 16 : 4,
+                borderWidth: message.type === 'assistant' ? 1 : 0,
+                borderColor: message.type === 'assistant' ? '#E5E5E5' : 'transparent',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 3
+              }}>
+                <Text style={{
+                  color: message.type === 'user' ? '#FFFFFF' : '#333333',
+                  fontSize: 14,
+                  lineHeight: 22,
+                  textAlign: 'left'
+                }}>
+                  {typeof message.content === 'string' ? 
+                    message.content.replace(/\*\*(.*?)\*\*/g, '$1').replace(/\n/g, '\n') : 
+                    JSON.stringify(message.content, null, 2)
+                  }
+                </Text>
+                {message.hasImage && (
+                  <Text style={{
+                    color: message.type === 'user' ? '#FFFFFF' : '#666666',
+                    fontSize: 12,
+                    fontStyle: 'italic',
+                    marginTop: 4
+                  }}>
+                    📷 Gambar gigi dilampirkan
+                  </Text>
+                )}
+                {message.resources && message.resources.length > 0 && (
+                  <View style={{ 
+                    marginTop: 12, 
+                    paddingTop: 12, 
+                    borderTopWidth: 1, 
+                    borderTopColor: '#F0F0F0' 
+                  }}>
+                    <Text style={{ 
+                      color: '#666666', 
+                      fontSize: 13, 
+                      fontWeight: '600',
+                      marginBottom: 8 
+                    }}>📊 Resources & References:</Text>
+                    {message.resources.map((resource, index) => (
+                      <View key={index} style={{
+                        backgroundColor: '#F8F9FA',
+                        padding: 8,
+                        borderRadius: 8,
+                        marginBottom: 4,
+                        borderLeftWidth: 3,
+                        borderLeftColor: '#483AA0'
+                      }}>
+                        <Text style={{ 
+                          color: '#333333', 
+                          fontSize: 12,
+                          lineHeight: 16 
+                        }}>• {typeof resource === 'string' ? resource : JSON.stringify(resource)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+              <Text style={{
+                fontSize: 10,
+                color: '#999999',
+                marginTop: 4,
+                textAlign: message.type === 'user' ? 'right' : 'left'
+              }}>
+                {new Date(message.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+              </Text>
+            </View>
+          ))}
+        </ScrollView>
+        
+        <View style={{ 
+          flexDirection: 'row', 
+          padding: 16, 
+          backgroundColor: '#FFFFFF',
+          borderTopWidth: 1, 
+          borderTopColor: '#E5E5E5',
+          borderBottomLeftRadius: 12,
+          borderBottomRightRadius: 12
+        }}>
+          <TextInput
+            style={{
+              flex: 1,
+              borderWidth: 1,
+              borderColor: '#E5E5E5',
+              borderRadius: 24,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              marginRight: 12,
+              fontSize: 14,
+              backgroundColor: '#F8F9FA',
+              maxHeight: 100
+            }}
+            placeholder="Tanyakan sesuatu tentang diagnosis..."
+            value={currentMessage}
+            onChangeText={setCurrentMessage}
+            multiline
+            maxLength={500}
+          />
+          <TouchableOpacity
+            onPress={sendChatMessage}
+            disabled={!currentMessage.trim() || isAnalyzing}
+            style={{
+              backgroundColor: (!currentMessage.trim() || isAnalyzing) ? '#B0B0B0' : '#483AA0',
+              borderRadius: 24,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              justifyContent: 'center',
+              alignItems: 'center',
+              minWidth: 48,
+              shadowColor: '#483AA0',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.2,
+              shadowRadius: 4,
+              elevation: 3
+            }}
+          >
+            {isAnalyzing ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Ionicons name="send" size={16} color="#FFFFFF" />
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
   };
 
   const renderAnalysisResult = () => {
@@ -260,15 +505,24 @@ const DiagnosisScreen = () => {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowResultModal(false)}
       >
-        <SafeAreaView style={{ flex: 1, backgroundColor: '#F2F1F8' }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E5E5' }}>
-            <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#333333' }}>Hasil Diagnosis AI</Text>
-            <TouchableOpacity onPress={() => setShowResultModal(false)}>
-              <Ionicons name="close" size={24} color="#666666" />
-            </TouchableOpacity>
-          </View>
+        <KeyboardAvoidingView 
+          style={{ flex: 1 }} 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <SafeAreaView style={{ flex: 1, backgroundColor: '#F2F1F8' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E5E5' }}>
+              <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#333333' }}>
+                {analysisResult.agentMode ? 'AI Agent Chat' : 'Hasil Diagnosis AI'}
+              </Text>
+              <TouchableOpacity onPress={() => setShowResultModal(false)}>
+                <Ionicons name="close" size={24} color="#666666" />
+              </TouchableOpacity>
+            </View>
           
-          <ScrollView style={{ flex: 1, padding: 20 }}>
+          {analysisResult.agentMode ? (
+            renderChatInterface()
+          ) : (
+            <ScrollView style={{ flex: 1, padding: 20 }}>
             {/* Patient Info section removed for doctor app */}
 
             {/* Deteksi yang ditemukan */}
@@ -353,7 +607,8 @@ const DiagnosisScreen = () => {
                 </TouchableOpacity>
               </View>
             )}
-          </ScrollView>
+            </ScrollView>
+          )}
           
           <View style={{ padding: 20, backgroundColor: '#FFFFFF', borderTopWidth: 1, borderTopColor: '#E5E5E5' }}>
             <TouchableOpacity
@@ -363,7 +618,8 @@ const DiagnosisScreen = () => {
               <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>Analisis Baru</Text>
             </TouchableOpacity>
           </View>
-        </SafeAreaView>
+          </SafeAreaView>
+        </KeyboardAvoidingView>
       </Modal>
     );
   };
@@ -412,22 +668,22 @@ const DiagnosisScreen = () => {
               {/* Enhanced Status Indicator */}
               <View style={[
                 { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
-                aiServerStatus === 'online' ? { backgroundColor: '#E8F5E8', borderColor: '#C8E6C9' } : 
-                aiServerStatus === 'offline' ? { backgroundColor: '#FFEBEE', borderColor: '#FFCDD2' } : { backgroundColor: '#FFF3E0', borderColor: '#FFE0B2' }
+                agentServerStatus === 'online' ? { backgroundColor: '#E8F5E8', borderColor: '#C8E6C9' } : 
+                agentServerStatus === 'offline' ? { backgroundColor: '#FFEBEE', borderColor: '#FFCDD2' } : { backgroundColor: '#FFF3E0', borderColor: '#FFE0B2' }
               ]}>
                 {/* Animated Status Dot */}
                 <View style={[
                   { width: 10, height: 10, borderRadius: 5, marginRight: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.2, shadowRadius: 2 },
-                  aiServerStatus === 'online' ? { backgroundColor: '#4CAF50' } : 
-                  aiServerStatus === 'offline' ? { backgroundColor: '#F44336' } : { backgroundColor: '#FF9800' }
+                  agentServerStatus === 'online' ? { backgroundColor: '#4CAF50' } : 
+                  agentServerStatus === 'offline' ? { backgroundColor: '#F44336' } : { backgroundColor: '#FF9800' }
                 ]} />
                 <Text style={[
                   { fontSize: 13, fontWeight: '700', letterSpacing: 0.3 },
-                  aiServerStatus === 'online' ? { color: '#2E7D32' } : 
-                  aiServerStatus === 'offline' ? { color: '#C62828' } : { color: '#E65100' }
+                  agentServerStatus === 'online' ? { color: '#2E7D32' } : 
+                  agentServerStatus === 'offline' ? { color: '#C62828' } : { color: '#E65100' }
                 ]}>
-                  {aiServerStatus === 'online' ? '🟢 AI Online & Ready' : 
-                   aiServerStatus === 'offline' ? '🔴 AI Offline' : '🟡 Connecting...'}
+                  {agentServerStatus === 'online' ? '🟢 AI Online & Ready' : 
+                   agentServerStatus === 'offline' ? '🔴 AI Offline' : '🟡 Connecting...'}
                 </Text>
               </View>
             </View>
@@ -437,6 +693,39 @@ const DiagnosisScreen = () => {
               <Text style={{ fontSize: 16, color: '#555555', textAlign: 'center', lineHeight: 22, fontWeight: '500' }}>Analisis kondisi gigi dengan teknologi AI</Text>
               <Text style={{ fontSize: 14, color: '#888888', textAlign: 'center', marginTop: 4, fontStyle: 'italic' }}>Powered by Advanced Machine Learning</Text>
             </View>
+          </View>
+
+          {/* AI Agent Status */}
+          <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 5 }}>
+            <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#333333', marginBottom: 12 }}>Clinical Decision Support System</Text>
+            
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, backgroundColor: '#F8F9FA', borderRadius: 12 }}>
+              <MaterialIcons 
+                name="smart-toy" 
+                size={24} 
+                color="#483AA0" 
+              />
+              <Text style={{ fontSize: 16, fontWeight: '600', color: '#483AA0', marginLeft: 8, marginRight: 16 }}>
+                AI Agent Mode
+              </Text>
+              <View style={[
+                { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
+                agentServerStatus === 'online' ? { backgroundColor: '#4CAF50' } : 
+                agentServerStatus === 'offline' ? { backgroundColor: '#F44336' } : { backgroundColor: '#FF9800' }
+              ]} />
+              <Text style={[
+                { fontSize: 12, fontWeight: '600' },
+                agentServerStatus === 'online' ? { color: '#2E7D32' } : 
+                agentServerStatus === 'offline' ? { color: '#C62828' } : { color: '#E65100' }
+              ]}>
+                {agentServerStatus === 'online' ? 'Server Online' : 
+                 agentServerStatus === 'offline' ? 'Server Offline' : 'Checking...'}
+              </Text>
+            </View>
+            
+            <Text style={{ fontSize: 12, color: '#666666', marginTop: 8, textAlign: 'center' }}>
+              AI Agent akan menganalisis gambar dan memberikan saran diagnosis interaktif melalui chat untuk mendukung keputusan klinis.
+            </Text>
           </View>
 
           {/* Image Selection Area */}
@@ -471,9 +760,9 @@ const DiagnosisScreen = () => {
           {selectedImage && (
             <TouchableOpacity
               onPress={analyzeImage}
-              disabled={isAnalyzing || aiServerStatus !== 'online'}
+              disabled={isAnalyzing || agentServerStatus !== 'online'}
               style={{
-                backgroundColor: (isAnalyzing || aiServerStatus !== 'online') ? '#B0B0B0' : '#483AA0',
+                backgroundColor: (isAnalyzing || agentServerStatus !== 'online') ? '#B0B0B0' : '#483AA0',
                 borderRadius: 16,
                 paddingVertical: 18,
                 alignItems: 'center',
@@ -488,25 +777,29 @@ const DiagnosisScreen = () => {
               {isAnalyzing ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
-                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>Menganalisis...</Text>
+                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
+                    Memulai Chat AI...
+                  </Text>
                 </View>
-              ) : aiServerStatus !== 'online' ? (
+              ) : agentServerStatus !== 'online' ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <MaterialIcons name="cloud-off" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
                   <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
-                    {aiServerStatus === 'offline' ? 'AI Server Offline' : 'Checking AI Server...'}
+                    {agentServerStatus === 'offline' ? 'AI Agent Offline' : 'Checking AI Agent...'}
                   </Text>
                 </View>
               ) : (
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <MaterialIcons name="analytics" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>Mulai Diagnosis AI</Text>
+                  <MaterialIcons name="chat" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+                  <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
+                    Mulai Chat AI Agent
+                  </Text>
                 </View>
               )}
             </TouchableOpacity>
           )}
 
-          {aiServerStatus === 'offline' && (
+          {agentServerStatus === 'offline' && (
             <TouchableOpacity 
               style={{
                 backgroundColor: '#F8F9FA',
@@ -520,10 +813,12 @@ const DiagnosisScreen = () => {
                 borderWidth: 1,
                 borderColor: '#E5E5E5'
               }}
-              onPress={checkAIServerStatus}
+              onPress={checkAgentServerStatus}
             >
               <MaterialIcons name="refresh" size={16} color="#483AA0" style={{ marginRight: 8 }} />
-              <Text style={{ color: '#483AA0', fontSize: 14, fontWeight: '600' }}>Coba Koneksi AI Lagi</Text>
+              <Text style={{ color: '#483AA0', fontSize: 14, fontWeight: '600' }}>
+                Coba Koneksi AI Agent Lagi
+              </Text>
             </TouchableOpacity>
           )}
 
@@ -561,6 +856,12 @@ const DiagnosisScreen = () => {
       </Animated.View>
       
       {renderAnalysisResult()}
+      
+      <AIAgentOfflineModal
+        visible={showOfflineModal}
+        onClose={() => setShowOfflineModal(false)}
+        onRetry={checkAgentServerStatus}
+      />
     </SafeAreaView>
   );
 };
