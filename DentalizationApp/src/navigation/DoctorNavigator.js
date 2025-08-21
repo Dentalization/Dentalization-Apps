@@ -13,6 +13,7 @@ import ScheduleScreen from '../screens/doctor/appointments/ScheduleScreen';
 import ConsultationCompleteForm from '../screens/doctor/appointments/ConsultationCompleteForm';
 import VideoCallConsultation from '../screens/doctor/appointments/VideoCallConsultation';
 import DiagnosisScreen from '../screens/doctor/diagnosis/DiagnosisScreen';
+import AgentChatAi from '../screens/doctor/diagnosis/agentChatAi';
 import DoctorProfileScreen from '../screens/doctor/profile/DoctorProfileScreen';
 import DoctorProfileSetupScreen from '../screens/doctor/profile/DoctorProfileSetupScreen';
 import ProfessionalDetails from '../screens/doctor/profile/ProfessionalDetails';
@@ -137,6 +138,7 @@ const DoctorNavigator = () => {
       <Stack.Screen name="ViewDetailsPatient" component={ViewDetailsPatient} />
       <Stack.Screen name="VideoCallConsultation" component={VideoCallConsultation} />
       <Stack.Screen name="ConsultationCompleteForm" component={ConsultationCompleteForm} />
+      <Stack.Screen name="AgentChatAi" component={AgentChatAi} />
       <Stack.Screen name="AiDiagnosisHistoryDoctor" component={AiDiagnosisHistoryDoctor} />
     </Stack.Navigator>
   );

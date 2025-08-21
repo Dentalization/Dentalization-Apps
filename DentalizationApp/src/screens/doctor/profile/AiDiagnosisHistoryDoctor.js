@@ -19,6 +19,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSelector } from 'react-redux';
 import { useNavigation } from '@react-navigation/native';
 import aiDiagnosisHistoryService from '../../../services/aiDiagnosisHistoryService';
+import aiAgentService from '../../../services/aiAgentService';
+import AIAgentOfflineModal from '../../../components/modals/AIAgentOfflineModal';
 
 const AiDiagnosisHistoryDoctor = () => {
   const navigation = useNavigation();
@@ -32,6 +34,12 @@ const AiDiagnosisHistoryDoctor = () => {
   const [selectedDiagnosis, setSelectedDiagnosis] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [stats, setStats] = useState(null);
+  const [agentSessions, setAgentSessions] = useState([]);
+  const [selectedSession, setSelectedSession] = useState(null);
+  const [sessionModalVisible, setSessionModalVisible] = useState(false);
+  const [viewMode, setViewMode] = useState('classic'); // 'classic' or 'agent'
+  const [agentServerStatus, setAgentServerStatus] = useState('checking'); // 'online', 'offline', 'checking'
+  const [showOfflineModal, setShowOfflineModal] = useState(false);
 
   const isDoctor = user?.role === 'DOCTOR';
 
@@ -69,6 +77,61 @@ const AiDiagnosisHistoryDoctor = () => {
     }
   }, [isDoctor]);
 
+  // Check agent server status
+  const checkAgentServerStatus = useCallback(async () => {
+    try {
+      setAgentServerStatus('checking');
+      const healthCheck = await aiAgentService.checkHealth();
+      if (healthCheck.status === 'success') {
+        setAgentServerStatus('online');
+        setShowOfflineModal(false);
+        return true;
+      } else {
+        setAgentServerStatus('offline');
+        setShowOfflineModal(true);
+        return false;
+      }
+    } catch (error) {
+      // AI Agent Server is offline - tidak perlu menampilkan log
+      setAgentServerStatus('offline');
+      setShowOfflineModal(true);
+      return false;
+    }
+  }, []);
+
+  // Load agent sessions
+  const loadAgentSessions = useCallback(async () => {
+    try {
+      setLoading(true);
+      const isOnline = await checkAgentServerStatus();
+      
+      if (!isOnline) {
+        setAgentSessions([]);
+        return;
+      }
+      
+      const sessions = await aiAgentService.listSessions();
+      setAgentSessions(sessions || []);
+      setAgentServerStatus('online');
+    } catch (error) {
+      // Server AI Agent offline - tidak perlu menampilkan error
+      setAgentServerStatus('offline');
+      // Handle network errors more gracefully
+      if (error.message?.includes('Network request failed') || error.message?.includes('Failed to fetch')) {
+        Alert.alert(
+          'Server AI Agent Offline', 
+          'Server AI Agent sedang tidak tersedia. Silakan coba lagi nanti atau hubungi administrator.'
+        );
+      } else {
+        Alert.alert('Error', 'Gagal memuat riwayat sesi AI Agent: ' + (error.message || 'Unknown error'));
+      }
+      // Set empty array so UI shows empty state instead of loading
+      setAgentSessions([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [checkAgentServerStatus]);
+
   // Load statistics
   const loadStats = useCallback(async () => {
     try {
@@ -80,21 +143,29 @@ const AiDiagnosisHistoryDoctor = () => {
         setStats({ totalDiagnoses: 0, recentDiagnoses: 0 });
       }
     } catch (error) {
-      console.error('Load stats error:', error);
+      // Server AI Agent offline - tidak perlu menampilkan error
       setStats({ totalDiagnoses: 0, recentDiagnoses: 0 });
     }
   }, []);
 
   useEffect(() => {
-    loadDiagnoses(1, true);
-    loadStats();
-  }, [loadDiagnoses, loadStats]);
+    if (viewMode === 'classic') {
+      loadDiagnoses(1, true);
+      loadStats();
+    } else {
+      loadAgentSessions();
+    }
+  }, [loadDiagnoses, loadStats, loadAgentSessions, viewMode]);
 
   const onRefresh = () => {
     setRefreshing(true);
     setPage(1);
-    loadDiagnoses(1, true);
-    loadStats();
+    if (viewMode === 'classic') {
+      loadDiagnoses(1, true);
+      loadStats();
+    } else {
+      loadAgentSessions();
+    }
   };
 
   const loadMore = () => {
@@ -106,6 +177,11 @@ const AiDiagnosisHistoryDoctor = () => {
   const openDiagnosisDetail = (diagnosis) => {
     setSelectedDiagnosis(diagnosis);
     setModalVisible(true);
+  };
+
+  const openSessionDetail = (session) => {
+    setSelectedSession(session);
+    setSessionModalVisible(true);
   };
 
   const deleteDiagnosis = async (diagnosisId) => {
@@ -128,6 +204,91 @@ const AiDiagnosisHistoryDoctor = () => {
           }
         }
       ]
+    );
+  };
+
+  const renderSessionDetailModal = () => {
+    if (!selectedSession) return null;
+
+    const messages = selectedSession.messages || [];
+    const images = selectedSession.images || [];
+
+    return (
+      <Modal
+        visible={sessionModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Detail Sesi AI Agent</Text>
+            <TouchableOpacity 
+              onPress={() => setSessionModalVisible(false)}
+              style={styles.closeButton}
+            >
+              <MaterialIcons name="close" size={24} color="#333" />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.modalContent}>
+            {/* Session Info */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>📱 Informasi Sesi</Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Session ID:</Text>
+                <Text style={styles.infoValue}>{selectedSession.session_id || 'N/A'}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Tanggal:</Text>
+                <Text style={styles.infoValue}>{formatDate(selectedSession.created_at || selectedSession.timestamp)}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Total Pesan:</Text>
+                <Text style={styles.infoValue}>{messages.length}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Gambar:</Text>
+                <Text style={styles.infoValue}>{images.length}</Text>
+              </View>
+            </View>
+
+            {/* Images */}
+            {images.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>🖼️ Gambar yang Dianalisis</Text>
+                {images.map((image, index) => (
+                  <View key={index} style={styles.detectionCard}>
+                    <Text style={styles.detectionTitle}>Gambar {index + 1}</Text>
+                    <Text style={styles.detectionDescription}>ID: {image.image_id}</Text>
+                    <Text style={styles.detectionDescription}>Upload: {formatDate(image.uploaded_at)}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Chat Messages */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>💬 Riwayat Chat ({messages.length})</Text>
+              {messages.map((message, index) => (
+                <View key={index} style={[
+                  styles.chatMessage,
+                  message.role === 'user' ? styles.userMessage : styles.agentMessage
+                ]}>
+                  <View style={styles.messageHeader}>
+                    <Text style={styles.messageRole}>
+                      {message.role === 'user' ? '👨‍⚕️ Dokter' : '🤖 AI Agent'}
+                    </Text>
+                    <Text style={styles.messageTime}>
+                      {formatDate(message.timestamp)}
+                    </Text>
+                  </View>
+                  <Text style={styles.messageContent}>{message.content}</Text>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     );
   };
 
@@ -206,6 +367,56 @@ const AiDiagnosisHistoryDoctor = () => {
         <View style={styles.cardFooter}>
           <MaterialIcons name="visibility" size={16} color="#666" />
           <Text style={styles.viewDetail}>Lihat Detail</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderSessionItem = ({ item }) => {
+    const sessionDate = new Date(item.created_at || item.timestamp);
+    const messageCount = item.messages?.length || 0;
+    const hasImages = item.images && item.images.length > 0;
+    
+    return (
+      <TouchableOpacity 
+        style={styles.diagnosisCard}
+        onPress={() => openSessionDetail(item)}
+      >
+        <View style={styles.cardHeader}>
+          <View style={styles.headerLeft}>
+            <View style={[styles.severityIndicator, { backgroundColor: '#667eea' }]} />
+            <View>
+              <Text style={styles.diagnosisDate}>{formatDate(sessionDate)}</Text>
+              <Text style={styles.doctorName}>AI Agent Session</Text>
+            </View>
+          </View>
+          <MaterialIcons name="chat" size={20} color="#667eea" />
+        </View>
+        
+        <View style={styles.cardContent}>
+          <Text style={styles.detectionCount}>
+            {messageCount} pesan chat
+          </Text>
+          
+          {hasImages && (
+            <View style={styles.detectionItem}>
+              <Text style={styles.detectionLabel}>
+                • {item.images.length} gambar dianalisis
+              </Text>
+              <MaterialIcons name="image" size={16} color="#667eea" />
+            </View>
+          )}
+          
+          {item.session_id && (
+            <Text style={styles.moreDetections}>
+              Session ID: {item.session_id.substring(0, 8)}...
+            </Text>
+          )}
+        </View>
+        
+        <View style={styles.cardFooter}>
+          <MaterialIcons name="visibility" size={16} color="#666" />
+          <Text style={styles.viewDetail}>Lihat Chat</Text>
         </View>
       </TouchableOpacity>
     );
@@ -357,15 +568,67 @@ const AiDiagnosisHistoryDoctor = () => {
           >
             <MaterialIcons name="arrow-back" size={24} color="#FFF" />
           </TouchableOpacity>
-          <Text style={{
-            fontSize: 20,
-            fontWeight: 'bold',
-            color: '#FFF',
-            textAlign: 'center',
-            flex: 1
-          }}>
-            Riwayat Diagnosis AI
-          </Text>
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text style={{
+              fontSize: 20,
+              fontWeight: 'bold',
+              color: '#FFF',
+              textAlign: 'center',
+              marginBottom: 8
+            }}>
+              Riwayat Diagnosis AI
+            </Text>
+            <View style={{
+              flexDirection: 'row',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              borderRadius: 20,
+              padding: 4
+            }}>
+              <TouchableOpacity
+                style={[
+                  styles.modeButton,
+                  viewMode === 'classic' && styles.activeModeButton
+                ]}
+                onPress={() => setViewMode('classic')}
+              >
+                <Text style={[
+                  styles.modeButtonText,
+                  viewMode === 'classic' && styles.activeModeButtonText
+                ]}>Diagnosis Klasik</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modeButton,
+                  viewMode === 'agent' && styles.activeModeButton
+                ]}
+                onPress={() => setViewMode('agent')}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={[
+                    styles.modeButtonText,
+                    viewMode === 'agent' && styles.activeModeButtonText
+                  ]}>AI Agent</Text>
+                  {viewMode === 'agent' && (
+                    <View style={[
+                      styles.statusIndicator,
+                      agentServerStatus === 'online' && styles.statusOnline,
+                      agentServerStatus === 'offline' && styles.statusOffline,
+                      agentServerStatus === 'checking' && styles.statusChecking
+                    ]} />
+                  )}
+                </View>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Server Status Info */}
+            {viewMode === 'agent' && agentServerStatus === 'offline' && (
+              <View style={styles.statusWarning}>
+                <Text style={styles.statusWarningText}>
+                  ⚠️ Server AI Agent sedang offline
+                </Text>
+              </View>
+            )}
+          </View>
           <View style={{ width: 40 }} />
         </View>
       </LinearGradient>
@@ -469,14 +732,17 @@ const AiDiagnosisHistoryDoctor = () => {
     );
   };
 
-  if (loading) {
+  if (loading && diagnoses.length === 0 && agentSessions.length === 0) {
     return (
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
+        {renderHeader()}
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <Text style={styles.loadingText}>Memuat riwayat diagnosis...</Text>
+          <ActivityIndicator size="large" color="#667eea" />
+          <Text style={styles.loadingText}>
+            {viewMode === 'classic' ? 'Memuat riwayat diagnosis...' : 'Memuat riwayat sesi AI Agent...'}
+          </Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
@@ -486,10 +752,10 @@ const AiDiagnosisHistoryDoctor = () => {
       <SafeAreaView style={styles.safeArea}>
         {renderHeader()}
         <FlatList
-          data={diagnoses}
-          renderItem={renderDiagnosisItem}
-          keyExtractor={(item) => item.id.toString()}
-          ListHeaderComponent={renderStatsContainer}
+          data={viewMode === 'classic' ? diagnoses : agentSessions}
+          renderItem={viewMode === 'classic' ? renderDiagnosisItem : renderSessionItem}
+          keyExtractor={(item) => viewMode === 'classic' ? item.id.toString() : (item.session_id || item.id || Math.random().toString())}
+          ListHeaderComponent={viewMode === 'classic' ? renderStatsContainer : null}
           contentContainerStyle={{
               paddingTop: 80,
               paddingHorizontal: 20,
@@ -516,10 +782,41 @@ const AiDiagnosisHistoryDoctor = () => {
               progressBackgroundColor="#FFF"
             />
           }
-          onEndReached={loadMore}
+          onEndReached={viewMode === 'classic' ? loadMore : undefined}
           onEndReachedThreshold={0.3}
-          ListEmptyComponent={renderEmpty}
-          ListFooterComponent={loading && diagnoses.length > 0 ? (
+          ListEmptyComponent={() => {
+            if (viewMode === 'agent' && agentServerStatus === 'offline') {
+              return (
+                <View style={styles.emptyContainer}>
+                  <MaterialIcons name="cloud-off" size={64} color="#F44336" />
+                  <Text style={styles.emptyTitle}>Server AI Agent Offline</Text>
+                  <Text style={styles.emptySubtitle}>
+                    Server AI Agent sedang tidak tersedia. Silakan coba lagi nanti atau hubungi administrator untuk bantuan.
+                  </Text>
+                  <TouchableOpacity 
+                    style={styles.retryButton}
+                    onPress={() => loadAgentSessions()}
+                  >
+                    <MaterialIcons name="refresh" size={20} color="#FFF" />
+                    <Text style={styles.retryButtonText}>Coba Lagi</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            }
+            
+            return (
+              <View style={styles.emptyContainer}>
+                <MaterialIcons name={viewMode === 'classic' ? "history" : "chat"} size={60} color="#CCC" />
+                <Text style={styles.emptyTitle}>Belum Ada Riwayat {viewMode === 'classic' ? 'Diagnosis' : 'Sesi AI Agent'}</Text>
+                <Text style={styles.emptySubtitle}>
+                  {viewMode === 'classic' 
+                    ? 'Riwayat diagnosis AI akan muncul di sini setelah Anda melakukan diagnosis'
+                    : 'Riwayat sesi AI Agent akan muncul di sini setelah Anda menggunakan fitur AI Agent'}
+                </Text>
+              </View>
+            );
+          }}
+          ListFooterComponent={loading && (viewMode === 'classic' ? diagnoses.length > 0 : agentSessions.length > 0) ? (
             <View style={styles.loadingFooter}>
               <ActivityIndicator size="small" color="#667eea" />
               <Text style={{ marginLeft: 8, color: '#667eea' }}>Memuat lebih banyak...</Text>
@@ -528,6 +825,13 @@ const AiDiagnosisHistoryDoctor = () => {
         />
         
         {renderDetailModal()}
+        {renderSessionDetailModal()}
+        
+        <AIAgentOfflineModal
+          visible={showOfflineModal}
+          onClose={() => setShowOfflineModal(false)}
+          onRetry={checkAgentServerStatus}
+        />
       </SafeAreaView>
     </View>
   );
@@ -827,6 +1131,105 @@ const styles = StyleSheet.create({
     padding: 12
   },
   reportButtonText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8
+  },
+  modeButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+    marginHorizontal: 2
+  },
+  activeModeButton: {
+    backgroundColor: '#FFF'
+  },
+  modeButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FFF'
+  },
+  activeModeButtonText: {
+    color: '#667eea'
+  },
+  statusIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginLeft: 6
+  },
+  statusOnline: {
+    backgroundColor: '#4CAF50'
+  },
+  statusOffline: {
+    backgroundColor: '#F44336'
+  },
+  statusChecking: {
+    backgroundColor: '#FF9800'
+  },
+  statusWarning: {
+    backgroundColor: 'rgba(244, 67, 54, 0.1)',
+    borderRadius: 8,
+    padding: 8,
+    marginTop: 8
+  },
+  statusWarningText: {
+    color: '#F44336',
+    fontSize: 12,
+    textAlign: 'center',
+    fontWeight: '500'
+  },
+  chatMessage: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8
+  },
+  userMessage: {
+    backgroundColor: '#E3F2FD',
+    marginLeft: 20
+  },
+  agentMessage: {
+    backgroundColor: '#F3E5F5',
+    marginRight: 20
+  },
+  messageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8
+  },
+  messageRole: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666'
+  },
+  messageTime: {
+    fontSize: 10,
+    color: '#999'
+  },
+  messageContent: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#667eea',
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    marginTop: 16,
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6
+  },
+  retryButtonText: {
     color: '#FFF',
     fontSize: 14,
     fontWeight: '600',

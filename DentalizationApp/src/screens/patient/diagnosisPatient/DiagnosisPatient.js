@@ -22,11 +22,13 @@ import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../../../components/common/ThemeProvider';
 import Card from '../../../components/common/Card';
 import aiService from '../../../services/aiService';
+import aiAgentService from '../../../services/aiAgentService';
 import aiDiagnosisHistoryService from '../../../services/aiDiagnosisHistoryService';
 import { wp, hp, spacing, fontSizes, borderRadius, iconSizes, responsiveDimensions } from '../../../utils/responsive';
 import ResponsiveContainer from '../../../components/layouts/ResponsiveContainer';
 import ResponsiveCard from '../../../components/layouts/ResponsiveCard';
 import ResponsiveText from '../../../components/layouts/ResponsiveText';
+import AIAgentOfflineModal from '../../../components/modals/AIAgentOfflineModal';
 
 const { width, height } = Dimensions.get('window');
 
@@ -40,6 +42,7 @@ const DiagnosisPatient = () => {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [showResultModal, setShowResultModal] = useState(false);
   const [aiServerStatus, setAiServerStatus] = useState('checking');
+  const [showOfflineModal, setShowOfflineModal] = useState(false);
   const [profileComplete, setProfileComplete] = useState(false);
   const [completionPercentage, setCompletionPercentage] = useState(0);
   
@@ -124,17 +127,20 @@ const DiagnosisPatient = () => {
 
   const checkAIServerStatus = async () => {
     try {
-      const healthCheck = await aiService.healthCheck();
+      const healthCheck = await aiAgentService.healthCheck();
       if (healthCheck.success) {
         setAiServerStatus('online');
-        console.log('✅ AI Server is online and ready');
+        setShowOfflineModal(false);
+        // AI Server online - tidak perlu menampilkan log
       } else {
         setAiServerStatus('offline');
-        console.log('❌ AI Server is offline:', healthCheck.error);
+        setShowOfflineModal(true);
+        // AI Server offline - tidak perlu menampilkan log
       }
     } catch (error) {
       setAiServerStatus('offline');
-      console.log('❌ AI Server health check failed:', error);
+      setShowOfflineModal(true);
+      // AI Server health check failed - tidak perlu menampilkan log
     }
   };
 
@@ -633,6 +639,12 @@ const DiagnosisPatient = () => {
           </ScrollView>
         </SafeAreaView>
       </Modal>
+      
+      <AIAgentOfflineModal
+        visible={showOfflineModal}
+        onClose={() => setShowOfflineModal(false)}
+        onRetry={checkAIServerStatus}
+      />
     </SafeAreaView>
   );
 };
