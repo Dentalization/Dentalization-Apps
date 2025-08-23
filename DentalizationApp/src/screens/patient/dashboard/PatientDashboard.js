@@ -481,7 +481,7 @@ const PatientDashboard = ({ navigation }) => {
                         timeout: 10000, // 10 second timeout
                         cache: 'force-cache'
                       }}
-                      defaultSource={require('../../../assets/images/default-avatar.svg')}
+                      // defaultSource={require('../../../assets/images/default-avatar.svg')}
                       style={{ width: wp(11), height: wp(11), borderRadius: wp(5.5) }}
                       resizeMode="cover"
                       onError={(error) => {

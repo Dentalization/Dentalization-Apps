@@ -1,9 +1,9 @@
 // API Configuration
 export const API_CONFIG = {
-  // Using staging server for development when localhost is not available
-  // Note: Using HTTP due to SSL certificate issues with staging server
+  // Using local server for development
+  // Note: Make sure your backend server is running on localhost:3001
   BASE_URL: __DEV__ 
-    ? 'http://staging-api.dentalization.com' 
+    ? 'http://localhost:3001' 
     : 'https://api.dentalization.com',
   TIMEOUT: 45000,  // Increased timeout for slow connections
   RETRY_ATTEMPTS: 3,
