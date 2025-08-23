@@ -1,9 +1,9 @@
 // API Configuration
 export const API_CONFIG = {
-  // Using local server for development
-  // Note: Make sure your backend server is running on localhost:3001
+  // Using localtunnel for backend API access from mobile
+  // Note: Make sure your backend server is running and localtunnel is active
   BASE_URL: __DEV__ 
-    ? 'http://localhost:3001' 
+    ? 'https://strong-rocks-battle.loca.lt' 
     : 'https://api.dentalization.com',
   TIMEOUT: 45000,  // Increased timeout for slow connections
   RETRY_ATTEMPTS: 3,

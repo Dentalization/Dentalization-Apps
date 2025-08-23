@@ -71,7 +71,6 @@ const RoleSelectionScreen = ({ navigation, route }) => {
       Alert.alert('Error', 'Silakan pilih jenis akun untuk melanjutkan');
       return;
     }
-
     const selectedRoleObj = roles.find(role => role.id === selectedRole);
     if (selectedRoleObj && selectedRoleObj.route) {
       navigation.navigate(selectedRoleObj.route);
@@ -102,12 +101,8 @@ const RoleSelectionScreen = ({ navigation, route }) => {
           </View>
           
           <View style={styles.roleInfo}>
-            <Text style={styles.roleTitle}>
-              {role.title}
-            </Text>
-            <Text style={styles.roleDescription}>
-              {role.description}
-            </Text>
+            <Text style={styles.roleTitle}>{role.title}</Text>
+            <Text style={styles.roleDescription}>{role.description}</Text>
           </View>
           
           {selectedRole === role.id && (
@@ -120,7 +115,7 @@ const RoleSelectionScreen = ({ navigation, route }) => {
 
   return (
     <LinearGradient
-      colors={['#667eea', '#764ba2', '#f093fb']}
+      colors={['#483AA0', '#483AA0']}  // solid brand background (sama seperti Login)
       style={styles.container}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
@@ -129,45 +124,50 @@ const RoleSelectionScreen = ({ navigation, route }) => {
         <Animated.View 
           style={[
             styles.content,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            },
+            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
           ]}
         >
-        <View style={styles.header}>
-          <Icon
-            name="how-to-reg"
-            size={60}
-            color="white"
-            style={styles.logo}
-          />
-          <Text style={styles.title}>
-            Pilih Peran Anda
-          </Text>
-          <Text style={styles.subtitle}>
-            Pilih bagaimana Anda akan menggunakan Dentalization
-          </Text>
-        </View>
+          {/* Top nav row: back button kiri atas */}
+          <View style={styles.navRow}>
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityRole="button"
+              accessibilityLabel="Kembali"
+            >
+              <Icon name="arrow-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
 
-        <View style={styles.rolesContainer}>
-          {roles.map(renderRoleCard)}
-        </View>
+          {/* Header */}
+          <View style={styles.header}>
+            <Icon name="how-to-reg" size={60} color="white" style={styles.logo} />
+            <Text style={styles.title}>Pilih Peran Anda</Text>
+            <Text style={styles.subtitle}>
+              Pilih bagaimana Anda akan menggunakan Dentalization
+            </Text>
+          </View>
 
-        <View style={styles.footer}>
-          <Button
-            title="Lanjutkan"
-            onPress={handleContinue}
-            loading={isLoading}
-            disabled={!selectedRole}
-            style={styles.continueButton}
-            textStyle={{ color: '#333333' }}
-          />
-          
-          <Text style={styles.footerNote}>
-            Mohon di Pilih Peran dengan Bijak. Jika Anda Dokter Gigi, pastikan Anda memiliki lisensi yang valid.
-          </Text>
-        </View>
+          {/* Roles */}
+          <View style={styles.rolesContainer}>
+            {roles.map(renderRoleCard)}
+          </View>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Button
+              title="Lanjutkan"
+              onPress={handleContinue}
+              loading={isLoading}
+              disabled={!selectedRole}
+              style={styles.continueButton}
+              textStyle={{ color: '#333333' }}
+            />
+            <Text style={styles.footerNote}>
+              Mohon di Pilih Peran dengan Bijak. Jika Anda Dokter Gigi, pastikan Anda memiliki lisensi yang valid.
+            </Text>
+          </View>
         </Animated.View>
       </SafeAreaView>
     </LinearGradient>
@@ -175,24 +175,32 @@ const RoleSelectionScreen = ({ navigation, route }) => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  safeArea: { flex: 1 },
   content: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingVertical: 32,
+    paddingVertical: 16, // sedikit lebih rapat agar back button benar2 di atas
   },
+
+  // NAV ROW (back button kiri atas mengikuti padding halaman)
+  navRow: {
+    width: '100%',
+    marginBottom: 8,
+    alignItems: 'flex-start',
+  },
+  backButton: {
+    width: 40, height: 40, borderRadius: 20,
+    alignItems: 'center', justifyContent: 'center',
+    // kalau mau terlihat lebih jelas, aktifkan background halus:
+    // backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+
   header: {
     alignItems: 'center',
     marginBottom: 32,
   },
-  logo: {
-    marginBottom: 16,
-  },
+  logo: { marginBottom: 16 },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
@@ -216,43 +224,20 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 16,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 8,
   },
-  roleHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
+  roleHeader: { flexDirection: 'row', alignItems: 'center' },
   iconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
+    width: 60, height: 60, borderRadius: 30,
+    justifyContent: 'center', alignItems: 'center', marginRight: 16,
   },
-  roleInfo: {
-    flex: 1,
-  },
-  roleTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 4,
-    color: 'white',
-  },
-  roleDescription: {
-    fontSize: 14,
-    lineHeight: 20,
-    color: 'rgba(255, 255, 255, 0.8)',
-  },
-  footer: {
-    alignItems: 'center',
-  },
+  roleInfo: { flex: 1 },
+  roleTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 4, color: 'white' },
+  roleDescription: { fontSize: 14, lineHeight: 20, color: 'rgba(255, 255, 255, 0.8)' },
+  footer: { alignItems: 'center' },
   continueButton: {
     width: '100%',
     marginBottom: 16,
@@ -260,10 +245,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 16,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
