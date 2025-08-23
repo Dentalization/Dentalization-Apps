@@ -304,7 +304,7 @@ const DoctorDashboard = ({ navigation }) => {
                   }}
                   style={{ width: 49, height: 49, borderRadius: 24.5 }}
                   resizeMode="cover"
-                  defaultSource={require('../../../assets/images/default-avatar.svg')}
+                  // defaultSource={require('../../../assets/images/default-avatar.svg')}
                   onError={(error) => {
                     console.log('❌ Dashboard image loading error:', error.nativeEvent.error);
                   }}

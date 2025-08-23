@@ -25,7 +25,15 @@ app.use(compression());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
     ? process.env.FRONTEND_URL
-    : ['http://localhost:3000', 'http://localhost:19006'], // Dev: React Web + React Native
+    : [
+        'http://localhost:3000', 
+        'http://localhost:19006', // React Native Metro
+        'http://192.168.2.192:3000', // Local network access
+        'http://192.168.2.192:19006', // React Native on local network
+        /^http:\/\/192\.168\.[0-9]+\.[0-9]+:19006$/, // Any local network IP for React Native
+        /^http:\/\/10\.[0-9]+\.[0-9]+\.[0-9]+:19006$/, // Private network range
+        /^http:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.[0-9]+\.[0-9]+:19006$/ // Private network range
+      ],
   credentials: true,
 }));
 
@@ -116,9 +124,11 @@ app.use((error, req, res, next) => {
 
 // Start server
 const PORT = process.env.PORT || 3001;
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Dentalization API server running on port ${PORT}`);
+const HOST = process.env.HOST || '0.0.0.0'; // Allow external connections
+const server = app.listen(PORT, HOST, () => {
+  console.log(`🚀 Dentalization API server running on ${HOST}:${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
+  console.log(`🌐 External access: http://192.168.2.192:${PORT}/health`);
   console.log(`🔒 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 

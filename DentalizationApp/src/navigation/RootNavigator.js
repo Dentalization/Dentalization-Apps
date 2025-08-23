@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useSelector, useDispatch } from 'react-redux';
@@ -7,6 +7,7 @@ import AuthNavigator from './AuthNavigator';
 import PatientNavigator from './PatientNavigator';
 import DoctorNavigator from './DoctorNavigator';
 import LoadingScreen from '../screens/shared/LoadingScreen';
+import SplashScreen from '../screens/shared/SplashScreen';
 
 import { checkAuthStatus, setBiometricAvailable, setShowLoginPrompt } from '../store/slices/authSlice';
 import biometricService from '../services/biometricService';
@@ -17,6 +18,7 @@ const Stack = createStackNavigator();
 const RootNavigator = () => {
   const dispatch = useDispatch();
   const { user, isAuthenticated, isLoading, isInitializing, showLoginPrompt } = useSelector(state => state.auth);
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     initializeApp();
@@ -27,15 +29,21 @@ const RootNavigator = () => {
       // Check auth status
       await dispatch(checkAuthStatus()).unwrap();
       
-      // Reset login prompt when auth check is successful
-      dispatch(setShowLoginPrompt(false));
-      
       // Biometrics disabled in development mode
       dispatch(setBiometricAvailable(false));
     } catch (error) {
       console.log('App initialization error:', error);
     }
   };
+
+  const handleSplashFinish = () => {
+    setShowSplash(false);
+  };
+
+  // Show splash screen first
+  if (showSplash) {
+    return <SplashScreen onFinish={handleSplashFinish} />;
+  }
 
   // Show loading screen during initialization
   if (isInitializing || isLoading) {
@@ -44,7 +52,7 @@ const RootNavigator = () => {
 
   // This component should start with a capital letter as per React convention
   const MainNavigator = () => {
-    if (!isAuthenticated || !user || showLoginPrompt) {
+    if (!isAuthenticated || !user) {
       return <AuthNavigator />;
     }
 

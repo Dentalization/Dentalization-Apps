@@ -431,7 +431,7 @@ const DiagnosisPatient = () => {
               AI Diagnosis Gigi
             </Text>
             <Text style={[styles.subtitle, { color: theme.scheme.textSecondary }]}>
-              Analisis kondisi gigi dengan teknologi AI
+              A Clinical Decision Support System
             </Text>
           </View>
 

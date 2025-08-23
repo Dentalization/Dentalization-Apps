@@ -1,9 +1,9 @@
 // API Configuration
 export const API_CONFIG = {
-  // Using staging server for development when localhost is not available
-  // Note: Using HTTP due to SSL certificate issues with staging server
+  // Using localtunnel for backend API access from mobile
+  // Note: Make sure your backend server is running and localtunnel is active
   BASE_URL: __DEV__ 
-    ? 'http://staging-api.dentalization.com' 
+    ? 'https://strong-rocks-battle.loca.lt' 
     : 'https://api.dentalization.com',
   TIMEOUT: 45000,  // Increased timeout for slow connections
   RETRY_ATTEMPTS: 3,

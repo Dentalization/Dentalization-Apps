@@ -507,7 +507,7 @@ const DoctorProfileScreen = () => {
                     borderRadius: 50,
                   }}
                   resizeMode="cover"
-                  defaultSource={require('../../../assets/images/default-avatar.svg')}
+                  // defaultSource={require('../../../assets/images/default-avatar.svg')}
                   onError={(error) => {
                     console.log('❌ Image loading error:', error.nativeEvent.error);
                     setProfilePhoto(null);

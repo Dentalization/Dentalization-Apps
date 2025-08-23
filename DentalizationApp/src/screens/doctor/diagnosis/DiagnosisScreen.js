@@ -625,9 +625,10 @@ const DiagnosisScreen = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: '#F2F1F8' }}>
-      <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}>
-        <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 24 }}>
+    <ResponsiveContainer safeArea={false} backgroundColor="#F8F9FF" padding={0}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 24 }}>
           {/* Beautiful Header */}
           <View style={{ alignItems: 'center', marginBottom: 40, paddingHorizontal: 20 }}>
             {/* Background Decoration */}
@@ -662,7 +663,7 @@ const DiagnosisScreen = () => {
             
             {/* Title Section */}
             <View style={{ alignItems: 'center', marginBottom: 16 }}>
-              <Text style={{ fontSize: 28, fontWeight: '800', color: '#1A1A1A', textAlign: 'center', letterSpacing: -0.5, marginBottom: 4 }}>AI Diagnosis</Text>
+              <Text style={{ fontSize: 28, fontWeight: '800', color: '#1A1A1A', textAlign: 'center', letterSpacing: -0.5, marginBottom: 4 }}>Serene AI</Text>
               <View style={{ width: 40, height: 3, backgroundColor: '#6B5CE7', borderRadius: 2, marginBottom: 12 }} />
               
               {/* Enhanced Status Indicator */}
@@ -690,8 +691,8 @@ const DiagnosisScreen = () => {
             
             {/* Description */}
             <View style={{ backgroundColor: 'rgba(255,255,255,0.8)', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 16, borderWidth: 1, borderColor: 'rgba(107, 92, 231, 0.1)' }}>
-              <Text style={{ fontSize: 16, color: '#555555', textAlign: 'center', lineHeight: 22, fontWeight: '500' }}>Analisis kondisi gigi dengan teknologi AI</Text>
-              <Text style={{ fontSize: 14, color: '#888888', textAlign: 'center', marginTop: 4, fontStyle: 'italic' }}>Powered by Advanced Machine Learning</Text>
+              <Text style={{ fontSize: 16, color: '#555555', textAlign: 'center', lineHeight: 22, fontWeight: '500' }}>A Clinical Decision Support System</Text>
+              <Text style={{ fontSize: 14, color: '#888888', textAlign: 'center', marginTop: 4, fontStyle: 'italic' }}>Powered by Serene</Text>
             </View>
           </View>
 
@@ -706,7 +707,7 @@ const DiagnosisScreen = () => {
                 color="#483AA0" 
               />
               <Text style={{ fontSize: 16, fontWeight: '600', color: '#483AA0', marginLeft: 8, marginRight: 16 }}>
-                AI Agent Mode
+                Serene
               </Text>
               <View style={[
                 { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
@@ -792,7 +793,7 @@ const DiagnosisScreen = () => {
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <MaterialIcons name="chat" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
                   <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '600' }}>
-                    Mulai Chat AI Agent
+                    Chat with Serene Now
                   </Text>
                 </View>
               )}
@@ -852,17 +853,18 @@ const DiagnosisScreen = () => {
               <Text style={{ fontSize: 14, color: '#666666', flex: 1 }}>Tekan tombol diagnosis untuk analisis AI</Text>
             </View>
           </View>
-        </ScrollView>
-      </Animated.View>
-      
-      {renderAnalysisResult()}
-      
-      <AIAgentOfflineModal
-        visible={showOfflineModal}
-        onClose={() => setShowOfflineModal(false)}
-        onRetry={checkAgentServerStatus}
-      />
-    </SafeAreaView>
+          </ScrollView>
+        </Animated.View>
+        
+        {renderAnalysisResult()}
+        
+        <AIAgentOfflineModal
+          visible={showOfflineModal}
+          onClose={() => setShowOfflineModal(false)}
+          onRetry={checkAgentServerStatus}
+        />
+      </SafeAreaView>
+    </ResponsiveContainer>
   );
 };
 

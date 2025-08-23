@@ -180,6 +180,7 @@ class AuthService {
           // Try fallback URLs for development
           if (__DEV__ && !error.config?._retryFallback) {
             const fallbackURLs = [
+              'http://192.168.2.192:3001',
               'http://localhost:3001',
               'http://127.0.0.1:3001',
               'http://10.0.2.2:3001' // Android emulator

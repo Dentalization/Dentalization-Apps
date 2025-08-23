@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   Animated,
   Dimensions,
+  Image, // CHANGED: import Image
 } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -153,15 +154,6 @@ const LoginScreen = ({ navigation }) => {
   const handleBiometricLogin = async () => {
     Alert.alert('Login Biometrik Dinonaktifkan', 'Autentikasi biometrik dinonaktifkan dalam mode pengembangan');
     return;
-    
-    /* Original code disabled for development:
-    try {
-      const result = await dispatch(loginWithBiometric()).unwrap();
-      // Navigation will be handled by RootNavigator based on auth state
-    } catch (error) {
-      Alert.alert('Login Biometrik Gagal', getReadableError(error, 'Autentikasi biometrik gagal'));
-    }
-    */
   };
 
   const getBiometricIcon = () => {
@@ -191,7 +183,7 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <LinearGradient
-      colors={['#667eea', '#764ba2', '#f093fb']}
+      colors={['#483AA0', '#483AA0']}  // background solid brand
       style={{ flex: 1 }}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
@@ -210,31 +202,32 @@ const LoginScreen = ({ navigation }) => {
               flex: 1,
               justifyContent: 'center',
               paddingHorizontal: 24,
-              paddingVertical: 32,
+              paddingTop: 0,        // CHANGED: kurangi ruang atas
+              paddingBottom: 32,
               opacity: fadeAnim,
               transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
             }}>
             {/* Header */}
             <Animated.View style={{ 
               alignItems: 'center', 
-              marginBottom: 48,
+              marginBottom: 32,     // CHANGED: dari 48 → 32
               transform: [{ scale: scaleAnim }]
             }}>
-              <View style={{
-                width: 100,
-                height: 100,
-                borderRadius: 50,
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginBottom: 32,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 8 },
-                shadowOpacity: 0.3,
-                shadowRadius: 16,
-                elevation: 8,
-              }}>
-                <Icon name="local-hospital" size={50} color="#FFFFFF" />
+              <View>
+                {/* gunakan logo sendiri - tanpa background di belakang logo */}
+                <Image
+                  source={require('../../../assets/logo.png')}
+                  style={{
+                    width: 200,
+                    height: 200,
+                    alignSelf: 'center',
+                    marginTop: -32,   // CHANGED: tarik lebih dekat ke atas
+                    marginBottom: 8   // CHANGED: jarak ke teks lebih rapat
+                  }}
+                  resizeMode="contain"
+                  accessible
+                  accessibilityLabel="Logo Dentalization"
+                />
               </View>
               <Text style={{
                 fontSize: 32,
@@ -409,7 +402,7 @@ const LoginScreen = ({ navigation }) => {
                 />
 
               {/* Biometric Login - Disabled for Development */}
-              {false && ( // biometricAvailable && biometricEnabled - always false in dev mode
+              {false && (
                 <Button
                   title="Login Biometrik (Dinonaktifkan dalam Mode Dev)"
                   onPress={handleBiometricLogin}
@@ -529,8 +522,6 @@ const LoginScreen = ({ navigation }) => {
                   </TouchableOpacity>
                 </Animated.View>
               )}
-
-
             </Animated.View>
 
             {/* Sign Up Link */}
